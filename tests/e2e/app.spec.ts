@@ -9,6 +9,11 @@ test("Today prioritizes actionable reminders", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Ready for a hello" })).toBeVisible();
   await expect(page.getByText("Birthdays soon")).toBeVisible();
   await expect(page.getByText("Loose ends")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 });
 
 test("a quick interaction can be saved with a type and one confirmation", async ({
