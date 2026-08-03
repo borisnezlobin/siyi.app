@@ -2,6 +2,7 @@ import {
   ArrowRight,
   EnvelopeSimple,
   GoogleLogo,
+  LockKey,
   ShieldCheck,
   UsersThree,
   WarningCircle,
@@ -9,7 +10,13 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
-import { sendMagicLink, signInWithGoogle } from "@/app/auth/actions";
+import {
+  sendMagicLink,
+  sendPasswordReset,
+  signInWithGoogle,
+  signInWithPassword,
+  signUpWithPassword,
+} from "@/app/auth/actions";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -81,9 +88,15 @@ export default async function AuthPage({
     sent?: string;
     error?: string;
     error_code?: string;
+    method?: string;
+    mode?: string;
+    reason?: string;
   }>;
 }) {
   const parameters = await searchParams;
+  const passwordMethod = parameters.method === "password";
+  const signupMode = passwordMethod && parameters.mode === "signup";
+  const forgotMode = passwordMethod && parameters.mode === "forgot";
   const isExpired =
     parameters.error_code === "otp_expired" ||
     parameters.error?.toLowerCase().includes("expired");
@@ -115,14 +128,27 @@ export default async function AuthPage({
                     Check your inbox
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-ink-muted">
-                    We sent a sign-in link to{" "}
+                    We sent{" "}
+                    {parameters.reason === "confirm"
+                      ? "a confirmation"
+                      : parameters.reason === "reset"
+                        ? "a password reset"
+                        : "a sign-in"}{" "}
+                    link to{" "}
                     <strong className="font-semibold text-ink">
                       {parameters.sent}
                     </strong>
-                    . It can take a minute to arrive.
+                    . It can take a minute to arrive, and you can open it in
+                    another browser container or device.
                   </p>
                   <Link
-                    href="/auth"
+                    href={
+                      parameters.reason === "confirm"
+                        ? "/auth?method=password&mode=signup"
+                        : parameters.reason === "reset"
+                          ? "/auth?method=password&mode=forgot"
+                          : "/auth"
+                    }
                     className="mt-6 inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
                   >
                     Use another email
@@ -150,14 +176,22 @@ export default async function AuthPage({
               ) : (
                 <>
                   <p className="text-xs font-semibold text-coral-strong">
-                    Welcome back
+                    {signupMode
+                      ? "Join your circle"
+                      : forgotMode
+                        ? "Reset securely"
+                        : "Welcome back"}
                   </p>
                   <h1 className="mt-2 font-display text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
-                    Pick up where you left off.
+                    {signupMode
+                      ? "Create your account."
+                      : forgotMode
+                        ? "Choose a new password."
+                        : "Pick up where you left off."}
                   </h1>
                   <p className="mt-4 text-sm leading-6 text-ink-muted">
-                    Sign in without a password. Your people and notes stay private
-                    to your account.
+                    Your people and notes stay private to your account. Choose
+                    the sign-in method that works best in your browser.
                   </p>
 
                   {parameters.error ? (
@@ -186,32 +220,145 @@ export default async function AuthPage({
                     <span className="h-px flex-1 bg-ink/10" />
                   </div>
 
-                  <form action={sendMagicLink}>
-                    <label className="block text-xs font-semibold text-ink-muted">
-                      Email address
-                      <input
-                        name="email"
-                        type="email"
-                        required
-                        autoComplete="email"
-                        placeholder="you@example.edu"
-                        className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                  <nav
+                    className="grid grid-cols-2 rounded-2xl bg-porcelain p-1"
+                    aria-label="Email sign-in method"
+                  >
+                    <Link
+                      href="/auth"
+                      className={`rounded-xl px-3 py-2.5 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                        passwordMethod
+                          ? "text-ink-muted"
+                          : "bg-white text-ink shadow-card"
+                      }`}
+                      aria-current={!passwordMethod ? "page" : undefined}
                     >
-                      Email me a sign-in link
-                      <ArrowRight size={17} weight="bold" aria-hidden="true" />
-                    </button>
-                  </form>
+                      Email link
+                    </Link>
+                    <Link
+                      href="/auth?method=password"
+                      className={`rounded-xl px-3 py-2.5 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                        passwordMethod
+                          ? "bg-white text-ink shadow-card"
+                          : "text-ink-muted"
+                      }`}
+                      aria-current={passwordMethod ? "page" : undefined}
+                    >
+                      Password
+                    </Link>
+                  </nav>
+
+                  {passwordMethod ? (
+                    <form
+                      action={
+                        signupMode
+                          ? signUpWithPassword
+                          : forgotMode
+                            ? sendPasswordReset
+                            : signInWithPassword
+                      }
+                      className="mt-4"
+                    >
+                      <label className="block text-xs font-semibold text-ink-muted">
+                        Email address
+                        <input
+                          name="email"
+                          type="email"
+                          required
+                          autoComplete="email"
+                          placeholder="you@example.edu"
+                          className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+                        />
+                      </label>
+                      {!forgotMode ? (
+                        <label className="mt-3 block text-xs font-semibold text-ink-muted">
+                          Password
+                          <input
+                            name="password"
+                            type="password"
+                            required
+                            minLength={8}
+                            maxLength={72}
+                            autoComplete={signupMode ? "new-password" : "current-password"}
+                            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+                          />
+                        </label>
+                      ) : null}
+                      {signupMode ? (
+                        <label className="mt-3 block text-xs font-semibold text-ink-muted">
+                          Confirm password
+                          <input
+                            name="passwordConfirmation"
+                            type="password"
+                            required
+                            minLength={8}
+                            maxLength={72}
+                            autoComplete="new-password"
+                            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+                          />
+                        </label>
+                      ) : null}
+                      <button
+                        type="submit"
+                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                      >
+                        <LockKey size={17} weight="fill" aria-hidden="true" />
+                        {signupMode
+                          ? "Create account"
+                          : forgotMode
+                            ? "Send reset link"
+                            : "Sign in with password"}
+                      </button>
+                      <div className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 text-xs text-ink-muted">
+                        <Link
+                          href={
+                            signupMode || forgotMode
+                              ? "/auth?method=password"
+                              : "/auth?method=password&mode=signup"
+                          }
+                          className="font-semibold text-coral-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                        >
+                          {signupMode || forgotMode ? "Back to sign in" : "Create an account"}
+                        </Link>
+                        {!signupMode && !forgotMode ? (
+                          <Link
+                            href="/auth?method=password&mode=forgot"
+                            className="font-semibold text-ink-muted hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                          >
+                            Forgot password?
+                          </Link>
+                        ) : null}
+                      </div>
+                    </form>
+                  ) : (
+                    <form action={sendMagicLink} className="mt-4">
+                      <label className="block text-xs font-semibold text-ink-muted">
+                        Email address
+                        <input
+                          name="email"
+                          type="email"
+                          required
+                          autoComplete="email"
+                          placeholder="you@example.edu"
+                          className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                      >
+                        Email me a sign-in link
+                        <ArrowRight size={17} weight="bold" aria-hidden="true" />
+                      </button>
+                    </form>
+                  )}
 
                   <div className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-ink-muted">
                     <ShieldCheck size={16} className="mt-0.5 shrink-0 text-sage-strong" aria-hidden="true" />
                     <p>
-                      No password to remember. Each sign-in link works once and
-                      expires automatically.
+                      {passwordMethod
+                        ? "Passwords are stored and verified by Supabase Auth, never in the CRM database."
+                        : "Each sign-in link works once, expires automatically, and no longer depends on the browser that requested it."}
                     </p>
                   </div>
                 </>

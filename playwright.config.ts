@@ -24,6 +24,13 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 3100",
     url: "http://127.0.0.1:3100/today",
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+      SUPABASE_SECRET_KEY: "",
+      SUPABASE_SERVICE_ROLE_KEY: "",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

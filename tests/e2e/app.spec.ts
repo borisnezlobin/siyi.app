@@ -1,5 +1,19 @@
 import { expect, test } from "@playwright/test";
 
+test("the public homepage explains the product and offers clear entry points", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Remember more than a name." }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start your circle" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "I already have an account" }),
+  ).toBeVisible();
+});
+
 test("Today prioritizes actionable reminders", async ({ page }) => {
   await page.goto("/today");
 
@@ -46,7 +60,7 @@ test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await expect(page.getByText("Person saved.")).toBeVisible();
 });
 
-test("authentication has no password interface and explains magic links", async ({
+test("authentication offers magic links without forcing a password", async ({
   page,
 }) => {
   await page.goto("/auth");
@@ -58,6 +72,25 @@ test("authentication has no password interface and explains magic links", async 
   await page.getByLabel("Email address").fill("alex@example.edu");
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+});
+
+test("authentication supports password sign in, signup, and recovery", async ({
+  page,
+}) => {
+  await page.goto("/auth?method=password");
+
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Sign in with password" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Create an account" }).click();
+  await expect(page.getByLabel("Confirm password")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to sign in" }).click();
+  await page.getByRole("link", { name: "Forgot password?" }).click();
+  await expect(page.getByRole("button", { name: "Send reset link" })).toBeVisible();
 });
 
 test("people can be searched by contextual notes", async ({ page }) => {
