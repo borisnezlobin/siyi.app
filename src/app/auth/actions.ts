@@ -82,7 +82,7 @@ export async function sendMagicLink(formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: appUrl,
+      emailRedirectTo: `${appUrl}/auth/callback?next=/today`,
       data: {
         app_name: brand.name,
       },
@@ -146,7 +146,7 @@ export async function signUpWithPassword(formData: FormData) {
     email: validation.data.email,
     password: validation.data.password,
     options: {
-      emailRedirectTo: appUrl,
+      emailRedirectTo: `${appUrl}/auth/callback?next=/onboarding`,
     },
   });
 
@@ -185,7 +185,9 @@ export async function sendPasswordReset(formData: FormData) {
   const appUrl = await getAppUrl();
   const { error } = await supabase.auth.resetPasswordForEmail(
     emailValidation.data,
-    { redirectTo: appUrl },
+    {
+      redirectTo: `${appUrl}/auth/callback?next=/auth/update-password`,
+    },
   );
 
   if (error) {

@@ -23,7 +23,7 @@ export default async function SettingsPage() {
   ]);
   const providers = user?.app_metadata.providers as string[] | undefined;
   const authMethods = providers?.length
-    ? providers.map((provider) => (provider === "email" ? "Email magic link" : "Google"))
+    ? providers.map((provider) => (provider === "email" ? "Email" : "Google"))
     : ["Preview mode"];
   let initialTimezone = "America/Los_Angeles";
   let initialIntervals: Record<RelationshipStrength, number> = {

@@ -93,6 +93,20 @@ test("authentication supports password sign in, signup, and recovery", async ({
   await expect(page.getByRole("button", { name: "Send reset link" })).toBeVisible();
 });
 
+test("a signed-in user can create a password without an email link", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+
+  await page.getByLabel("New password").fill("correct-horse-battery");
+  await page.getByLabel("Confirm password").fill("correct-horse-battery");
+  await page.getByRole("button", { name: "Save password" }).click();
+
+  await expect(
+    page.getByText("Password saved. You can use it the next time you sign in."),
+  ).toBeVisible();
+});
+
 test("people can be searched by contextual notes", async ({ page }) => {
   await page.goto("/people");
   await page.getByRole("searchbox", { name: "Search people" }).fill("pollinators");

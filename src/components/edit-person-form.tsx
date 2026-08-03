@@ -3,6 +3,7 @@
 import { Check, SpinnerGap } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getApiResponseError } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import type { Person } from "@/lib/types";
 
@@ -47,8 +48,9 @@ export function EditPersonForm({ person }: { person: Person }) {
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        const result = (await response.json()) as { error?: string };
-        setError(result.error ?? "Changes could not be saved.");
+        setError(
+          await getApiResponseError(response, "Changes could not be saved."),
+        );
         setSaving(false);
         return;
       }

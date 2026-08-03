@@ -17,8 +17,9 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { importPayloadSchema } from "@/lib/validation";
+import { getApiResponseError } from "@/lib/http";
 import type { FollowUp, Interaction, Person, RelationshipStrength } from "@/lib/types";
+import { importPayloadSchema } from "@/lib/validation";
 
 type ImportPreview = {
   fileName: string;
@@ -80,7 +81,12 @@ export function SettingsControls({
   const [timezone, setTimezone] = useState(initialTimezone);
   const [intervals, setIntervals] = useState(initialIntervals);
   const [message, setMessage] = useState("");
-  const [working, setWorking] = useState<"save" | "import" | "delete" | null>(null);
+  const [working, setWorking] = useState<
+    "save" | "password" | "import" | "delete" | null
+  >(null);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importError, setImportError] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -111,6 +117,47 @@ export function SettingsControls({
     }
 
     setMessage("Settings saved.");
+    setWorking(null);
+  }
+
+  async function savePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError("");
+    setMessage("");
+
+    if (password.length < 8) {
+      setPasswordError("Use at least 8 characters.");
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setPasswordError("The passwords do not match.");
+      return;
+    }
+
+    setWorking("password");
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const response = await fetch("/api/account/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, passwordConfirmation }),
+      });
+
+      if (!response.ok) {
+        setPasswordError(
+          await getApiResponseError(response, "The password could not be saved."),
+        );
+        setWorking(null);
+        return;
+      }
+    } else {
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+    }
+
+    setPassword("");
+    setPasswordConfirmation("");
+    setMessage("Password saved. You can use it the next time you sign in.");
     setWorking(null);
   }
 
@@ -255,8 +302,12 @@ export function SettingsControls({
         body: JSON.stringify(importPreview.payload),
       });
       if (!response.ok) {
-        const result = (await response.json()) as { error?: string };
-        setImportError(result.error ?? "The import could not be completed.");
+        setImportError(
+          await getApiResponseError(
+            response,
+            "The import could not be completed.",
+          ),
+        );
         setWorking(null);
         return;
       }
@@ -461,6 +512,57 @@ export function SettingsControls({
             </p>
           </div>
         </div>
+        <form onSubmit={savePassword} className="mt-5 rounded-2xl bg-porcelain p-4">
+          <h3 className="text-xs font-bold">Create or change your password</h3>
+          <p className="mt-1 text-[11px] leading-5 text-ink-muted">
+            Since you are already signed in, this does not need an email link.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-[11px] font-semibold text-ink-muted">
+              New password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                maxLength={72}
+                required
+                autoComplete="new-password"
+                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+              />
+            </label>
+            <label className="text-[11px] font-semibold text-ink-muted">
+              Confirm password
+              <input
+                type="password"
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                minLength={8}
+                maxLength={72}
+                required
+                autoComplete="new-password"
+                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+              />
+            </label>
+          </div>
+          {passwordError ? (
+            <p role="alert" className="mt-3 text-[11px] font-semibold text-coral-strong">
+              {passwordError}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={working === "password"}
+            className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            {working === "password" ? (
+              <SpinnerGap size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <LockKey size={16} weight="fill" aria-hidden="true" />
+            )}
+            Save password
+          </button>
+        </form>
         <form action="/auth/signout" method="post">
           <button
             type="submit"

@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { createClient } from "@/lib/supabase/client";
 
@@ -111,13 +112,22 @@ export function AddPersonForm() {
           body: JSON.stringify(payload),
         });
 
-        const result = (await response.json()) as {
+        if (!response.ok) {
+          throw new Error(
+            await getApiResponseError(
+              response,
+              "The person could not be saved.",
+            ),
+          );
+        }
+
+        const result = await readJsonResponse<{
           person?: { id: string };
           error?: string;
-        };
+        }>(response);
 
-        if (!response.ok || !result.person) {
-          throw new Error(result.error ?? "The person could not be saved.");
+        if (!result?.person) {
+          throw new Error("The app returned an unexpected response. Try again.");
         }
 
         router.push(`/people/${result.person.id}`);

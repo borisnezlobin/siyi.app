@@ -30,6 +30,7 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
       SUPABASE_SECRET_KEY: "",
       SUPABASE_SERVICE_ROLE_KEY: "",
+      NEXT_DIST_DIR: ".next-e2e",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SwitchControl } from "@/components/switch-control";
+import { getApiResponseError } from "@/lib/http";
 
 const commonTimezones = [
   "America/Los_Angeles",
@@ -87,8 +88,12 @@ export function OnboardingForm() {
       });
 
       if (!response.ok) {
-        const result = (await response.json()) as { error?: string };
-        setError(result.error ?? "Your setup could not be saved.");
+        setError(
+          await getApiResponseError(
+            response,
+            "Your setup could not be saved.",
+          ),
+        );
         setSaving(false);
         return;
       }

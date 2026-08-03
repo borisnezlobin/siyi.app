@@ -138,8 +138,9 @@ export default async function AuthPage({
                     <strong className="font-semibold text-ink">
                       {parameters.sent}
                     </strong>
-                    . It can take a minute to arrive, and you can open it in
-                    another browser container or device.
+                    . It can take a minute to arrive. Open it in the same
+                    browser container that requested it, or use Password if
+                    container boundaries get in the way.
                   </p>
                   <Link
                     href={
@@ -358,7 +359,7 @@ export default async function AuthPage({
                     <p>
                       {passwordMethod
                         ? "Passwords are stored and verified by Supabase Auth, never in the CRM database."
-                        : "Each sign-in link works once, expires automatically, and no longer depends on the browser that requested it."}
+                        : "Each link works once and expires automatically. Open it in the browser container that requested it."}
                     </p>
                   </div>
                 </>
