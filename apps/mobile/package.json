@@ -62,7 +62,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "start:device": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false expo start --dev-client --tunnel",
+    "start:device": "node ./scripts/start-ios-device.mjs",
+    "start:tunnel": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false expo start --dev-client --tunnel",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "ios:device": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false expo run:ios --device",
