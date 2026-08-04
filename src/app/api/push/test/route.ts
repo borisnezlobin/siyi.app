@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { brand } from "@/config/brand";
 import { apiError, errorMessage } from "@/lib/api";
-import { requireAuthenticatedUser } from "@/lib/auth";
+import { requireAuthenticatedRequest } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPushToUser } from "@/lib/push";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuthenticatedUser();
+    const { user } = await requireAuthenticatedRequest(request);
     const admin = createAdminClient();
     const result = await sendPushToUser(admin, user.id, {
       title: `${brand.name} is ready`,

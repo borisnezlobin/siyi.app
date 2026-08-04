@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
-import { requireAuthenticatedUser } from "@/lib/auth";
+import { requireAuthenticatedRequest } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
-    const user = await requireAuthenticatedUser();
+    const { user } = await requireAuthenticatedRequest(request);
     const admin = createAdminClient();
     const { data: avatarFiles, error: listError } = await admin.storage
       .from("avatars")

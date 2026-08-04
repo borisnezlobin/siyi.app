@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { brand } from "@/config/brand";
 import { apiError, errorMessage } from "@/lib/api";
-import { requireAuthenticatedUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedRequest } from "@/lib/api-auth";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -24,8 +23,7 @@ function downloadResponse(
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuthenticatedUser();
-    const supabase = await createClient();
+    const { user, supabase } = await requireAuthenticatedRequest(request);
     const format = new URL(request.url).searchParams.get("format") ?? "json";
     const [
       profileResult,
@@ -38,6 +36,7 @@ export async function GET(request: NextRequest) {
       followUpsResult,
       deliveriesResult,
       subscriptionsResult,
+      nativeSubscriptionsResult,
     ] = await Promise.all([
       supabase.from("user_profiles").select("*").eq("auth_user_id", user.id).maybeSingle(),
       supabase.from("user_settings").select("*").eq("user_id", user.id).maybeSingle(),
@@ -59,6 +58,12 @@ export async function GET(request: NextRequest) {
         .from("push_subscriptions")
         .select("id,endpoint,user_agent,created_at,updated_at,last_used_at,revoked_at")
         .eq("user_id", user.id),
+      supabase
+        .from("native_push_subscriptions")
+        .select(
+          "id,platform,device_name,app_version,created_at,updated_at,last_used_at,revoked_at",
+        )
+        .eq("user_id", user.id),
     ]);
 
     const firstError = [
@@ -72,6 +77,7 @@ export async function GET(request: NextRequest) {
       followUpsResult.error,
       deliveriesResult.error,
       subscriptionsResult.error,
+      nativeSubscriptionsResult.error,
     ].find(Boolean);
 
     if (firstError) return apiError(firstError.message, 500);
@@ -203,6 +209,7 @@ export async function GET(request: NextRequest) {
       })),
       notificationDeliveries: deliveriesResult.data ?? [],
       pushSubscriptions: subscriptionsResult.data ?? [],
+      nativePushSubscriptions: nativeSubscriptionsResult.data ?? [],
     };
 
     return downloadResponse(
