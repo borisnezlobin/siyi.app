@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { brand } from "@/config/brand";
 import { SwitchControl } from "@/components/switch-control";
 
 type PermissionState = NotificationPermission | "unsupported";
@@ -180,7 +181,7 @@ export function NotificationControls({
     } else if (permission === "granted") {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification("A gentle hello", {
-        body: "People CRM notifications are working on this browser.",
+        body: `${brand.name} notifications are working on this browser.`,
         icon: "/icon-192.png",
         data: { url: "/today" },
       });

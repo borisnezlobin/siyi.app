@@ -17,6 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
 import type { FollowUp, Interaction, Person, RelationshipStrength } from "@/lib/types";
 import { importPayloadSchema } from "@/lib/validation";
@@ -168,7 +169,7 @@ export function SettingsControls({
     }
 
     downloadFile(
-      "people-crm-export.json",
+      `${brand.slug}-export.json`,
       JSON.stringify(
         {
           version: 1,
@@ -226,7 +227,7 @@ export function SettingsControls({
         .join(","),
     );
     downloadFile(
-      "people-crm-contacts.csv",
+      `${brand.slug}-contacts.csv`,
       [headers.map(csvCell).join(","), ...rows].join("\n"),
       "text/csv",
     );
@@ -251,7 +252,7 @@ export function SettingsControls({
         .join(","),
     );
     downloadFile(
-      "people-crm-interactions.csv",
+      `${brand.slug}-interactions.csv`,
       [headers.map(csvCell).join(","), ...rows].join("\n"),
       "text/csv",
     );

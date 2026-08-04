@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FollowUpBoard } from "@/components/follow-up-board";
 import { PageHeader } from "@/components/page-header";
+import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { getFollowUps, getPeople } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -26,6 +27,13 @@ export default async function FollowUpsPage({
         eyebrow="Keep your word"
         title="Follow-ups"
         description="A practical list of the things you said you’d send, ask, or do."
+        action={
+          <QuickCaptureTrigger
+            mode="follow-up"
+            label="Add follow-up"
+            compact
+          />
+        }
       />
       <FollowUpBoard
         initialFollowUps={followUps}

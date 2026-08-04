@@ -16,7 +16,7 @@ import {
   startOfDay,
 } from "date-fns";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import type { FollowUp, Person } from "@/lib/types";
 
@@ -45,6 +45,10 @@ export function FollowUpBoard({
   const [dueWindow, setDueWindow] = useState<DueWindow>("all");
   const [workingId, setWorkingId] = useState<string | null>(null);
   const today = startOfDay(new Date());
+
+  useEffect(() => {
+    setFollowUps(initialFollowUps);
+  }, [initialFollowUps]);
 
   const groupedCounts = useMemo(() => {
     return followUps.reduce(

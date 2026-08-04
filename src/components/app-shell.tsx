@@ -11,7 +11,12 @@ import {
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  QuickCaptureHub,
+  QuickCaptureTrigger,
+} from "@/components/quick-capture-hub";
 import { brand } from "@/config/brand";
+import type { Person } from "@/lib/types";
 
 const primaryNavigation = [
   { href: "/today", label: "Today", icon: House },
@@ -34,10 +39,15 @@ export function AppShell({
   children,
   displayName = "Alex Vale",
   email = "alex@example.edu",
+  quickPeople,
 }: {
   children: React.ReactNode;
   displayName?: string;
   email?: string;
+  quickPeople: Pick<
+    Person,
+    "id" | "fullName" | "preferredName" | "profilePhotoUrl"
+  >[];
 }) {
   const pathname = usePathname();
   const initials = displayName
@@ -62,7 +72,7 @@ export function AppShell({
               {brand.name}
             </span>
             <span className="mt-1 block text-[11px] text-white/55">
-              Your college circle
+              {brand.sidebarTagline}
             </span>
           </span>
         </Link>
@@ -93,13 +103,25 @@ export function AppShell({
           })}
         </nav>
 
-        <Link
-          href="/people/new"
-          className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-coral px-4 py-3 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-        >
-          <Plus size={18} weight="bold" aria-hidden="true" />
-          Add someone
-        </Link>
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <Link
+            href="/people/new"
+            className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-coral px-4 py-3 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
+          >
+            <Plus size={18} weight="bold" aria-hidden="true" />
+            Add someone
+          </Link>
+          <QuickCaptureTrigger
+            mode="follow-up"
+            label="Follow-up"
+            surface="sidebar"
+          />
+          <QuickCaptureTrigger
+            mode="interaction"
+            label="Interaction"
+            surface="sidebar"
+          />
+        </div>
 
         <nav className="mt-auto space-y-1" aria-label="Account navigation">
           {secondaryNavigation.map(({ href, label, icon: Icon }) => {
@@ -163,16 +185,7 @@ export function AppShell({
           },
         )}
 
-        <Link
-          href="/people/new"
-          className="-mt-7 flex flex-col items-center gap-1 text-[10px] font-semibold text-ink focus-visible:outline-none"
-          aria-label="Add someone"
-        >
-          <span className="grid size-14 place-items-center rounded-full bg-coral text-white shadow-float ring-4 ring-white">
-            <Plus size={24} weight="bold" aria-hidden="true" />
-          </span>
-          Add
-        </Link>
+        <span className="min-h-12" aria-hidden="true" />
 
         {[
           primaryNavigation[2],
@@ -195,6 +208,7 @@ export function AppShell({
           );
         })}
       </nav>
+      <QuickCaptureHub people={quickPeople} />
     </div>
   );
 }

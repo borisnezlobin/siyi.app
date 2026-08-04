@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@/lib/demo-data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -79,7 +80,7 @@ function mapPerson(row: PersonRow): Person {
   };
 }
 
-export async function getPeople(): Promise<Person[]> {
+const loadPeople = async (): Promise<Person[]> => {
   if (!isSupabaseConfigured()) {
     return createDemoPeople();
   }
@@ -102,7 +103,9 @@ export async function getPeople(): Promise<Person[]> {
   }
 
   return (data as PersonRow[]).map(mapPerson);
-}
+};
+
+export const getPeople = cache(loadPeople);
 
 export async function getPerson(personId: string): Promise<Person> {
   if (!isSupabaseConfigured()) {

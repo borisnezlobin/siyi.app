@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { brand } from "@/config/brand";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
       return downloadResponse(
         [headers.map(csvCell).join(","), ...rows].join("\n"),
         "text/csv; charset=utf-8",
-        "people-crm-contacts.csv",
+        `${brand.slug}-contacts.csv`,
       );
     }
 
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
       return downloadResponse(
         [headers.map(csvCell).join(","), ...rows].join("\n"),
         "text/csv; charset=utf-8",
-        "people-crm-interactions.csv",
+        `${brand.slug}-interactions.csv`,
       );
     }
 
@@ -207,7 +208,7 @@ export async function GET(request: NextRequest) {
     return downloadResponse(
       JSON.stringify(payload, null, 2),
       "application/json; charset=utf-8",
-      "people-crm-export.json",
+      `${brand.slug}-export.json`,
     );
   } catch (error) {
     return apiError(errorMessage(error), 401);

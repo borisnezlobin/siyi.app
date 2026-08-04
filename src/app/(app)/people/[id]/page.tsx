@@ -19,6 +19,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArchivePersonButton } from "@/components/archive-person-button";
 import { Avatar } from "@/components/avatar";
+import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
 import { getFollowUps, getInteractions, getPerson } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
@@ -317,13 +318,21 @@ export default async function PersonDetailPage({
           <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold">Open follow-ups</h2>
-              <Link
-                href={`/follow-ups?person=${person.id}`}
-                className="grid size-8 place-items-center rounded-full bg-porcelain text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                aria-label="Open all follow-ups"
-              >
-                <ArrowSquareOut size={14} aria-hidden="true" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <QuickCaptureTrigger
+                  mode="follow-up"
+                  personId={person.id}
+                  label={`Add a follow-up for ${displayName}`}
+                  compact
+                />
+                <Link
+                  href={`/follow-ups?person=${person.id}`}
+                  className="grid size-9 place-items-center rounded-full bg-porcelain text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  aria-label="Open all follow-ups"
+                >
+                  <ArrowSquareOut size={14} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
             <div className="mt-4 space-y-2">
               {openFollowUps.length ? (

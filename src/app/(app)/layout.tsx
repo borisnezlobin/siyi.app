@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { getPeople } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,8 +33,19 @@ export default async function AuthenticatedLayout({
     email = profile?.email || email;
   }
 
+  const quickPeople = (await getPeople()).map((person) => ({
+    id: person.id,
+    fullName: person.fullName,
+    preferredName: person.preferredName,
+    profilePhotoUrl: person.profilePhotoUrl,
+  }));
+
   return (
-    <AppShell displayName={displayName} email={email}>
+    <AppShell
+      displayName={displayName}
+      email={email}
+      quickPeople={quickPeople}
+    >
       {children}
     </AppShell>
   );

@@ -1,4 +1,10 @@
-const CACHE_NAME = "people-crm-shell-v1";
+import { brand } from "@/config/brand";
+
+const cacheName = `${brand.slug}-shell-v2`;
+const notificationTag = `${brand.slug}-reminder`;
+
+const serviceWorkerSource = `
+const CACHE_NAME = ${JSON.stringify(cacheName)};
 const APP_SHELL = [
   "/offline",
   "/manifest.webmanifest",
@@ -35,9 +41,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match("/offline")),
-    );
+    event.respondWith(fetch(event.request).catch(() => caches.match("/offline")));
     return;
   }
 
@@ -65,10 +69,10 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   const fallback = {
-    title: "People CRM",
+    title: ${JSON.stringify(brand.name)},
     body: "You have a new reminder.",
     url: "/today",
-    tag: "people-crm-reminder",
+    tag: ${JSON.stringify(notificationTag)},
   };
   let payload = fallback;
 
@@ -91,14 +95,19 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = new URL(event.notification.data?.url || "/today", self.location.origin).href;
+  const targetUrl = new URL(
+    event.notification.data?.url || "/today",
+    self.location.origin,
+  ).href;
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      const matchingClient = clients.find((client) => client.url === targetUrl);
-      if (matchingClient) return matchingClient.focus();
-      return self.clients.openWindow(targetUrl);
-    }),
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const matchingClient = clients.find((client) => client.url === targetUrl);
+        if (matchingClient) return matchingClient.focus();
+        return self.clients.openWindow(targetUrl);
+      }),
   );
 });
 
@@ -119,3 +128,14 @@ self.addEventListener("pushsubscriptionchange", (event) => {
       ),
   );
 });
+`;
+
+export function GET() {
+  return new Response(serviceWorkerSource, {
+    headers: {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Service-Worker-Allowed": "/",
+    },
+  });
+}

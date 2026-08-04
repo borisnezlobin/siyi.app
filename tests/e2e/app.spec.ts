@@ -8,6 +8,7 @@ test("the public homepage explains the product and offers clear entry points", a
   await expect(
     page.getByRole("heading", { name: "Remember more than a name." }),
   ).toBeVisible();
+  await expect(page.getByText("Frenk", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Start your circle" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "I already have an account" }),
@@ -18,11 +19,13 @@ test("Today prioritizes actionable reminders", async ({ page }) => {
   await page.goto("/today");
 
   await expect(
-    page.getByRole("heading", { name: "Who’s on your mind?" }),
+    page.getByRole("heading", { name: "What needs your attention?" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Ready for a hello" })).toBeVisible();
-  await expect(page.getByText("Birthdays soon")).toBeVisible();
-  await expect(page.getByText("Loose ends")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Time-sensitive" })).toBeVisible();
+  await expect(page.getByText("Overdue first, then what’s coming up")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "A few people to check in on" }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -30,15 +33,49 @@ test("Today prioritizes actionable reminders", async ({ page }) => {
   ).toBe(true);
 });
 
-test("a quick interaction can be saved with a type and one confirmation", async ({
+test("the mobile add button opens an animated quick-action tray", async ({
   page,
-}) => {
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile-chromium",
+    "The action tray is the mobile navigation pattern.",
+  );
   await page.goto("/today");
-  await page.getByRole("button", { name: "Log an interaction with Luis" }).click();
+  await page.getByRole("button", { name: "Open quick actions" }).click();
+
+  await expect(page.getByRole("link", { name: "Person" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Follow-up", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Interaction", exact: true }).click();
+  await page.getByLabel("Person").selectOption({ label: "Luis" });
   await page.getByRole("button", { name: "Coffee" }).click();
   await page.getByRole("button", { name: "Save interaction" }).click();
 
-  await expect(page.getByRole("button", { name: "Logged" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
+});
+
+test("a follow-up can be added from quick actions", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/today");
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "Open quick actions" }).click();
+    await page
+      .getByRole("button", { name: "Follow-up", exact: true })
+      .click();
+  } else {
+    await page
+      .getByRole("button", { name: "Follow-up", exact: true })
+      .click();
+  }
+
+  await page.getByLabel("Person").selectOption({ label: "Maya" });
+  await page.getByLabel("Follow-up").fill("Send the studio address");
+  await page.getByRole("button", { name: "Tomorrow" }).click();
+  await page.getByRole("button", { name: "Save follow-up" }).click();
+
+  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
 });
 
 test("fast capture keeps advanced fields collapsed", async ({ page }) => {

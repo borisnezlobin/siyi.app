@@ -53,6 +53,34 @@ a {
   color: #17201c;
 }
 
+@keyframes quick-capture-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes quick-capture-backdrop-in {
+  from {
+    background-color: rgb(23 32 28 / 0);
+  }
+  to {
+    background-color: rgb(23 32 28 / 0.4);
+  }
+}
+
+.quick-capture-sheet[open] {
+  animation: quick-capture-sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.quick-capture-sheet[open]::backdrop {
+  animation: quick-capture-backdrop-in 180ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
