@@ -60,7 +60,9 @@ export default function FollowUpsScreen() {
     return {
       overdue: visible.filter(
         (item) =>
-          !item.completedAt && new Date(item.dueAt).getTime() < now.getTime(),
+          !item.completedAt &&
+          new Date(item.dueAt).getTime() < now.getTime() &&
+          !isSameLocalDay(new Date(item.dueAt), now),
       ),
       today: visible.filter(
         (item) => !item.completedAt && isSameLocalDay(new Date(item.dueAt), now),

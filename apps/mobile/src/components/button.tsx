@@ -80,13 +80,13 @@ export function Button({
         }
         onPress?.(event);
       }}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.base,
         compact ? styles.compact : styles.regular,
         visual.container,
         (disabled || loading) && styles.disabled,
-        pressed && styles.pressed,
-        typeof style === "function" ? style({ pressed }) : style,
+        state.pressed && styles.pressed,
+        typeof style === "function" ? style(state) : style,
       ]}
       {...props}
     >

@@ -21,10 +21,10 @@ export function PressableCard({ style, ...props }: PressableProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      style={({ pressed }) => [
+      style={(state) => [
         styles.card,
-        pressed && styles.pressed,
-        typeof style === "function" ? style({ pressed }) : style,
+        state.pressed && styles.pressed,
+        typeof style === "function" ? style(state) : style,
       ]}
       {...props}
     />

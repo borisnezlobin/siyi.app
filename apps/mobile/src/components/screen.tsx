@@ -18,6 +18,7 @@ type ScreenProps = ScrollViewProps & {
   refreshing?: boolean;
   onRefresh?: () => void;
   bottomInset?: number;
+  maxContentWidth?: number;
 };
 
 export function Screen({
@@ -28,6 +29,7 @@ export function Screen({
   refreshing = false,
   onRefresh,
   bottomInset = 124,
+  maxContentWidth = 1040,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
@@ -42,6 +44,9 @@ export function Screen({
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[
           styles.content,
+          {
+            maxWidth: maxContentWidth,
+          },
           {
             paddingTop: Math.max(insets.top + 18, 28),
             paddingBottom: bottomInset + insets.bottom,
@@ -88,8 +93,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: "center",
     gap: 22,
     paddingHorizontal: 20,
+    width: "100%",
   },
   header: {
     gap: 7,

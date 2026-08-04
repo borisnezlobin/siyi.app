@@ -50,6 +50,7 @@ export default function ResetPasswordScreen() {
   return (
     <Screen
       bottomInset={40}
+      maxContentWidth={620}
       subtitle="Choose something memorable and unique to this account."
       title="Set a new password"
     >

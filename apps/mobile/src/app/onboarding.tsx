@@ -84,6 +84,7 @@ export default function OnboardingScreen() {
     <Screen
       bottomInset={40}
       eyebrow="A minute now saves awkward moments later"
+      maxContentWidth={720}
       subtitle="You can change all of this from Settings."
       title="Make it yours"
     >

@@ -122,7 +122,7 @@ export default function LegalScreen() {
   const sections = privacy ? privacySections : termsSections;
 
   return (
-    <Screen bottomInset={48}>
+    <Screen bottomInset={48} maxContentWidth={760}>
       <Pressable
         accessibilityLabel="Go back"
         accessibilityRole="button"
