@@ -1,0 +1,25 @@
+{
+  "tracking": false,
+  "trackingDomains": [],
+  "dataLinkedToUser": [
+    {
+      "category": "Contact Info",
+      "types": ["Name", "Email Address", "Phone Number"],
+      "purposes": ["App Functionality", "Developer Communications"]
+    },
+    {
+      "category": "User Content",
+      "types": ["Photos or Videos", "Other User Content"],
+      "purposes": ["App Functionality"]
+    },
+    {
+      "category": "Identifiers",
+      "types": ["User ID", "Device ID"],
+      "purposes": ["App Functionality"]
+    }
+  ],
+  "dataNotLinkedToUser": [],
+  "saleOfData": false,
+  "targetedAdvertising": false,
+  "notes": "People, notes, contact details, interactions, photos, tags, and follow-ups are entered by the user and stored only to provide the private app. Device identifiers are random installation IDs used to refresh and revoke push subscriptions."
+}

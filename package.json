@@ -2,6 +2,12 @@
   "name": "frenk",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "apps/mobile"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
@@ -12,7 +18,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "mobile:start": "npm run start --workspace=apps/mobile",
+    "mobile:ios": "npm run ios --workspace=apps/mobile",
+    "mobile:android": "npm run android --workspace=apps/mobile",
+    "mobile:lint": "npm run lint --workspace=apps/mobile",
+    "mobile:typecheck": "npm run typecheck --workspace=apps/mobile",
+    "mobile:test": "npm run test --workspace=apps/mobile",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run mobile:lint && npm run mobile:typecheck && npm run mobile:test && npm run build"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -20,6 +32,7 @@
     "@supabase/supabase-js": "^2.112.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "expo-server-sdk": "^7.0.0",
     "next": "15.5.22",
     "react": "19.1.0",
     "react-dom": "19.1.0",

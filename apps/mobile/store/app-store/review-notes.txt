@@ -1,0 +1,13 @@
+Frenk is a private people-and-follow-up organizer. It does not scrape Instagram or any other social network.
+
+Review account
+Email: ${APP_REVIEW_EMAIL}
+Password: ${APP_REVIEW_PASSWORD}
+
+The review account should be preloaded with fictional people, interactions, birthdays, and follow-ups. No real person data should be used.
+
+Account deletion is available in Settings > Delete account and data. Privacy Policy and Terms of Service are available before sign-in and from Settings.
+
+Push notification permission is requested only after the reviewer taps Set up notifications during onboarding or Enable push notifications on the Notifications screen. Remote push requires a physical device. The Send a test notification action is available after permission is granted.
+
+Sign in with Apple and Google require network access. Email/password is available as a reliable review fallback.

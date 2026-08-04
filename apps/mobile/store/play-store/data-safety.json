@@ -1,0 +1,35 @@
+{
+  "dataShared": false,
+  "dataCollected": true,
+  "securityPractices": {
+    "encryptedInTransit": true,
+    "accountDeletionAvailable": true,
+    "deletionPath": "Settings > Delete account and data"
+  },
+  "collectedData": [
+    {
+      "category": "Personal info",
+      "types": ["Name", "Email address", "Phone number", "User IDs"],
+      "required": "Account email and user ID are required; other fields are optional.",
+      "purposes": ["App functionality", "Account management"]
+    },
+    {
+      "category": "Photos and videos",
+      "types": ["Photos"],
+      "required": "Optional",
+      "purposes": ["App functionality"]
+    },
+    {
+      "category": "App activity",
+      "types": ["Other user-generated content"],
+      "required": "Optional",
+      "purposes": ["App functionality"]
+    },
+    {
+      "category": "Device or other IDs",
+      "types": ["Device IDs"],
+      "required": "Optional; created when push is enabled.",
+      "purposes": ["App functionality"]
+    }
+  ]
+}
