@@ -65,6 +65,10 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
         ]
       : [],
   },
+  web: {
+    bundler: "metro",
+    favicon: "./assets/images/icon.png",
+  },
   plugins: [
     "expo-router",
     "expo-apple-authentication",
