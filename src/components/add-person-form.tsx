@@ -68,7 +68,7 @@ export function AddPersonForm() {
       throw new Error(uploadError.message);
     }
 
-    return supabase.storage.from("avatars").getPublicUrl(filePath).data.publicUrl;
+    return filePath;
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

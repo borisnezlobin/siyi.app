@@ -102,6 +102,7 @@ test("authentication offers magic links without forcing a password", async ({
 }) => {
   await page.goto("/auth");
 
+  await expect(page.getByRole("button", { name: "Continue with Apple" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Email me a sign-in link" })).toBeVisible();
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
@@ -109,6 +110,18 @@ test("authentication offers magic links without forcing a password", async ({
   await page.getByLabel("Email address").fill("alex@example.edu");
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+});
+
+test("legal pages contain launch-ready policies", async ({ page }) => {
+  await page.goto("/privacy");
+  await expect(page.getByRole("heading", { name: "Privacy policy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your choices and rights" })).toBeVisible();
+  await expect(page.getByText(/do not sell personal information/i)).toBeVisible();
+
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { name: "Terms of service" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Information about other people" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account deletion" })).toBeVisible();
 });
 
 test("authentication supports password sign in, signup, and recovery", async ({

@@ -1,13 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
-import { requireAuthenticatedUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedRequest } from "@/lib/api-auth";
+import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { importPayloadSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuthenticatedUser();
-    const validation = importPayloadSchema.safeParse(await request.json());
+    const { user, supabase } = await requireAuthenticatedRequest(request);
+    const rawPayload = await request.json().catch(() => null);
+    if (!rawPayload) {
+      return apiError("Choose a valid JSON export file.", 400);
+    }
+    const validation = importPayloadSchema.safeParse(rawPayload);
     if (!validation.success) {
       const issue = validation.error.issues[0];
       return apiError(
@@ -16,7 +20,6 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = validation.data;
-    const supabase = await createClient();
     const personIdMap = new Map<string, string>();
     const tagIdMap = new Map<string, string>();
 
@@ -29,7 +32,12 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         full_name: person.fullName,
         preferred_name: person.preferredName,
-        profile_photo_url: person.profilePhotoUrl,
+        profile_photo_url: isOwnedAvatarReference(
+          person.profilePhotoUrl,
+          user.id,
+        )
+          ? person.profilePhotoUrl
+          : null,
         instagram_username: person.instagramUsername,
         phone_number: person.phoneNumber,
         email: person.email,

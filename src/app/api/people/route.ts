@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
+import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuthenticatedUser();
+    const user = await requireAuthenticatedUser();
     const validation = personInputSchema.safeParse(await request.json());
 
     if (!validation.success) {
@@ -14,6 +15,10 @@ export async function POST(request: NextRequest) {
     }
 
     const person = validation.data;
+    if (!isOwnedAvatarReference(person.profilePhotoUrl, user.id)) {
+      return apiError("The profile photo does not belong to this account.");
+    }
+
     const supabase = await createClient();
     const { data, error } = await supabase.rpc(
       "create_person_with_met_interaction",

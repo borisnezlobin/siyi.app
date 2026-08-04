@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@/lib/demo-data";
+import { resolveAvatarUrls, resolvedAvatarUrl } from "@/lib/avatar-urls";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { FollowUp, Interaction, Person, RelationshipStrength, Tag } from "@/lib/types";
@@ -47,7 +48,7 @@ function mapTag(row: TagRow): Tag {
   };
 }
 
-function mapPerson(row: PersonRow): Person {
+function mapPerson(row: PersonRow, profilePhotoUrl = row.profile_photo_url): Person {
   const joinedTags = (row.person_tags ?? []).flatMap(({ tags }) => {
     if (!tags) return [];
     return Array.isArray(tags) ? tags : [tags];
@@ -58,7 +59,7 @@ function mapPerson(row: PersonRow): Person {
     userId: row.user_id,
     fullName: row.full_name,
     preferredName: row.preferred_name,
-    profilePhotoUrl: row.profile_photo_url,
+    profilePhotoUrl,
     instagramUsername: row.instagram_username,
     phoneNumber: row.phone_number,
     email: row.email,
@@ -102,7 +103,18 @@ const loadPeople = async (): Promise<Person[]> => {
     throw new Error(error.message);
   }
 
-  return (data as PersonRow[]).map(mapPerson);
+  const rows = data as PersonRow[];
+  const avatarUrls = await resolveAvatarUrls(
+    supabase,
+    rows.map((row) => row.profile_photo_url),
+  );
+
+  return rows.map((row) =>
+    mapPerson(
+      row,
+      resolvedAvatarUrl(row.profile_photo_url, avatarUrls),
+    ),
+  );
 };
 
 export const getPeople = cache(loadPeople);
@@ -132,7 +144,12 @@ export async function getPerson(personId: string): Promise<Person> {
     notFound();
   }
 
-  return mapPerson(data as PersonRow);
+  const row = data as PersonRow;
+  const avatarUrls = await resolveAvatarUrls(supabase, [row.profile_photo_url]);
+  return mapPerson(
+    row,
+    resolvedAvatarUrl(row.profile_photo_url, avatarUrls),
+  );
 }
 
 export async function getInteractions(personId?: string): Promise<Interaction[]> {
@@ -179,6 +196,10 @@ export async function getFollowUps(): Promise<FollowUp[]> {
     .order("due_at", { ascending: true });
 
   if (error) throw new Error(error.message);
+  const avatarUrls = await resolveAvatarUrls(
+    supabase,
+    data.map((row) => row.people?.profile_photo_url),
+  );
 
   return data.map((row) => ({
     id: row.id,
@@ -194,7 +215,10 @@ export async function getFollowUps(): Promise<FollowUp[]> {
           id: row.people.id,
           fullName: row.people.full_name,
           preferredName: row.people.preferred_name,
-          profilePhotoUrl: row.people.profile_photo_url,
+          profilePhotoUrl: resolvedAvatarUrl(
+            row.people.profile_photo_url,
+            avatarUrls,
+          ),
         }
       : undefined,
   }));

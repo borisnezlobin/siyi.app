@@ -65,6 +65,31 @@ export async function signInWithGoogle() {
   redirect(data.url);
 }
 
+export async function signInWithApple() {
+  if (!isSupabaseConfigured()) {
+    redirect("/today");
+  }
+
+  const supabase = await createClient();
+  const appUrl = await getAppUrl();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: {
+      redirectTo: `${appUrl}/auth/callback?next=/today`,
+    },
+  });
+
+  if (error || !data.url) {
+    redirect(
+      `/auth?error=${encodeURIComponent(
+        error?.message ?? "Apple sign-in could not be started.",
+      )}`,
+    );
+  }
+
+  redirect(data.url);
+}
+
 export async function sendMagicLink(formData: FormData) {
   const emailValue = formData.get("email");
   const email = typeof emailValue === "string" ? emailValue.trim() : "";

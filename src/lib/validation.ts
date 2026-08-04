@@ -68,7 +68,12 @@ export const personInputSchema = z.object({
     z.coerce.number().int().min(1).max(3650).nullable(),
   ),
   status: z.enum(personStatuses).default("active"),
-  profilePhotoUrl: z.string().url().nullish().transform((value) => value || null),
+  profilePhotoUrl: z
+    .string()
+    .trim()
+    .max(1024)
+    .nullish()
+    .transform((value) => value || null),
   firstMetAt: z.string().datetime().optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,

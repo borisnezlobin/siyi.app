@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
+import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
@@ -55,6 +56,11 @@ export async function PATCH(
     const validation = updatePersonSchema.safeParse(await request.json());
     if (!validation.success) {
       return apiError(validation.error.issues[0]?.message ?? "Invalid update.");
+    }
+    if (
+      !isOwnedAvatarReference(validation.data.profilePhotoUrl, user.id)
+    ) {
+      return apiError("The profile photo does not belong to this account.");
     }
 
     const supabase = await createClient();

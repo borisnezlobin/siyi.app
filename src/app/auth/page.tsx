@@ -1,4 +1,5 @@
 import {
+  AppleLogo,
   ArrowRight,
   EnvelopeSimple,
   GoogleLogo,
@@ -13,6 +14,7 @@ import { brand } from "@/config/brand";
 import {
   sendMagicLink,
   sendPasswordReset,
+  signInWithApple,
   signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
@@ -205,15 +207,26 @@ export default async function AuthPage({
                     </p>
                   ) : null}
 
-                  <form action={signInWithGoogle} className="mt-7">
-                    <button
-                      type="submit"
-                      className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-[#28332e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                    >
-                      <GoogleLogo size={20} weight="bold" aria-hidden="true" />
-                      Continue with Google
-                    </button>
-                  </form>
+                  <div className="mt-7 grid gap-2">
+                    <form action={signInWithApple}>
+                      <button
+                        type="submit"
+                        className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-[#28332e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                      >
+                        <AppleLogo size={21} weight="fill" aria-hidden="true" />
+                        Continue with Apple
+                      </button>
+                    </form>
+                    <form action={signInWithGoogle}>
+                      <button
+                        type="submit"
+                        className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-white px-5 text-sm font-semibold text-ink shadow-card ring-1 ring-black/[0.055] transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                      >
+                        <GoogleLogo size={20} weight="bold" aria-hidden="true" />
+                        Continue with Google
+                      </button>
+                    </form>
+                  </div>
 
                   <div className="my-5 flex items-center gap-3 text-[11px] text-ink/35">
                     <span className="h-px flex-1 bg-ink/10" />
