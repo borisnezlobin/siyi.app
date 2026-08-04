@@ -11,6 +11,7 @@ import {
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   QuickCaptureHub,
   QuickCaptureTrigger,
@@ -50,6 +51,7 @@ export function AppShell({
   >[];
 }) {
   const pathname = usePathname();
+  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const initials = displayName
     .split(/\s+/)
     .slice(0, 2)
@@ -103,10 +105,10 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        <div className="mt-6 space-y-2">
           <Link
             href="/people/new"
-            className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-coral px-4 py-3 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-coral px-4 py-3 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
           >
             <Plus size={18} weight="bold" aria-hidden="true" />
             Add someone
@@ -185,7 +187,28 @@ export function AppShell({
           },
         )}
 
-        <span className="min-h-12" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => setQuickCaptureOpen((open) => !open)}
+          className="relative z-50 -mt-7 flex min-h-16 flex-col items-center justify-end gap-1 text-[10px] font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          aria-label={
+            quickCaptureOpen ? "Close quick actions" : "Open quick actions"
+          }
+          aria-expanded={quickCaptureOpen}
+        >
+          <span className="grid size-14 place-items-center rounded-full bg-coral text-white shadow-float ring-4 ring-white">
+            <Plus
+              size={24}
+              weight="bold"
+              className={clsx(
+                "transition-transform duration-200",
+                quickCaptureOpen && "rotate-45",
+              )}
+              aria-hidden="true"
+            />
+          </span>
+          {quickCaptureOpen ? "Close" : "Add"}
+        </button>
 
         {[
           primaryNavigation[2],
@@ -208,7 +231,11 @@ export function AppShell({
           );
         })}
       </nav>
-      <QuickCaptureHub people={quickPeople} />
+      <QuickCaptureHub
+        people={quickPeople}
+        menuOpen={quickCaptureOpen}
+        onMenuOpenChange={setQuickCaptureOpen}
+      />
     </div>
   );
 }

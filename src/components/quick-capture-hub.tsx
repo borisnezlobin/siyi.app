@@ -6,7 +6,6 @@ import {
   ChatCircleDots,
   Check,
   CheckSquareOffset,
-  Plus,
   SpinnerGap,
   UserPlus,
   X,
@@ -15,7 +14,7 @@ import clsx from "clsx";
 import { addDays, format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getApiResponseError } from "@/lib/http";
 import { interactionOptions } from "@/lib/interaction-options";
 import type { InteractionType, Person } from "@/lib/types";
@@ -60,7 +59,7 @@ export function QuickCaptureTrigger({
         compact
           ? "grid size-9 shrink-0 place-items-center rounded-full bg-sage text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           : clsx(
-              "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
+              "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
               surface === "sidebar"
                 ? "bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
                 : "bg-ink text-white shadow-card focus-visible:ring-coral",
@@ -74,10 +73,17 @@ export function QuickCaptureTrigger({
   );
 }
 
-export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
+export function QuickCaptureHub({
+  people,
+  menuOpen,
+  onMenuOpenChange,
+}: {
+  people: QuickPerson[];
+  menuOpen: boolean;
+  onMenuOpenChange: (open: boolean) => void;
+}) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [mode, setMode] = useState<CaptureMode | null>(null);
   const [personId, setPersonId] = useState("");
   const [followUpText, setFollowUpText] = useState("");
@@ -89,14 +95,17 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  function openCapture(nextMode: CaptureMode, nextPersonId?: string) {
-    setMenuOpen(false);
-    setPersonId(nextPersonId ?? "");
-    setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
-    setMode(nextMode);
-    setError("");
-    setSaved(false);
-  }
+  const openCapture = useCallback(
+    (nextMode: CaptureMode, nextPersonId?: string) => {
+      onMenuOpenChange(false);
+      setPersonId(nextPersonId ?? "");
+      setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+      setMode(nextMode);
+      setError("");
+      setSaved(false);
+    },
+    [onMenuOpenChange],
+  );
 
   useEffect(() => {
     const openFromElsewhere = (event: Event) => {
@@ -107,7 +116,7 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
     window.addEventListener(quickCaptureEvent, openFromElsewhere);
     return () =>
       window.removeEventListener(quickCaptureEvent, openFromElsewhere);
-  }, []);
+  }, [openCapture]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -225,8 +234,8 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
       {menuOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-ink/10 lg:hidden"
-          onClick={() => setMenuOpen(false)}
+          className="fixed inset-0 z-30 bg-ink/10 lg:hidden"
+          onClick={() => onMenuOpenChange(false)}
           aria-label="Close quick actions"
         />
       ) : null}
@@ -242,7 +251,7 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
       >
         <Link
           href="/people/new"
-          onClick={() => setMenuOpen(false)}
+          onClick={() => onMenuOpenChange(false)}
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-white px-2 text-[11px] font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
         >
           <UserPlus size={23} weight="fill" className="text-coral" aria-hidden="true" />
@@ -251,7 +260,7 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
         <button
           type="button"
           onClick={() => {
-            setMenuOpen(false);
+            onMenuOpenChange(false);
             window.setTimeout(() => openCapture("follow-up"), 130);
           }}
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-sage px-2 text-[11px] font-semibold text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
@@ -262,7 +271,7 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
         <button
           type="button"
           onClick={() => {
-            setMenuOpen(false);
+            onMenuOpenChange(false);
             window.setTimeout(() => openCapture("interaction"), 130);
           }}
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-[#fff5d8] px-2 text-[11px] font-semibold text-[#705513] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
@@ -271,27 +280,6 @@ export function QuickCaptureHub({ people }: { people: QuickPerson[] }) {
           Interaction
         </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setMenuOpen((current) => !current)}
-        className="fixed bottom-[calc(0.4rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-1 text-[10px] font-semibold text-ink focus-visible:outline-none lg:hidden"
-        aria-label={menuOpen ? "Close quick actions" : "Open quick actions"}
-        aria-expanded={menuOpen}
-      >
-        <span className="grid size-14 place-items-center rounded-full bg-coral text-white shadow-float ring-4 ring-white">
-          <Plus
-            size={24}
-            weight="bold"
-            className={clsx(
-              "transition-transform duration-200",
-              menuOpen && "rotate-45",
-            )}
-            aria-hidden="true"
-          />
-        </span>
-        {menuOpen ? "Close" : "Add"}
-      </button>
 
       <dialog
         ref={dialogRef}
