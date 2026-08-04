@@ -9,4 +9,6 @@ export const brand = {
   operatorName:
     process.env.EXPO_PUBLIC_LEGAL_ENTITY_NAME?.trim() || "Frenk",
   legalEffectiveDate: "August 4, 2026",
+  iosProtectedCapabilitiesEnabled:
+    process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false",
 } as const;

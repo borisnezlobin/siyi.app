@@ -47,6 +47,9 @@ export async function getPushPermissionState(): Promise<PushPermissionState> {
   if (!Device.isDevice || (Platform.OS !== "ios" && Platform.OS !== "android")) {
     return "unavailable";
   }
+  if (Platform.OS === "ios" && !brand.iosProtectedCapabilitiesEnabled) {
+    return "unavailable";
+  }
   const permission = await Notifications.getPermissionsAsync();
   if (permission.granted) return "granted";
   if (permission.canAskAgain) return "undetermined";
@@ -94,6 +97,11 @@ async function upsertExpoToken(session: Session) {
 }
 
 export async function enableNativePush(session: Session) {
+  if (Platform.OS === "ios" && !brand.iosProtectedCapabilitiesEnabled) {
+    throw new Error(
+      "Remote push will be available after the Apple Developer membership is connected. This local build can test the rest of the app.",
+    );
+  }
   if (!Device.isDevice) {
     throw new Error(
       "Remote push notifications require a physical iPhone or Android device.",

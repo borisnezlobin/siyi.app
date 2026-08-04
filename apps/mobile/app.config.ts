@@ -10,6 +10,8 @@ const androidPackage =
   process.env.EXPO_PUBLIC_ANDROID_PACKAGE?.trim() ||
   "com.borisnezlobin.people";
 const appDomain = process.env.EXPO_PUBLIC_APP_DOMAIN?.trim();
+const iosProtectedCapabilitiesEnabled =
+  process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false";
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -27,8 +29,8 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier,
     buildNumber: "1",
     supportsTablet: true,
-    usesAppleSignIn: true,
-    associatedDomains: appDomain ? [`applinks:${appDomain}`] : [],
+    usesAppleSignIn: iosProtectedCapabilitiesEnabled,
+    associatedDomains: appDomain ? [`applinks:${appDomain}`] : undefined,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription:
@@ -71,7 +73,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
-    "expo-apple-authentication",
+    ...(iosProtectedCapabilitiesEnabled
+      ? (["expo-apple-authentication"] as const)
+      : []),
     "expo-secure-store",
     [
       "expo-image-picker",
@@ -82,14 +86,18 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
           "Take a profile photo for someone you want to remember.",
       },
     ],
-    [
-      "expo-notifications",
-      {
-        icon: "./assets/images/notification-icon.png",
-        color: "#e66b56",
-        defaultChannel: "reminders",
-      },
-    ],
+    ...(iosProtectedCapabilitiesEnabled
+      ? ([
+          [
+            "expo-notifications",
+            {
+              icon: "./assets/images/notification-icon.png",
+              color: "#e66b56",
+              defaultChannel: "reminders",
+            },
+          ],
+        ] as NonNullable<ExpoConfig["plugins"]>)
+      : []),
     [
       "expo-splash-screen",
       {
@@ -104,6 +112,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
         experimentalLauncherActivity: false,
       },
     ],
+    ...(iosProtectedCapabilitiesEnabled
+      ? []
+      : ["./plugins/without-protected-ios-capabilities"]),
   ],
   experiments: {
     typedRoutes: true,

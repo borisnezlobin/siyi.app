@@ -152,7 +152,7 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.providerStack}>
-          {Platform.OS === "ios" ? (
+          {Platform.OS === "ios" && brand.iosProtectedCapabilitiesEnabled ? (
             <Button
               icon={AppleLogo}
               label="Continue with Apple"
