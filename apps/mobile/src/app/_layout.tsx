@@ -17,6 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "@/constants/theme";
 import { AuthProvider } from "@/providers/auth-provider";
 import { useAuth } from "@/providers/auth-provider";
+import { OfflineSyncProvider } from "@/providers/offline-sync-provider";
 import {
   appRouteFromNotificationUrl,
   configureNotificationPresentation,
@@ -89,7 +90,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <BottomSheetModalProvider>
           <AuthProvider>
-            <AppRuntime />
+            <OfflineSyncProvider>
+              <AppRuntime />
+            </OfflineSyncProvider>
           </AuthProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>

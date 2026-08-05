@@ -19,6 +19,11 @@ import {
   supabase,
 } from "@/lib/supabase";
 import type { UserProfile } from "@/lib/types";
+import {
+  getOfflineSnapshot,
+  isOnline,
+  updateOfflineSnapshot,
+} from "@/lib/offline-store";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -119,6 +124,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const snapshot = await getOfflineSnapshot(activeSession.user.id);
+    if (!(await isOnline())) {
+      if (snapshot.profile) {
+        setProfile(snapshot.profile);
+        return;
+      }
+      throw new Error("Connect once to finish loading this account.");
+    }
+
     const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
@@ -127,7 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) throw error;
     if (data) {
-      setProfile(mapProfile(data as ProfileRow));
+      const mappedProfile = mapProfile(data as ProfileRow);
+      setProfile(mappedProfile);
+      await updateOfflineSnapshot(activeSession.user.id, (current) => ({
+        ...current,
+        profile: mappedProfile,
+      }));
       return;
     }
 
@@ -148,7 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
 
     if (createError) throw createError;
-    setProfile(mapProfile(createdProfile as ProfileRow));
+    const mappedProfile = mapProfile(createdProfile as ProfileRow);
+    setProfile(mappedProfile);
+    await updateOfflineSnapshot(activeSession.user.id, (current) => ({
+      ...current,
+      profile: mappedProfile,
+    }));
   }, []);
 
   const refreshProfile = useCallback(
@@ -164,6 +188,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       try {
         await loadProfile(data.session);
+      } catch {
+        if (data.session) {
+          const snapshot = await getOfflineSnapshot(data.session.user.id);
+          if (snapshot.profile) setProfile(snapshot.profile);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -175,9 +204,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(nextSession);
       setTimeout(() => {
-        void loadProfile(nextSession).finally(() => {
-          if (mounted) setLoading(false);
-        });
+        void loadProfile(nextSession)
+          .catch(async () => {
+            if (!nextSession) return;
+            const snapshot = await getOfflineSnapshot(nextSession.user.id);
+            if (snapshot.profile && mounted) setProfile(snapshot.profile);
+          })
+          .finally(() => {
+            if (mounted) setLoading(false);
+          });
       }, 0);
     });
 

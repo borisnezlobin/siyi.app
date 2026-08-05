@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
+import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import {
   colors,
@@ -20,18 +21,26 @@ export function Avatar({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+  const cacheKey = uri
+    ? uri.startsWith("file:")
+      ? uri
+      : uri.replace(/[?#].*$/, "")
+    : undefined;
 
   if (uri) {
     return (
       <Image
+        cachePolicy="memory-disk"
+        contentFit="cover"
         alt={`${name}'s profile photo`}
         accessibilityLabel={`${name}'s profile photo`}
-        source={{ uri }}
+        source={{ uri, cacheKey }}
         style={{
           borderRadius: size / 2,
           height: size,
           width: size,
         }}
+        transition={120}
       />
     );
   }

@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
   ArrowLeft,
@@ -11,7 +12,6 @@ import {
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -194,6 +194,8 @@ export function PersonForm({ person }: { person?: Person }) {
               <Image
                 accessibilityLabel={`${fullName || "Person"} profile photo`}
                 alt={`${fullName || "Person"} profile photo`}
+                cachePolicy="memory-disk"
+                contentFit="cover"
                 source={{ uri: photoUri }}
                 style={styles.photo}
               />

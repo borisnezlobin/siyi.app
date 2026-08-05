@@ -99,7 +99,11 @@ export type FollowUp = {
   updatedAt: string;
   person?: Pick<
     Person,
-    "id" | "fullName" | "preferredName" | "profilePhotoUrl"
+    | "id"
+    | "fullName"
+    | "preferredName"
+    | "profilePhotoUrl"
+    | "profilePhotoPath"
   >;
 };
 
