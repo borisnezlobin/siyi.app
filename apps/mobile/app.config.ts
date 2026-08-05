@@ -98,6 +98,35 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
           ],
         ] as NonNullable<ExpoConfig["plugins"]>)
       : []),
+    ...(iosProtectedCapabilitiesEnabled
+      ? ([
+          [
+            "expo-widgets",
+            {
+              bundleIdentifier: `${bundleIdentifier}.widgets`,
+              groupIdentifier: `group.${bundleIdentifier}`,
+              widgets: [
+                {
+                  name: "FrenkTodayWidget",
+                  contentMarginsDisabled: true,
+                  displayName: `${appName} Today`,
+                  description:
+                    "See reminders and what needs attention.",
+                  supportedFamilies: ["systemSmall", "systemMedium"],
+                },
+                {
+                  name: "FrenkCatchUpWidget",
+                  contentMarginsDisabled: true,
+                  displayName: `${appName} Catch Up`,
+                  description:
+                    "Bring someone to mind and open their context.",
+                  supportedFamilies: ["systemSmall", "systemMedium"],
+                },
+              ],
+            },
+          ],
+        ] as NonNullable<ExpoConfig["plugins"]>)
+      : []),
     [
       "expo-splash-screen",
       {
