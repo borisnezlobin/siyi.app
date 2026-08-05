@@ -163,7 +163,7 @@ export default function SettingsScreen() {
       );
       setPendingImport(null);
       setMessage(
-        `Imported ${result.imported.people} people, ${result.imported.interactions} interactions, and ${result.imported.followUps} follow-ups.`,
+        `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.followUps} follow-ups.`,
       );
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
@@ -182,7 +182,7 @@ export default function SettingsScreen() {
   function requestAccountDeletion() {
     Alert.alert(
       "Delete your account?",
-      "This permanently removes your account, people, interactions, follow-ups, photos, and notification records. This cannot be undone.",
+      "This permanently removes your account, people, updates, interactions, follow-ups, photos, and notification records. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -333,9 +333,9 @@ export default function SettingsScreen() {
           />
           <Button
             icon={DownloadSimple}
-            label="Export interactions as CSV"
-            loading={busyAction === "export-interactions-csv"}
-            onPress={() => void exportFormat("interactions-csv")}
+            label="Export updates as CSV"
+            loading={busyAction === "export-updates-csv"}
+            onPress={() => void exportFormat("updates-csv")}
             variant="secondary"
           />
           <Button
@@ -350,7 +350,8 @@ export default function SettingsScreen() {
               <AppText variant="heading">Ready to preview</AppText>
               <AppText style={styles.muted}>
                 {pendingImport.preview.people} people ·{" "}
-                {pendingImport.preview.interactions} interactions ·{" "}
+                {pendingImport.preview.updates} updates ·{" "}
+                {pendingImport.preview.interactions} legacy interactions ·{" "}
                 {pendingImport.preview.followUps} follow-ups ·{" "}
                 {pendingImport.preview.tags} tags
               </AppText>
@@ -454,7 +455,7 @@ export default function SettingsScreen() {
           Delete account
         </AppText>
         <AppText style={styles.muted}>
-          Permanently removes every person, note, photo, interaction,
+          Permanently removes every person, note, photo, update, interaction,
           follow-up, subscription, and your sign-in identity.
         </AppText>
         <Button

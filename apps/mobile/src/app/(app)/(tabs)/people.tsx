@@ -159,7 +159,7 @@ export default function PeopleScreen() {
       eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle={`${screenData.data!.people.filter((person) => person.status !== "archived").length} people, with the context you wanted to keep.`}
+      subtitle="Search by name, username, phone, note, major, dorm, or tag."
       title="People"
     >
       <View style={styles.searchRow}>
@@ -169,7 +169,7 @@ export default function PeopleScreen() {
             accessibilityLabel="Search people"
             autoCapitalize="none"
             onChangeText={setQuery}
-            placeholder="Name, phone, note, major, dorm, tag…"
+            placeholder="Search…"
             placeholderTextColor={colors.inkMuted}
             returnKeyType="search"
             selectionColor={colors.coral}
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   filterButton: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.medium,
+    borderRadius: radii.small,
     height: 52,
     justifyContent: "center",
     width: 52,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     paddingHorizontal: 13,
     paddingVertical: 8,
   },

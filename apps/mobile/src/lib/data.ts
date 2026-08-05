@@ -9,6 +9,7 @@ import {
   type Interaction,
   type NotificationPreference,
   type Person,
+  type PersonUpdate,
   type RelationshipStrength,
   type ReminderDefaults,
   type Tag,
@@ -18,9 +19,11 @@ import {
   followUpInputSchema,
   importPreviewSchema,
   interactionInputSchema,
+  personUpdateInputSchema,
   personInputSchema,
   type FollowUpInput,
   type InteractionInput,
+  type PersonUpdateInput,
   type PersonInput,
 } from "@/lib/validation";
 import { brand } from "@/config/brand";
@@ -83,10 +86,23 @@ type FollowUpRow = {
     | null;
 };
 
+type PersonUpdateRow = {
+  id: string;
+  user_id: string;
+  text: string;
+  recorded_at: string;
+  is_interaction: boolean;
+  interaction_label: string | null;
+  created_at: string;
+  updated_at: string;
+  person_update_people?: { person_id: string }[];
+};
+
 export type PersonDetails = {
   person: Person;
   interactions: Interaction[];
   followUps: FollowUp[];
+  updates: PersonUpdate[];
 };
 
 export type AccountSettings = {
@@ -277,6 +293,7 @@ export async function getPersonDetails(personId: string) {
     note: row.note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    sourceUpdateId: row.source_update_id || null,
   }));
   const followUpRows = followUpsResult.data as FollowUpRow[];
   const avatarUrls = await signedAvatarUrls(
@@ -285,10 +302,34 @@ export async function getPersonDetails(personId: string) {
     ),
   );
 
+  const updatesResult = await supabase
+    .from("person_updates")
+    .select("*, person_update_people!inner(person_id)")
+    .eq("person_update_people.person_id", personId)
+    .order("recorded_at", { ascending: false });
+  if (updatesResult.error && !isMissingUpdatesSchema(updatesResult.error.code)) {
+    throw updatesResult.error;
+  }
+  const updates = ((updatesResult.data || []) as PersonUpdateRow[]).map(
+    (row): PersonUpdate => ({
+      id: row.id,
+      userId: row.user_id,
+      text: row.text,
+      recordedAt: row.recorded_at,
+      isInteraction: row.is_interaction,
+      interactionLabel: row.interaction_label,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      personIds:
+        row.person_update_people?.map((item) => item.person_id) || [],
+    }),
+  );
+
   return {
     person,
     interactions,
     followUps: followUpRows.map((row) => mapFollowUp(row, avatarUrls)),
+    updates,
   } satisfies PersonDetails;
 }
 
@@ -441,6 +482,110 @@ export async function createInteraction(
     .single();
   if (error) throw error;
   return data;
+}
+
+const updateTypeKinds: Record<string, Interaction["type"]> = {
+  met: "met",
+  talked: "other",
+  texted: "texted",
+  called: "called",
+  coffee: "coffee",
+  meal: "meal",
+  party: "party",
+  class: "class",
+  event: "event",
+  other: "other",
+};
+
+function updateKind(label: string | null) {
+  return updateTypeKinds[label?.trim().toLowerCase() || ""] || "other";
+}
+
+function isMissingUpdatesSchema(code: string | undefined) {
+  return ["42P01", "42883", "PGRST202", "PGRST205"].includes(code || "");
+}
+
+async function saveUpdateFallback(
+  userId: string,
+  update: PersonUpdateInput,
+) {
+  if (update.isInteraction) {
+    await Promise.all(
+      update.personIds.map((personId) =>
+        createInteraction(userId, {
+          personId,
+          type: updateKind(update.interactionLabel),
+          occurredAt: update.recordedAt,
+          note: update.text,
+        }),
+      ),
+    );
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("people")
+    .select("id,general_notes")
+    .in("id", update.personIds);
+  if (error) throw error;
+  const recordedLabel = new Date(update.recordedAt).toLocaleString();
+  await Promise.all(
+    data.map((person) => {
+      const note = `${recordedLabel} — ${update.text}`;
+      return supabase
+        .from("people")
+        .update({
+          general_notes: person.general_notes
+            ? `${person.general_notes}\n\n${note}`
+            : note,
+        })
+        .eq("id", person.id)
+        .then(({ error: updateError }) => {
+          if (updateError) throw updateError;
+        });
+    }),
+  );
+}
+
+export async function createPersonUpdate(
+  userId: string,
+  input: PersonUpdateInput,
+) {
+  const update = personUpdateInputSchema.parse(input);
+  const { data, error } = await supabase.rpc("create_person_update", {
+    person_ids: update.personIds,
+    update_text: update.text,
+    recorded_at: update.recordedAt,
+    is_interaction: update.isInteraction,
+    interaction_label: update.isInteraction
+      ? update.interactionLabel || "Talked"
+      : null,
+    interaction_kind: updateKind(update.interactionLabel),
+  });
+
+  if (!error) return data;
+  if (!isMissingUpdatesSchema(error.code)) throw error;
+  await saveUpdateFallback(userId, update);
+  return null;
+}
+
+export async function getRecentUpdateTypes() {
+  const { data, error } = await supabase
+    .from("person_updates")
+    .select("interaction_label")
+    .eq("is_interaction", true)
+    .not("interaction_label", "is", null)
+    .order("recorded_at", { ascending: false })
+    .limit(30);
+  if (error && isMissingUpdatesSchema(error.code)) return [];
+  if (error) throw error;
+  return Array.from(
+    new Set(
+      data
+        .map((item) => item.interaction_label?.trim())
+        .filter((label): label is string => Boolean(label)),
+    ),
+  );
 }
 
 export async function setFollowUpComplete(
@@ -630,7 +775,11 @@ async function authenticatedWebRequest(
   return response;
 }
 
-export type ExportFormat = "json" | "people-csv" | "interactions-csv";
+export type ExportFormat =
+  | "json"
+  | "people-csv"
+  | "interactions-csv"
+  | "updates-csv";
 
 export async function shareAccountExport(
   session: Session,
@@ -647,6 +796,8 @@ export async function shareAccountExport(
   const suffix =
     format === "people-csv"
       ? "contacts"
+      : format === "updates-csv"
+        ? "updates"
       : format === "interactions-csv"
         ? "interactions"
         : "export";
@@ -695,6 +846,7 @@ export async function chooseImportFile() {
     payload,
     preview: {
       people: preview.data.people.length,
+      updates: preview.data.updates.length,
       interactions: preview.data.interactions.length,
       followUps: preview.data.followUps.length,
       tags: preview.data.tags.length,
@@ -720,6 +872,7 @@ export async function importAccountData(
   return (await response.json()) as {
     imported: {
       people: number;
+      updates: number;
       interactions: number;
       followUps: number;
       tags: number;

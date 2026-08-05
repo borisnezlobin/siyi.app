@@ -2,17 +2,30 @@ import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
+  BottomSheetTextInput,
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
+  ArrowLeft,
+  ArrowRight,
   CalendarCheck,
+  ChatCircle,
   ChatCircleDots,
   Check,
   Clock,
+  DiscordLogo,
+  Envelope,
+  InstagramLogo,
+  LightbulbFilament,
+  MagnifyingGlass,
+  NotePencil,
+  PencilSimple,
   Plus,
+  Shuffle,
   UserPlus,
   X,
 } from "phosphor-react-native";
@@ -27,9 +40,10 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
-  TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,6 +51,7 @@ import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
+import { brand } from "@/config/brand";
 import {
   colors,
   fontFamilies,
@@ -44,40 +59,63 @@ import {
 } from "@/constants/theme";
 import {
   createFollowUp,
-  createInteraction,
+  createPersonUpdate,
   getPeople,
+  getPersonDetails,
+  getRecentUpdateTypes,
+  type PersonDetails,
 } from "@/lib/data";
 import {
-  interactionTypes,
-  type InteractionType,
+  chooseCatchUpPerson,
+  fallbackConversationStarters,
+} from "@/lib/catch-up";
+import {
+  contactChoicesForPerson,
+  openContactMethod,
+  type ContactMethod,
+} from "@/lib/contact-links";
+import {
+  getPreferredContactMethod,
+  setPreferredContactMethod,
+} from "@/lib/contact-preferences";
+import { elapsedLabel } from "@/lib/date-labels";
+import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
+import {
   type Person,
 } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 
-type CapturePhase = "menu" | "follow-up" | "interaction";
+type CapturePhase =
+  | "menu"
+  | "follow-up"
+  | "update"
+  | "catch-up"
+  | "choose-catch-up"
+  | "contact";
 
 type QuickCaptureContextValue = {
   revision: number;
   open: () => void;
   addPerson: () => void;
   addFollowUp: (personId?: string) => void;
-  logInteraction: (personId?: string) => void;
+  addUpdate: (personId?: string) => void;
+  catchUp: (personId?: string) => void;
+  sayHello: (personId: string) => void;
 };
 
 const QuickCaptureContext =
   createContext<QuickCaptureContextValue | null>(null);
 
-const interactionLabels: Record<InteractionType, string> = {
-  met: "Met",
-  texted: "Texted",
-  called: "Called",
-  coffee: "Coffee",
-  meal: "Meal",
-  party: "Party",
-  class: "Class",
-  event: "Event",
-  other: "Other",
-};
+const defaultUpdateTypes = [
+  "Talked",
+  "Texted",
+  "Called",
+  "Coffee",
+  "Meal",
+  "Party",
+  "Class",
+  "Event",
+];
 
 function dueAtFromOption(days: number) {
   const date = new Date();
@@ -141,15 +179,54 @@ function CaptureAction({
 
 function PersonPicker({
   people,
-  selectedId,
-  onSelect,
+  selectedIds,
+  onToggle,
+  multiple = false,
+  locked = false,
+  label = "Who is this for?",
 }: {
   people: Person[];
-  selectedId: string | null;
-  onSelect: (personId: string) => void;
+  selectedIds: string[];
+  onToggle: (personId: string) => void;
+  multiple?: boolean;
+  locked?: boolean;
+  label?: string;
 }) {
   const [query, setQuery] = useState("");
-  const filteredPeople = people
+  const lockedPerson = people.find((person) =>
+    selectedIds.includes(person.id),
+  );
+
+  if (locked && lockedPerson) {
+    return (
+      <View style={styles.lockedPerson}>
+        <Avatar
+          name={lockedPerson.fullName}
+          size={44}
+          uri={lockedPerson.profilePhotoUrl}
+        />
+        <View style={styles.flex}>
+          <AppText variant="caption">{label}</AppText>
+          <AppText variant="label">
+            {lockedPerson.preferredName || lockedPerson.fullName}
+          </AppText>
+        </View>
+        <Check color={colors.sageStrong} size={20} weight="bold" />
+      </View>
+    );
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const recentPeople = [...people].sort((left, right) => {
+    const leftDate = new Date(
+      left.lastInteractionAt || left.createdAt,
+    ).getTime();
+    const rightDate = new Date(
+      right.lastInteractionAt || right.createdAt,
+    ).getTime();
+    return rightDate - leftDate;
+  });
+  const filteredPeople = recentPeople
     .filter((person) =>
       [
         person.fullName,
@@ -159,36 +236,43 @@ function PersonPicker({
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(query.trim().toLowerCase()),
+        .includes(normalizedQuery),
     )
-    .slice(0, 7);
+    .slice(0, normalizedQuery ? 12 : 6);
 
   return (
     <View style={styles.picker}>
-      <AppText variant="label">Who is this for?</AppText>
       <View style={styles.search}>
-        <TextInput
+        <MagnifyingGlass color={colors.inkMuted} size={19} />
+        <BottomSheetTextInput
           accessibilityLabel="Search people"
           autoCapitalize="words"
           onChangeText={setQuery}
-          placeholder="Search people"
+          placeholder="Search…"
           placeholderTextColor={colors.inkMuted}
           selectionColor={colors.coral}
           style={styles.searchInput}
           value={query}
         />
       </View>
+      <AppText variant="label">
+        {normalizedQuery
+          ? "Search results"
+          : multiple
+            ? "Recent people · choose one or more"
+            : "Recent people"}
+      </AppText>
       <View style={styles.personOptions}>
         {filteredPeople.map((person) => {
-          const selected = person.id === selectedId;
+          const selected = selectedIds.includes(person.id);
           return (
             <Pressable
-              accessibilityRole="radio"
+              accessibilityRole={multiple ? "checkbox" : "radio"}
               accessibilityState={{ checked: selected }}
               key={person.id}
               onPress={() => {
                 void Haptics.selectionAsync();
-                onSelect(person.id);
+                onToggle(person.id);
               }}
               style={({ pressed }) => [
                 styles.personOption,
@@ -196,22 +280,118 @@ function PersonPicker({
                 pressed && styles.pressed,
               ]}
             >
-              <Avatar
-                name={person.fullName}
-                size={38}
-                uri={person.profilePhotoUrl}
-              />
-              <AppText numberOfLines={1} style={styles.personOptionName}>
+              <View>
+                <Avatar
+                  name={person.fullName}
+                  size={48}
+                  uri={person.profilePhotoUrl}
+                />
+                {selected ? (
+                  <View style={styles.selectedBadge}>
+                    <Check color={colors.paper} size={12} weight="bold" />
+                  </View>
+                ) : null}
+              </View>
+              <AppText
+                numberOfLines={1}
+                style={[
+                  styles.personOptionName,
+                  selected && styles.selectedPersonName,
+                ]}
+                variant="caption"
+              >
                 {person.preferredName || person.fullName}
               </AppText>
-              {selected ? (
-                <Check color={colors.paper} size={17} weight="bold" />
-              ) : null}
             </Pressable>
           );
         })}
       </View>
+      {filteredPeople.length === 0 ? (
+        <AppText style={styles.noResults}>
+          No one matches that search yet.
+        </AppText>
+      ) : null}
     </View>
+  );
+}
+
+const contactVisuals: Record<
+  ContactMethod,
+  {
+    backgroundColor: string;
+    gradient?: readonly [string, string, ...string[]];
+    icon: typeof InstagramLogo;
+  }
+> = {
+  instagram: {
+    backgroundColor: "#e1306c",
+    gradient: ["#833ab4", "#fd1d1d", "#fcaf45"] as const,
+    icon: InstagramLogo,
+  },
+  messages: {
+    backgroundColor: "#34c759",
+    icon: ChatCircle,
+  },
+  mail: {
+    backgroundColor: "#0a84ff",
+    icon: Envelope,
+  },
+  discord: {
+    backgroundColor: "#5865f2",
+    icon: DiscordLogo,
+  },
+};
+
+function ContactChoiceButton({
+  method,
+  label,
+  detail,
+  onPress,
+}: {
+  method: ContactMethod;
+  label: string;
+  detail: string;
+  onPress: () => void;
+}) {
+  const visual = contactVisuals[method];
+  const IconComponent = visual.icon;
+  return (
+    <Pressable
+      accessibilityLabel={`${label}: ${detail}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.contactChoice,
+        pressed && styles.pressed,
+      ]}
+    >
+      {visual.gradient ? (
+        <LinearGradient
+          colors={visual.gradient}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.brandIcon}
+        >
+          <IconComponent color={colors.paper} size={25} weight="fill" />
+        </LinearGradient>
+      ) : (
+        <View
+          style={[
+            styles.brandIcon,
+            { backgroundColor: visual.backgroundColor },
+          ]}
+        >
+          <IconComponent color={colors.paper} size={25} weight="fill" />
+        </View>
+      )}
+      <View style={styles.contactChoiceCopy}>
+        <AppText variant="label">{label}</AppText>
+        <AppText numberOfLines={1} variant="caption">
+          {detail}
+        </AppText>
+      </View>
+      <ArrowRight color={colors.inkMuted} size={18} />
+    </Pressable>
   );
 }
 
@@ -221,26 +401,42 @@ export function QuickCaptureProvider({
   children: ReactNode;
 }) {
   const modalRef = useRef<BottomSheetModal>(null);
+  const contextRequestRef = useRef(0);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { session } = useAuth();
   const [phase, setPhase] = useState<CapturePhase>("menu");
   const [people, setPeople] = useState<Person[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(false);
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
+  const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
   const [followUpText, setFollowUpText] = useState("");
   const [dueOption, setDueOption] = useState(1);
-  const [interactionType, setInteractionType] =
-    useState<InteractionType>("texted");
-  const [interactionNote, setInteractionNote] = useState("");
+  const [updateText, setUpdateText] = useState("");
+  const [updateIsInteraction, setUpdateIsInteraction] = useState(true);
+  const [updateType, setUpdateType] = useState("Talked");
+  const [recentUpdateTypes, setRecentUpdateTypes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const [catchUpDetails, setCatchUpDetails] =
+    useState<PersonDetails | null>(null);
+  const [loadingCatchUp, setLoadingCatchUp] = useState(false);
+  const [modelConversationStarters, setModelConversationStarters] = useState<
+    string[]
+  >([]);
+  const [preferredContactMethod, setPreferredContactMethodState] =
+    useState<ContactMethod | null>(null);
 
   const loadPeople = useCallback(async () => {
     setLoadingPeople(true);
     try {
-      setPeople((await getPeople()).filter((person) => person.status !== "archived"));
+      setPeople(
+        (await getPeople()).filter(
+          (person) => person.status !== "archived",
+        ),
+      );
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -255,8 +451,9 @@ export function QuickCaptureProvider({
   const resetForm = useCallback(() => {
     setFollowUpText("");
     setDueOption(1);
-    setInteractionType("texted");
-    setInteractionNote("");
+    setUpdateText("");
+    setUpdateIsInteraction(true);
+    setUpdateType("Talked");
     setError(null);
   }, []);
 
@@ -264,12 +461,73 @@ export function QuickCaptureProvider({
     (nextPhase: CapturePhase, personId?: string) => {
       resetForm();
       setPhase(nextPhase);
-      setSelectedPersonId(personId || null);
+      setSelectedPersonIds(personId ? [personId] : []);
+      setPersonSelectionLocked(Boolean(personId));
       modalRef.current?.present();
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      if (nextPhase !== "menu") void loadPeople();
+      if (nextPhase !== "menu") {
+        void loadPeople();
+      }
+      if (nextPhase === "update") {
+        void getRecentUpdateTypes()
+          .then(setRecentUpdateTypes)
+          .catch(() => setRecentUpdateTypes([]));
+      }
     },
     [loadPeople, resetForm],
+  );
+
+  const presentPersonContext = useCallback(
+    async (
+      nextPhase: Extract<CapturePhase, "catch-up" | "contact">,
+      personId?: string,
+    ) => {
+      resetForm();
+      const requestId = contextRequestRef.current + 1;
+      contextRequestRef.current = requestId;
+      setPhase(nextPhase);
+      setCatchUpDetails(null);
+      setModelConversationStarters([]);
+      setPreferredContactMethodState(null);
+      setSelectedPersonIds([]);
+      setPersonSelectionLocked(false);
+      setLoadingCatchUp(true);
+      modalRef.current?.present();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        const availablePeople = (
+          await getPeople()
+        ).filter((person) => person.status === "active");
+        setPeople(availablePeople);
+        const person = personId
+          ? availablePeople.find((item) => item.id === personId)
+          : chooseCatchUpPerson(availablePeople);
+        if (!person) {
+          setError("Add someone before starting a catch-up.");
+          return;
+        }
+        setSelectedPersonIds([person.id]);
+        const details = await getPersonDetails(person.id);
+        setCatchUpDetails(details);
+        void getPreferredContactMethod(person.id).then(
+          setPreferredContactMethodState,
+        );
+        void onDeviceConversationStarters(details.person).then((starters) => {
+          if (contextRequestRef.current === requestId && starters.length > 0) {
+            setModelConversationStarters(starters);
+          }
+        });
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "That person’s context could not be loaded.",
+        );
+      } finally {
+        setLoadingCatchUp(false);
+      }
+    },
+    [resetForm],
   );
 
   const addPerson = useCallback(() => {
@@ -279,7 +537,8 @@ export function QuickCaptureProvider({
   }, [router]);
 
   async function saveFollowUp() {
-    if (!session || !selectedPersonId || !followUpText.trim()) {
+    const personId = selectedPersonIds[0];
+    if (!session || !personId || !followUpText.trim()) {
       setError("Choose someone and add what you want to remember.");
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
@@ -291,7 +550,7 @@ export function QuickCaptureProvider({
     setError(null);
     try {
       await createFollowUp(session.user.id, {
-        personId: selectedPersonId,
+        personId,
         text: followUpText,
         dueAt: dueAtFromOption(dueOption),
       });
@@ -312,9 +571,9 @@ export function QuickCaptureProvider({
     }
   }
 
-  async function saveInteraction() {
-    if (!session || !selectedPersonId) {
-      setError("Choose someone first.");
+  async function saveUpdate() {
+    if (!session || selectedPersonIds.length === 0 || !updateText.trim()) {
+      setError("Choose someone and add what you learned.");
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
@@ -324,11 +583,12 @@ export function QuickCaptureProvider({
     setSaving(true);
     setError(null);
     try {
-      await createInteraction(session.user.id, {
-        personId: selectedPersonId,
-        type: interactionType,
-        occurredAt: new Date().toISOString(),
-        note: interactionNote,
+      await createPersonUpdate(session.user.id, {
+        personIds: selectedPersonIds,
+        text: updateText,
+        recordedAt: new Date().toISOString(),
+        isInteraction: updateIsInteraction,
+        interactionLabel: updateIsInteraction ? updateType : null,
       });
       setRevision((value) => value + 1);
       await Haptics.notificationAsync(
@@ -339,7 +599,7 @@ export function QuickCaptureProvider({
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "That interaction could not be saved.",
+          : "That update could not be saved.",
       );
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -366,10 +626,65 @@ export function QuickCaptureProvider({
       open: () => present("menu"),
       addPerson,
       addFollowUp: (personId) => present("follow-up", personId),
-      logInteraction: (personId) => present("interaction", personId),
+      addUpdate: (personId) => present("update", personId),
+      catchUp: (personId) => {
+        void presentPersonContext("catch-up", personId);
+      },
+      sayHello: (personId) => {
+        void presentPersonContext("contact", personId);
+      },
     }),
-    [addPerson, present, revision],
+    [addPerson, present, presentPersonContext, revision],
   );
+  const contextPerson = catchUpDetails?.person || null;
+  const conversationStarters =
+    modelConversationStarters.length > 0
+      ? modelConversationStarters
+      : contextPerson
+        ? fallbackConversationStarters(contextPerson)
+        : [];
+  const updateTypeOptions = Array.from(
+    new Set([...recentUpdateTypes, ...defaultUpdateTypes]),
+  )
+    .filter((label) =>
+      label.toLowerCase().includes(updateType.trim().toLowerCase()),
+    )
+    .slice(0, 6);
+  const contactChoices = contextPerson
+    ? contactChoicesForPerson(contextPerson).sort((left, right) => {
+        if (left.method === preferredContactMethod) return -1;
+        if (right.method === preferredContactMethod) return 1;
+        return 0;
+      })
+    : [];
+  const preferredContactChoice =
+    contactChoices.find(
+      (choice) => choice.method === preferredContactMethod,
+    ) || null;
+
+  function togglePerson(personId: string, multiple: boolean) {
+    setSelectedPersonIds((current) => {
+      if (!multiple) return [personId];
+      return current.includes(personId)
+        ? current.filter((id) => id !== personId)
+        : [...current, personId];
+    });
+  }
+
+  async function openContactChoice(method: ContactMethod) {
+    if (!contextPerson) return;
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await setPreferredContactMethod(contextPerson.id, method);
+      setPreferredContactMethodState(method);
+      await openContactMethod(contextPerson, method);
+    } catch {
+      Alert.alert(
+        "Couldn’t open that app",
+        "Check that the app is installed, or add another contact method for this person.",
+      );
+    }
+  }
 
   return (
     <QuickCaptureContext.Provider value={value}>
@@ -379,9 +694,11 @@ export function QuickCaptureProvider({
         backgroundStyle={styles.sheetBackground}
         enableDynamicSizing
         handleIndicatorStyle={styles.handle}
-        keyboardBehavior="interactive"
+        keyboardBehavior="extend"
         keyboardBlurBehavior="restore"
+        maxDynamicContentSize={windowHeight - insets.top - 12}
         ref={modalRef}
+        topInset={insets.top + 8}
       >
         {phase === "menu" ? (
           <BottomSheetView
@@ -421,14 +738,16 @@ export function QuickCaptureProvider({
                 title="Add a follow-up"
               />
               <CaptureAction
-                body="Text, call, coffee, class, or anything else"
-                icon={ChatCircleDots}
-                onPress={() => present("interaction")}
-                title="Log an interaction"
+                body="Save what you learned in a few seconds"
+                icon={NotePencil}
+                onPress={() => present("update")}
+                title="Add an update"
               />
             </View>
           </BottomSheetView>
-        ) : (
+        ) : phase === "catch-up" ||
+          phase === "choose-catch-up" ||
+          phase === "contact" ? (
           <BottomSheetScrollView
             contentContainerStyle={[
               styles.sheetContent,
@@ -437,16 +756,40 @@ export function QuickCaptureProvider({
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.sheetHeader}>
+              {phase === "contact" || phase === "choose-catch-up" ? (
+                <Pressable
+                  accessibilityLabel="Back to catch-up context"
+                  accessibilityRole="button"
+                  onPress={() => setPhase("catch-up")}
+                  style={styles.closeButton}
+                >
+                  <ArrowLeft color={colors.ink} size={21} />
+                </Pressable>
+              ) : null}
               <View style={styles.flex}>
                 <AppText variant="title">
-                  {phase === "follow-up"
-                    ? "Add a follow-up"
-                    : "Log an interaction"}
+                  {phase === "catch-up"
+                    ? "Good idea"
+                    : phase === "choose-catch-up"
+                      ? "Choose someone"
+                      : contextPerson
+                      ? `Say hello to ${
+                          contextPerson.preferredName ||
+                          contextPerson.fullName.split(" ")[0]
+                        }`
+                      : "Choose how to say hello"}
                 </AppText>
                 <AppText style={styles.muted}>
-                  {phase === "follow-up"
-                    ? "A small promise to your future self."
-                    : "A quick note is plenty."}
+                  {phase === "catch-up"
+                    ? contextPerson
+                      ? `How about reaching out to ${
+                          contextPerson.preferredName ||
+                          contextPerson.fullName.split(" ")[0]
+                        }?`
+                      : "Finding someone you haven’t heard from in a while…"
+                    : phase === "choose-catch-up"
+                      ? `Search your people, or let ${brand.name} pick.`
+                      : "Pick the app that feels natural."}
                 </AppText>
               </View>
               <Pressable
@@ -459,19 +802,177 @@ export function QuickCaptureProvider({
               </Pressable>
             </View>
 
-            {loadingPeople ? (
+            {phase === "choose-catch-up" ? (
+              <>
+                <Button
+                  compact
+                  icon={Shuffle}
+                  label="Pick someone for me"
+                  onPress={() => {
+                    const otherPeople = people.filter(
+                      (person) =>
+                        person.status === "active" &&
+                        person.id !== contextPerson?.id,
+                    );
+                    const choice =
+                      otherPeople[
+                        Math.floor(Math.random() * otherPeople.length)
+                      ] || people[0];
+                    if (choice) {
+                      void presentPersonContext("catch-up", choice.id);
+                    }
+                  }}
+                  variant="secondary"
+                />
+                <PersonPicker
+                  onToggle={(personId) =>
+                    void presentPersonContext("catch-up", personId)
+                  }
+                  people={people}
+                  selectedIds={
+                    contextPerson ? [contextPerson.id] : selectedPersonIds
+                  }
+                />
+              </>
+            ) : loadingCatchUp ? (
               <ActivityIndicator color={colors.coral} style={styles.loader} />
-            ) : people.length > 0 ? (
-              <PersonPicker
-                onSelect={setSelectedPersonId}
-                people={people}
-                selectedId={selectedPersonId}
-              />
+            ) : contextPerson ? (
+              phase === "catch-up" ? (
+                <>
+                  <View style={styles.contextProfile}>
+                    <Avatar
+                      name={contextPerson.fullName}
+                      size={68}
+                      uri={contextPerson.profilePhotoUrl}
+                    />
+                    <View style={styles.contextProfileCopy}>
+                      <AppText variant="heading">
+                        {contextPerson.preferredName ||
+                          contextPerson.fullName}
+                      </AppText>
+                      <AppText variant="caption">
+                        Last interaction{" "}
+                        {elapsedLabel(contextPerson.lastInteractionAt).toLowerCase()}
+                      </AppText>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => setPhase("choose-catch-up")}
+                        style={styles.choosePersonInline}
+                      >
+                        <Shuffle color={colors.inkMuted} size={14} />
+                        <AppText variant="caption">
+                          Choose someone else
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {contextPerson.generalNotes ? (
+                    <View style={styles.contextBlock}>
+                      <AppText variant="label">What you saved</AppText>
+                      <AppText style={styles.contextBody}>
+                        {contextPerson.generalNotes}
+                      </AppText>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.starterSection}>
+                    <View style={styles.starterHeading}>
+                      <LightbulbFilament
+                        color={colors.coralStrong}
+                        size={21}
+                        weight="duotone"
+                      />
+                      <AppText variant="label">A few easy openings</AppText>
+                    </View>
+                    {modelConversationStarters.length > 0 ? (
+                      <AppText style={styles.privateSuggestion} variant="caption">
+                        Suggested privately on this iPhone
+                      </AppText>
+                    ) : null}
+                    {conversationStarters.map((starter) => (
+                      <View key={starter} style={styles.starterRow}>
+                        <View style={styles.starterDot} />
+                        <AppText style={styles.starterCopy}>{starter}</AppText>
+                      </View>
+                    ))}
+                  </View>
+
+                  {preferredContactChoice ? (
+                    <View style={styles.preferredContact}>
+                      <ContactChoiceButton
+                        detail={`Last used · ${preferredContactChoice.detail}`}
+                        label={preferredContactChoice.label}
+                        method={preferredContactChoice.method}
+                        onPress={() =>
+                          void openContactChoice(
+                            preferredContactChoice.method,
+                          )
+                        }
+                      />
+                      <Button
+                        compact
+                        label="Choose another app"
+                        onPress={() => setPhase("contact")}
+                        variant="quiet"
+                      />
+                    </View>
+                  ) : (
+                    <Button
+                      icon={ChatCircleDots}
+                      label="Choose how to say hello"
+                      onPress={() => setPhase("contact")}
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <View style={styles.contactPerson}>
+                    <Avatar
+                      name={contextPerson.fullName}
+                      size={54}
+                      uri={contextPerson.profilePhotoUrl}
+                    />
+                    <View style={styles.flex}>
+                      <AppText variant="heading">
+                        {contextPerson.preferredName ||
+                          contextPerson.fullName}
+                      </AppText>
+                      <AppText variant="caption">
+                        Opening another app won’t automatically save an update.
+                      </AppText>
+                    </View>
+                  </View>
+                  <View style={styles.contactChoices}>
+                    {contactChoices.map((choice) => (
+                      <ContactChoiceButton
+                        detail={choice.detail}
+                        key={choice.method}
+                        label={choice.label}
+                        method={choice.method}
+                        onPress={() =>
+                          void openContactChoice(choice.method)
+                        }
+                      />
+                    ))}
+                  </View>
+                  {!contextPerson.instagramUsername &&
+                  !contextPerson.phoneNumber &&
+                  !contextPerson.email ? (
+                    <AppText style={styles.contactNote} variant="caption">
+                      Add a phone number, email, or Instagram handle for a
+                      direct shortcut. Discord can open your inbox, but{" "}
+                      {brand.name} can’t target someone from a username alone.
+                    </AppText>
+                  ) : null}
+                </>
+              )
             ) : (
               <View style={styles.noPeople}>
-                <AppText variant="heading">Add someone first</AppText>
+                <AppText variant="heading">No one to choose yet</AppText>
                 <AppText style={styles.muted}>
-                  Interactions and follow-ups stay attached to a person.
+                  Add someone, then {brand.name} can bring back useful context
+                  when you want to catch up.
                 </AppText>
                 <Button
                   compact
@@ -481,11 +982,73 @@ export function QuickCaptureProvider({
                 />
               </View>
             )}
+            {error ? (
+              <AppText style={styles.error} variant="caption">
+                {error}
+              </AppText>
+            ) : null}
+          </BottomSheetScrollView>
+        ) : (
+          <BottomSheetScrollView
+            contentContainerStyle={[
+              styles.sheetContent,
+              { paddingBottom: Math.max(insets.bottom + 24, 36) },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <AppText variant="title">
+                  {phase === "follow-up" ? "Add a follow-up" : "Add an update"}
+                </AppText>
+                <AppText style={styles.muted}>
+                  {phase === "follow-up"
+                    ? "A small promise to your future self."
+                    : "One sentence is enough. You can be done in seconds."}
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityLabel="Close"
+                accessibilityRole="button"
+                onPress={() => modalRef.current?.dismiss()}
+                style={styles.closeButton}
+              >
+                <X color={colors.ink} size={21} />
+              </Pressable>
+            </View>
 
             {phase === "follow-up" ? (
               <>
+                {loadingPeople ? (
+                  <ActivityIndicator
+                    color={colors.coral}
+                    style={styles.loader}
+                  />
+                ) : people.length > 0 ? (
+                  <PersonPicker
+                    label="Follow-up for"
+                    locked={personSelectionLocked}
+                    onToggle={(personId) => togglePerson(personId, false)}
+                    people={people}
+                    selectedIds={selectedPersonIds}
+                  />
+                ) : (
+                  <View style={styles.noPeople}>
+                    <AppText variant="heading">Add someone first</AppText>
+                    <AppText style={styles.muted}>
+                      Follow-ups stay attached to a person.
+                    </AppText>
+                    <Button
+                      compact
+                      icon={Plus}
+                      label="Add someone"
+                      onPress={addPerson}
+                    />
+                  </View>
+                )}
                 <FormField
-                  autoFocus={Boolean(selectedPersonId)}
+                  autoFocus={Boolean(selectedPersonIds[0])}
+                  bottomSheet
                   label="What do you want to remember?"
                   multiline
                   onChangeText={setFollowUpText}
@@ -540,7 +1103,7 @@ export function QuickCaptureProvider({
                   </View>
                 </View>
                 <Button
-                  disabled={!selectedPersonId || !followUpText.trim()}
+                  disabled={!selectedPersonIds[0] || !followUpText.trim()}
                   label="Save follow-up"
                   loading={saving}
                   onPress={() => void saveFollowUp()}
@@ -548,52 +1111,144 @@ export function QuickCaptureProvider({
               </>
             ) : (
               <>
-                <View style={styles.optionGroup}>
-                  <AppText variant="label">What happened?</AppText>
-                  <View style={styles.typeGrid}>
-                    {interactionTypes.map((type) => (
+                <FormField
+                  autoFocus
+                  bottomSheet
+                  label="What did you learn?"
+                  multiline
+                  onChangeText={setUpdateText}
+                  placeholder="Joshua has been getting into photography"
+                  style={styles.fastUpdateInput}
+                  value={updateText}
+                />
+
+                {loadingPeople ? (
+                  <ActivityIndicator
+                    color={colors.coral}
+                    style={styles.loader}
+                  />
+                ) : people.length > 0 ? (
+                  <PersonPicker
+                    label="Adding this update to"
+                    locked={personSelectionLocked}
+                    multiple
+                    onToggle={(personId) => togglePerson(personId, true)}
+                    people={people}
+                    selectedIds={selectedPersonIds}
+                  />
+                ) : (
+                  <View style={styles.noPeople}>
+                    <AppText variant="heading">Add someone first</AppText>
+                    <AppText style={styles.muted}>
+                      Updates stay attached to the people they are about.
+                    </AppText>
+                    <Button
+                      compact
+                      icon={Plus}
+                      label="Add someone"
+                      onPress={addPerson}
+                    />
+                  </View>
+                )}
+
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: updateIsInteraction }}
+                  onPress={() => {
+                    setUpdateIsInteraction((value) => !value);
+                    void Haptics.selectionAsync();
+                  }}
+                  style={styles.interactionToggle}
+                >
+                  <View
+                    style={[
+                      styles.toggleCheck,
+                      updateIsInteraction && styles.toggleCheckSelected,
+                    ]}
+                  >
+                    {updateIsInteraction ? (
+                      <Check color={colors.paper} size={15} weight="bold" />
+                    ) : null}
+                  </View>
+                  <View style={styles.flex}>
+                    <AppText variant="label">This was an interaction</AppText>
+                    <AppText variant="caption">
+                      Counts as the latest time you spoke or spent time together
+                    </AppText>
+                  </View>
+                </Pressable>
+
+                {updateIsInteraction ? (
+                  <View style={styles.optionGroup}>
+                    <AppText variant="label">What kind?</AppText>
+                    <View style={styles.search}>
+                      <MagnifyingGlass color={colors.inkMuted} size={18} />
+                      <BottomSheetTextInput
+                        accessibilityLabel="Interaction type"
+                        autoCapitalize="words"
+                        onChangeText={setUpdateType}
+                        placeholder="Talked, coffee, study session…"
+                        placeholderTextColor={colors.inkMuted}
+                        selectionColor={colors.coral}
+                        style={styles.searchInput}
+                        value={updateType}
+                      />
+                    </View>
+                    <View style={styles.typeGrid}>
+                      {updateTypeOptions.map((label) => (
                       <Pressable
                         accessibilityRole="radio"
                         accessibilityState={{
-                          checked: interactionType === type,
+                            checked:
+                              updateType.toLowerCase() === label.toLowerCase(),
                         }}
-                        key={type}
+                          key={label}
                         onPress={() => {
-                          setInteractionType(type);
+                            setUpdateType(label);
                           void Haptics.selectionAsync();
                         }}
                         style={[
                           styles.typeOption,
-                          interactionType === type &&
+                            updateType.toLowerCase() === label.toLowerCase() &&
                             styles.typeOptionSelected,
                         ]}
                       >
                         <AppText
                           style={
-                            interactionType === type
+                              updateType.toLowerCase() === label.toLowerCase()
                               ? styles.lightText
                               : undefined
                           }
                           variant="label"
                         >
-                          {interactionLabels[type]}
+                            {label}
                         </AppText>
                       </Pressable>
                     ))}
                   </View>
-                </View>
-                <FormField
-                  label="Note (optional)"
-                  multiline
-                  onChangeText={setInteractionNote}
-                  placeholder="Caught up after class"
-                  value={interactionNote}
-                />
+                  </View>
+                ) : null}
+
+                {personSelectionLocked && selectedPersonIds.length === 1 ? (
+                  <Button
+                    compact
+                    icon={PencilSimple}
+                    label="Edit profile details"
+                    onPress={() => {
+                      const personId = selectedPersonIds[0];
+                      modalRef.current?.dismiss();
+                      router.push(`/people/${personId}/edit`);
+                    }}
+                    variant="quiet"
+                  />
+                ) : null}
                 <Button
-                  disabled={!selectedPersonId}
-                  label="Save interaction"
+                  disabled={
+                    selectedPersonIds.length === 0 || !updateText.trim()
+                  }
+                  label="Save update"
                   loading={saving}
-                  onPress={() => void saveInteraction()}
+                  onPress={() => void saveUpdate()}
                 />
               </>
             )}
@@ -644,7 +1299,7 @@ const styles = StyleSheet.create({
   closeButton: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 42,
     justifyContent: "center",
     width: 42,
@@ -655,7 +1310,7 @@ const styles = StyleSheet.create({
   captureAction: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.large,
+    borderRadius: radii.small,
     flexDirection: "row",
     gap: 14,
     minHeight: 92,
@@ -667,7 +1322,7 @@ const styles = StyleSheet.create({
   captureIcon: {
     alignItems: "center",
     backgroundColor: colors.sage,
-    borderRadius: radii.medium,
+    borderRadius: radii.small,
     height: 52,
     justifyContent: "center",
     width: 52,
@@ -699,40 +1354,101 @@ const styles = StyleSheet.create({
   picker: {
     gap: 10,
   },
+  lockedPerson: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.small,
+    flexDirection: "row",
+    gap: 11,
+    padding: 12,
+  },
   search: {
+    alignItems: "center",
     backgroundColor: colors.paper,
     borderColor: colors.mist,
     borderRadius: radii.medium,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    paddingLeft: 14,
   },
   searchInput: {
     color: colors.ink,
+    flex: 1,
     fontFamily: fontFamilies.body,
     fontSize: 15,
     minHeight: 48,
-    paddingHorizontal: 15,
+    paddingRight: 15,
   },
   personOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   personOption: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.medium,
-    flexDirection: "row",
-    gap: 10,
-    minHeight: 52,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: radii.small,
+    flexBasis: "30%",
+    flexGrow: 1,
+    gap: 7,
+    justifyContent: "center",
+    maxWidth: "32%",
+    minHeight: 92,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
   },
   personOptionSelected: {
-    backgroundColor: colors.sageStrong,
+    backgroundColor: colors.sage,
   },
   personOptionName: {
-    flex: 1,
+    maxWidth: "100%",
+    textAlign: "center",
+  },
+  selectedPersonName: {
+    color: colors.sageStrong,
+    fontFamily: fontFamilies.bodySemibold,
+  },
+  selectedBadge: {
+    alignItems: "center",
+    backgroundColor: colors.coral,
+    borderRadius: radii.round,
+    bottom: -2,
+    height: 20,
+    justifyContent: "center",
+    position: "absolute",
+    right: -3,
+    width: 20,
+  },
+  noResults: {
+    color: colors.inkMuted,
+    paddingVertical: 10,
+    textAlign: "center",
   },
   optionGroup: {
     gap: 10,
+  },
+  fastUpdateInput: {
+    minHeight: 88,
+  },
+  interactionToggle: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.small,
+    flexDirection: "row",
+    gap: 11,
+    padding: 13,
+  },
+  toggleCheck: {
+    alignItems: "center",
+    backgroundColor: colors.mist,
+    borderRadius: 7,
+    height: 26,
+    justifyContent: "center",
+    width: 26,
+  },
+  toggleCheckSelected: {
+    backgroundColor: colors.sageStrong,
   },
   optionRow: {
     flexDirection: "row",
@@ -742,7 +1458,7 @@ const styles = StyleSheet.create({
   optionChip: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     flexDirection: "row",
     gap: 6,
     paddingHorizontal: 13,
@@ -759,7 +1475,7 @@ const styles = StyleSheet.create({
   typeOption: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.medium,
+    borderRadius: radii.small,
     justifyContent: "center",
     minHeight: 46,
     paddingHorizontal: 17,
@@ -779,5 +1495,102 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  contextProfile: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
+    flexDirection: "row",
+    gap: 14,
+    padding: 16,
+  },
+  contextProfileCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  choosePersonInline: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 5,
+    marginTop: 4,
+    paddingVertical: 3,
+  },
+  contextBlock: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
+    gap: 7,
+    padding: 17,
+  },
+  contextBody: {
+    color: colors.inkMuted,
+  },
+  starterSection: {
+    backgroundColor: colors.sunSoft,
+    borderRadius: radii.large,
+    gap: 12,
+    padding: 17,
+  },
+  starterHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  starterRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+  },
+  privateSuggestion: {
+    color: colors.sageStrong,
+    marginTop: -6,
+  },
+  starterDot: {
+    backgroundColor: colors.coral,
+    borderRadius: radii.round,
+    height: 7,
+    marginTop: 7,
+    width: 7,
+  },
+  starterCopy: {
+    flex: 1,
+  },
+  contactPerson: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
+    flexDirection: "row",
+    gap: 13,
+    padding: 15,
+  },
+  contactChoices: {
+    gap: 10,
+  },
+  preferredContact: {
+    gap: 6,
+  },
+  contactChoice: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.small,
+    flexDirection: "row",
+    gap: 12,
+    minHeight: 68,
+    padding: 12,
+  },
+  brandIcon: {
+    alignItems: "center",
+    borderRadius: radii.small,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  contactChoiceCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  contactNote: {
+    color: colors.inkMuted,
+    textAlign: "center",
   },
 });

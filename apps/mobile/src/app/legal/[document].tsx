@@ -16,7 +16,7 @@ const privacySections: LegalSection[] = [
     title: "What we collect",
     paragraphs: [
       `${brand.name} stores the account details you provide, including your name, email address, timezone, locale, sign-in providers, and notification preferences.`,
-      "When you use the app, we store the people, contact details, photos, notes, tags, interactions, birthdays, and follow-ups you choose to add. We also receive limited device and diagnostic details needed for security, sign-in, push delivery, and reliable operation.",
+      "When you use the app, we store the people, contact details, photos, notes, tags, updates, interactions, birthdays, and follow-ups you choose to add. We also receive limited device and diagnostic details needed for security, sign-in, push delivery, and reliable operation.",
     ],
   },
   {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   back: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 44,
     justifyContent: "center",
     width: 44,

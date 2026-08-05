@@ -113,8 +113,36 @@ export const importPayloadSchema = z.object({
     .array(personInputSchema.extend({ id: z.string().uuid().optional() }))
     .max(10_000),
   interactions: z
-    .array(interactionInputSchema.extend({ id: z.string().uuid().optional() }))
+    .array(
+      interactionInputSchema.extend({
+        id: z.string().uuid().optional(),
+        sourceUpdateId: z.string().uuid().optional().nullable(),
+      }),
+    )
     .max(100_000),
+  updates: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        text: z.string().trim().min(1).max(2000),
+        recordedAt: z.string().datetime(),
+        isInteraction: z.boolean(),
+        interactionLabel: z.string().trim().min(1).max(60).nullable(),
+      }),
+    )
+    .max(100_000)
+    .optional()
+    .default([]),
+  updatePeople: z
+    .array(
+      z.object({
+        updateId: z.string().uuid(),
+        personId: z.string().uuid(),
+      }),
+    )
+    .max(500_000)
+    .optional()
+    .default([]),
   followUps: z
     .array(
       followUpInputSchema.extend({

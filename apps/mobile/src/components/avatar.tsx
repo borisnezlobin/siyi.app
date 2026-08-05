@@ -53,6 +53,8 @@ export function Avatar({
           color: colors.paper,
           fontFamily: fontFamilies.bodyBold,
           fontSize: Math.max(13, size * 0.29),
+          lineHeight: Math.max(16, size * 0.36),
+          textAlign: "center",
         }}
       >
         {initials || "•"}

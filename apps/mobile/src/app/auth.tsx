@@ -368,13 +368,13 @@ const styles = StyleSheet.create({
   },
   segmented: {
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     flexDirection: "row",
     padding: 4,
   },
   segment: {
     alignItems: "center",
-    borderRadius: radii.round,
+    borderRadius: 8,
     flex: 1,
     minHeight: 42,
     justifyContent: "center",

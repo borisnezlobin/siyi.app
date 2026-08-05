@@ -7,6 +7,7 @@ import {
   ChatCircleDots,
   ClockCountdown,
   HandWaving,
+  NotePencil,
   UsersThree,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
@@ -24,6 +25,7 @@ import {
   PressableCard,
   SectionHeading,
 } from "@/components/surface";
+import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import {
   getAccountSettings,
@@ -32,10 +34,12 @@ import {
   setFollowUpComplete,
 } from "@/lib/data";
 import { relativeDayLabel } from "@/lib/date-labels";
+import { refreshHomeWidgets } from "@/lib/home-widgets";
 import {
   daysUntilBirthday,
   nextBirthday,
   overdueDays,
+  reminderDueDate,
 } from "@/lib/reminders";
 import type { FollowUp, Person } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
@@ -172,6 +176,15 @@ export default function TodayScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickCapture.revision]);
 
+  useEffect(() => {
+    if (!screenData.data) return;
+    void refreshHomeWidgets({
+      people: screenData.data.people,
+      followUps: screenData.data.followUps,
+      reminderDefaults: screenData.data.settings.reminderDefaults,
+    });
+  }, [screenData.data]);
+
   if (screenData.loading && !screenData.data) {
     return <LoadingState label="Finding what matters today…" />;
   }
@@ -186,12 +199,21 @@ export default function TodayScreen() {
 
   const { people, followUps, settings } = screenData.data!;
   const now = new Date();
+  const upcomingCutoff = new Date(now);
+  upcomingCutoff.setDate(upcomingCutoff.getDate() + 14);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
   const openFollowUps = followUps.filter((item) => !item.completedAt);
   const overdueFollowUps = openFollowUps.filter(
     (item) => new Date(item.dueAt).getTime() < now.getTime(),
   );
   const upcomingFollowUps = openFollowUps
-    .filter((item) => new Date(item.dueAt).getTime() >= now.getTime())
+    .filter((item) => {
+      const dueAt = new Date(item.dueAt).getTime();
+      return (
+        dueAt >= now.getTime() && dueAt <= upcomingCutoff.getTime()
+      );
+    })
     .slice(0, 5);
   const birthdays = people
     .filter((person) => {
@@ -215,10 +237,18 @@ export default function TodayScreen() {
     );
   const activePeople = people.filter((person) => person.status === "active");
   const checkInPeople = [...activePeople]
-    .sort(
-      (left, right) =>
-        stableDailyScore(left.id) - stableDailyScore(right.id),
-    )
+    .sort((left, right) => {
+      const leftContactedAt = new Date(
+        left.lastInteractionAt || left.firstMetAt,
+      ).getTime();
+      const rightContactedAt = new Date(
+        right.lastInteractionAt || right.firstMetAt,
+      ).getTime();
+      return (
+        leftContactedAt - rightContactedAt ||
+        stableDailyScore(left.id) - stableDailyScore(right.id)
+      );
+    })
     .slice(0, 3);
   const recentlyMet = people
     .filter(
@@ -227,10 +257,45 @@ export default function TodayScreen() {
         7 * 86_400_000,
     )
     .slice(0, 4);
-  const hasTimeSensitive =
+  const reminderItems = [
+    ...overdueFollowUps.map((followUp) => ({
+      kind: "follow-up" as const,
+      id: followUp.id,
+      at: new Date(followUp.dueAt).getTime(),
+      followUp,
+    })),
+    ...overduePeople.map((person) => ({
+      kind: "person" as const,
+      id: person.id,
+      at: reminderDueDate(person, settings.reminderDefaults).getTime(),
+      person,
+    })),
+    ...birthdays.map((person) => ({
+      kind: "birthday" as const,
+      id: person.id,
+      at: nextBirthday(person.birthday, now)?.getTime() ?? Infinity,
+      person,
+    })),
+    ...upcomingFollowUps.map((followUp) => ({
+      kind: "follow-up" as const,
+      id: followUp.id,
+      at: new Date(followUp.dueAt).getTime(),
+      followUp,
+    })),
+  ]
+    .sort((left, right) => left.at - right.at)
+    .slice(0, 12);
+  const hasTimeSensitive = reminderItems.length > 0;
+  const hasImmediateAttention =
     overdueFollowUps.length > 0 ||
-    upcomingFollowUps.length > 0 ||
-    birthdays.length > 0;
+    overduePeople.length > 0 ||
+    upcomingFollowUps.some(
+      (followUp) =>
+        new Date(followUp.dueAt).getTime() <= endOfToday.getTime(),
+    ) ||
+    birthdays.some(
+      (person) => (daysUntilBirthday(person.birthday, now) ?? 99) <= 1,
+    );
 
   async function complete(followUpId: string) {
     try {
@@ -246,67 +311,92 @@ export default function TodayScreen() {
 
   return (
     <Screen
-      eyebrow="Your day, with context"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="A calm look at what needs attention and who might appreciate a hello."
+      subtitle="Here’s what needs attention and who might appreciate a hello."
       title={
         profile?.displayName
           ? `Hi, ${profile.displayName.split(" ")[0]}`
           : "Today"
       }
     >
-      <View style={styles.summaryRow}>
-        <Card style={[styles.summary, styles.summaryUrgent]}>
-          <ClockCountdown color={colors.coralStrong} size={22} weight="duotone" />
-          <AppText variant="title">
-            {overdueFollowUps.length + overduePeople.length}
-          </AppText>
-          <AppText variant="caption">need attention</AppText>
-        </Card>
-        <Card style={[styles.summary, styles.summaryUpcoming]}>
-          <CalendarBlank color={colors.sageStrong} size={22} weight="duotone" />
-          <AppText variant="title">
-            {birthdays.length + upcomingFollowUps.length}
-          </AppText>
-          <AppText variant="caption">coming up</AppText>
-        </Card>
-      </View>
+      <Card style={styles.overview}>
+        <View style={styles.overviewItem}>
+          <View style={[styles.overviewIcon, styles.summaryUrgent]}>
+            <ClockCountdown
+              color={colors.coralStrong}
+              size={21}
+              weight="duotone"
+            />
+          </View>
+          <View style={styles.overviewCopy}>
+            <AppText variant="heading">
+              {overdueFollowUps.length + overduePeople.length}
+            </AppText>
+            <AppText variant="caption">need attention</AppText>
+          </View>
+        </View>
+        <View style={styles.overviewDivider} />
+        <View style={styles.overviewItem}>
+          <View style={[styles.overviewIcon, styles.summaryUpcoming]}>
+            <CalendarBlank
+              color={colors.sageStrong}
+              size={21}
+              weight="duotone"
+            />
+          </View>
+          <View style={styles.overviewCopy}>
+            <AppText variant="heading">
+              {birthdays.length + upcomingFollowUps.length}
+            </AppText>
+            <AppText variant="caption">coming up</AppText>
+          </View>
+        </View>
+      </Card>
 
       <View style={styles.section}>
-        <SectionHeading
-          detail="Overdue first, then upcoming"
-          title="Time-sensitive"
-        />
+        <SectionHeading title="Reminders" />
         {hasTimeSensitive ? (
           <View style={styles.list}>
-            {overdueFollowUps.map((followUp) => (
-              <FollowUpItem
-                followUp={followUp}
-                key={followUp.id}
-                onComplete={() => void complete(followUp.id)}
-                onOpen={() =>
-                  router.push(`/people/${followUp.personId}`)
-                }
-              />
-            ))}
-            {birthdays.map((person) => (
-              <BirthdayItem
-                key={person.id}
-                onOpen={() => router.push(`/people/${person.id}`)}
-                person={person}
-              />
-            ))}
-            {upcomingFollowUps.map((followUp) => (
-              <FollowUpItem
-                followUp={followUp}
-                key={followUp.id}
-                onComplete={() => void complete(followUp.id)}
-                onOpen={() =>
-                  router.push(`/people/${followUp.personId}`)
-                }
-              />
-            ))}
+            {reminderItems.map((item) => {
+              if (item.kind === "follow-up") {
+                return (
+                  <FollowUpItem
+                    followUp={item.followUp}
+                    key={`follow-up-${item.id}`}
+                    onComplete={() => void complete(item.followUp.id)}
+                    onOpen={() =>
+                      router.push(`/people/${item.followUp.personId}`)
+                    }
+                  />
+                );
+              }
+              if (item.kind === "birthday") {
+                return (
+                  <BirthdayItem
+                    key={`birthday-${item.id}`}
+                    onOpen={() => router.push(`/people/${item.person.id}`)}
+                    person={item.person}
+                  />
+                );
+              }
+              return (
+                <PersonRow
+                  key={`person-${item.id}`}
+                  onPress={() => router.push(`/people/${item.person.id}`)}
+                  person={item.person}
+                  trailing={
+                    <Button
+                      compact
+                      icon={NotePencil}
+                      label="Update"
+                      onPress={() => quickCapture.addUpdate(item.person.id)}
+                      variant="secondary"
+                    />
+                  }
+                />
+              );
+            })}
           </View>
         ) : (
           <EmptyState
@@ -317,45 +407,32 @@ export default function TodayScreen() {
         )}
       </View>
 
-      {overduePeople.length > 0 ? (
-        <View style={styles.section}>
-          <SectionHeading
-            detail={`${overduePeople.length} due`}
-            title="Ready for a check-in"
-          />
-          <View style={styles.list}>
-            {overduePeople.slice(0, 5).map((person) => (
-              <PersonRow
-                key={person.id}
-                onPress={() => router.push(`/people/${person.id}`)}
-                person={person}
-                trailing={
-                  <Button
-                    compact
-                    icon={ChatCircleDots}
-                    label="Log"
-                    onPress={() => quickCapture.logInteraction(person.id)}
-                    variant="secondary"
-                  />
-                }
-              />
-            ))}
+      {!hasImmediateAttention && activePeople.length > 0 ? (
+        <Card style={styles.catchUpPrompt}>
+          <View style={styles.catchUpCopy}>
+            <AppText variant="heading">Have a little room today?</AppText>
+            <AppText style={styles.catchUpBody}>
+              {brand.name} can pick someone and bring back the context you
+              saved.
+            </AppText>
           </View>
-        </View>
+          <Button
+            icon={ChatCircleDots}
+            label="Catch up with someone"
+            onPress={() => quickCapture.catchUp()}
+          />
+        </Card>
       ) : null}
 
       {checkInPeople.length > 0 ? (
         <View style={styles.section}>
-          <SectionHeading
-            detail="A fresh few each day"
-            title="Have you checked in recently?"
-          />
+          <SectionHeading title="Have you checked in recently?" />
           <View style={styles.checkInCard}>
             {checkInPeople.map((person, index) => (
               <Pressable
                 accessibilityRole="button"
                 key={person.id}
-                onPress={() => quickCapture.logInteraction(person.id)}
+                onPress={() => quickCapture.sayHello(person.id)}
                 style={[
                   styles.checkInRow,
                   index < checkInPeople.length - 1 && styles.checkInDivider,
@@ -371,7 +448,7 @@ export default function TodayScreen() {
                     {person.preferredName || person.fullName}
                   </AppText>
                   <AppText variant="caption">
-                    Tap to log a recent interaction
+                    Choose how to say hello
                   </AppText>
                 </View>
                 <HandWaving
@@ -415,14 +492,34 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  summaryRow: {
+  overview: {
+    alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: 14,
+    padding: 15,
   },
-  summary: {
+  overviewItem: {
+    alignItems: "center",
     flex: 1,
-    gap: 4,
-    minHeight: 138,
+    flexDirection: "row",
+    gap: 10,
+    minWidth: 0,
+  },
+  overviewIcon: {
+    alignItems: "center",
+    borderRadius: radii.small,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  overviewCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  overviewDivider: {
+    backgroundColor: colors.mist,
+    height: 38,
+    width: StyleSheet.hairlineWidth,
   },
   summaryUrgent: {
     backgroundColor: colors.coralSoft,
@@ -469,7 +566,7 @@ const styles = StyleSheet.create({
   check: {
     alignItems: "center",
     backgroundColor: colors.sage,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 38,
     justifyContent: "center",
     width: 38,
@@ -490,5 +587,14 @@ const styles = StyleSheet.create({
   checkInDivider: {
     borderBottomColor: colors.mist,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  catchUpPrompt: {
+    gap: 15,
+  },
+  catchUpCopy: {
+    gap: 4,
+  },
+  catchUpBody: {
+    color: colors.inkMuted,
   },
 });

@@ -40,8 +40,14 @@ export function SectionHeading({
 }) {
   return (
     <View style={styles.sectionHeading}>
-      <AppText variant="heading">{title}</AppText>
-      {detail ? <AppText variant="caption">{detail}</AppText> : null}
+      <AppText style={styles.sectionTitle} variant="heading">
+        {title}
+      </AppText>
+      {detail ? (
+        <AppText style={styles.sectionDetail} variant="caption">
+          {detail}
+        </AppText>
+      ) : null}
     </View>
   );
 }
@@ -80,9 +86,20 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   sectionHeading: {
-    alignItems: "baseline",
+    alignItems: "flex-start",
     flexDirection: "row",
+    gap: 12,
     justifyContent: "space-between",
+  },
+  sectionTitle: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  sectionDetail: {
+    flexShrink: 1,
+    maxWidth: "42%",
+    paddingTop: 3,
+    textAlign: "right",
   },
   empty: {
     alignItems: "center",

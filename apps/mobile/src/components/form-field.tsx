@@ -1,3 +1,4 @@
+import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import {
   StyleSheet,
   TextInput,
@@ -15,20 +16,24 @@ type FormFieldProps = TextInputProps & {
   label: string;
   hint?: string;
   error?: string;
+  bottomSheet?: boolean;
 };
 
 export function FormField({
   label,
   hint,
   error,
+  bottomSheet = false,
   multiline,
   style,
   ...props
 }: FormFieldProps) {
+  const Input = bottomSheet ? BottomSheetTextInput : TextInput;
+
   return (
     <View style={styles.group}>
       <AppText variant="label">{label}</AppText>
-      <TextInput
+      <Input
         accessibilityLabel={label}
         multiline={multiline}
         placeholderTextColor={colors.inkMuted}

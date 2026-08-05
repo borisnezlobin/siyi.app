@@ -119,7 +119,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     alignItems: "center",
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     flexDirection: "row",
     gap: 9,
     justifyContent: "center",

@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   back: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 44,
     justifyContent: "center",
     width: 44,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   day: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     minWidth: 42,
     paddingHorizontal: 9,
     paddingVertical: 8,

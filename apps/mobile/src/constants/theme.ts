@@ -26,7 +26,7 @@ export const fontFamilies = {
 } as const;
 
 export const radii = {
-  small: 12,
+  small: 8,
   medium: 18,
   large: 24,
   xlarge: 32,

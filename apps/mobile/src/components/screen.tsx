@@ -19,6 +19,7 @@ type ScreenProps = ScrollViewProps & {
   onRefresh?: () => void;
   bottomInset?: number;
   maxContentWidth?: number;
+  keyboardAvoiding?: boolean;
 };
 
 export function Screen({
@@ -30,6 +31,7 @@ export function Screen({
   onRefresh,
   bottomInset = 124,
   maxContentWidth = 1040,
+  keyboardAvoiding = true,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
@@ -37,18 +39,20 @@ export function Screen({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={
+        keyboardAvoiding && Platform.OS === "ios" ? "padding" : undefined
+      }
       style={styles.fill}
     >
       <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={[
           styles.content,
           {
             maxWidth: maxContentWidth,
           },
           {
-            paddingTop: Math.max(insets.top + 18, 28),
+            paddingTop: Math.max(insets.top + 10, 22),
             paddingBottom: bottomInset + insets.bottom,
           },
           contentContainerStyle,
@@ -100,6 +104,8 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 7,
+    paddingHorizontal: 2,
+    paddingTop: 4,
   },
   eyebrow: {
     color: colors.coralStrong,

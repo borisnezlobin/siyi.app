@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   filter: {
     backgroundColor: colors.mist,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   checkbox: {
     alignItems: "center",
     backgroundColor: colors.sage,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 38,
     justifyContent: "center",
     width: 38,

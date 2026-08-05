@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     const payload = validation.data;
     const personIdMap = new Map<string, string>();
     const tagIdMap = new Map<string, string>();
+    const updateIdMap = new Map<string, string>();
 
     for (const person of payload.people) {
       const targetId = person.id ?? crypto.randomUUID();
@@ -67,6 +68,36 @@ export async function POST(request: NextRequest) {
       if (error) return apiError(error.message, 400);
     }
 
+    if (payload.updates.length) {
+      const updateRows = payload.updates.map((update) => {
+        const targetId = update.id ?? crypto.randomUUID();
+        if (update.id) updateIdMap.set(update.id, targetId);
+        return {
+          id: targetId,
+          user_id: user.id,
+          text: update.text,
+          recorded_at: update.recordedAt,
+          is_interaction: update.isInteraction,
+          interaction_label: update.isInteraction
+            ? update.interactionLabel
+            : null,
+        };
+      });
+      const { error } = await supabase.from("person_updates").upsert(updateRows);
+      if (error) return apiError(error.message, 400);
+    }
+
+    if (payload.updatePeople.length) {
+      const { error } = await supabase.from("person_update_people").upsert(
+        payload.updatePeople.map((link) => ({
+          update_id: updateIdMap.get(link.updateId) ?? link.updateId,
+          person_id: personIdMap.get(link.personId) ?? link.personId,
+          user_id: user.id,
+        })),
+      );
+      if (error) return apiError(error.message, 400);
+    }
+
     if (payload.interactions.length) {
       const { error } = await supabase.from("interactions").upsert(
         payload.interactions.map((interaction) => ({
@@ -76,6 +107,10 @@ export async function POST(request: NextRequest) {
           type: interaction.type,
           occurred_at: interaction.occurredAt,
           note: interaction.note,
+          source_update_id: interaction.sourceUpdateId
+            ? updateIdMap.get(interaction.sourceUpdateId) ??
+              interaction.sourceUpdateId
+            : null,
         })),
       );
       if (error) return apiError(error.message, 400);
@@ -108,6 +143,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       imported: {
         people: payload.people.length,
+        updates: payload.updates.length,
         interactions: payload.interactions.length,
         followUps: payload.followUps.length,
         tags: payload.tags.length,

@@ -12,6 +12,8 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -155,10 +157,14 @@ export function PersonForm({ person }: { person?: Person }) {
   const photoUri = photo?.uri || person?.profilePhotoUrl;
 
   return (
-    <View style={styles.fill}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.fill}
+    >
       <Screen
         bottomInset={116 + insets.bottom}
         contentContainerStyle={styles.content}
+        keyboardAvoiding={false}
       >
         <View style={styles.topBar}>
           <Pressable
@@ -202,13 +208,13 @@ export function PersonForm({ person }: { person?: Person }) {
           </Pressable>
           <View style={styles.heroCopy}>
             <AppText variant="title">
-              {person ? "Keep the details useful" : "Save the moment"}
+              {person ? "Add what you know" : "Who’d you meet?"}
             </AppText>
-            <AppText style={styles.muted}>
-              {person
-                ? "Only keep context that helps you show up thoughtfully."
-                : "The essentials are visible first so this stays comfortably under 20 seconds."}
-            </AppText>
+            {person ? (
+              <AppText style={styles.muted}>
+                Keep their interests, stories, and details close at hand.
+              </AppText>
+            ) : null}
           </View>
         </View>
 
@@ -406,7 +412,7 @@ export function PersonForm({ person }: { person?: Person }) {
           onPress={() => void save()}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -426,7 +432,7 @@ const styles = StyleSheet.create({
   back: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 44,
     justifyContent: "center",
     width: 44,
@@ -483,7 +489,7 @@ const styles = StyleSheet.create({
   advancedToggle: {
     alignItems: "center",
     backgroundColor: colors.sage,
-    borderRadius: radii.large,
+    borderRadius: radii.small,
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 17,
@@ -498,7 +504,7 @@ const styles = StyleSheet.create({
   strength: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.medium,
+    borderRadius: radii.small,
     flex: 1,
     flexDirection: "row",
     gap: 4,

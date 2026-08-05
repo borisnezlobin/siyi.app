@@ -58,7 +58,7 @@ export function PersonRow({
         {overdue > 0 ? (
           <View style={styles.overdueChip}>
             <AppText style={styles.overdueText} variant="caption">
-              {overdue}d since reminder
+              {overdue} day{overdue === 1 ? "" : "s"} overdue
             </AppText>
           </View>
         ) : null}

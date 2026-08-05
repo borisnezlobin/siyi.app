@@ -99,6 +99,14 @@ export const interactionInputSchema = z.object({
   note: optionalText,
 });
 
+export const personUpdateInputSchema = z.object({
+  personIds: z.array(z.string().uuid()).min(1).max(50),
+  text: z.string().trim().min(1, "Add what you learned.").max(2000),
+  recordedAt: z.string().datetime(),
+  isInteraction: z.boolean(),
+  interactionLabel: z.string().trim().min(1).max(60).nullable(),
+});
+
 export const importPreviewSchema = z
   .object({
     version: z.literal(1),
@@ -111,6 +119,8 @@ export const importPreviewSchema = z
       )
       .max(10_000),
     interactions: z.array(z.unknown()).max(100_000),
+    updates: z.array(z.unknown()).max(100_000).optional().default([]),
+    updatePeople: z.array(z.unknown()).max(500_000).optional().default([]),
     followUps: z.array(z.unknown()).max(100_000),
     tags: z.array(z.unknown()).max(2_000),
     personTags: z.array(z.unknown()).max(100_000).optional().default([]),
@@ -120,4 +130,5 @@ export const importPreviewSchema = z
 export type PersonInput = z.infer<typeof personInputSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export type InteractionInput = z.infer<typeof interactionInputSchema>;
+export type PersonUpdateInput = z.infer<typeof personUpdateInputSchema>;
 export type ImportPreview = z.infer<typeof importPreviewSchema>;

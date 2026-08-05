@@ -20,7 +20,7 @@ import {
   UsersThree,
 } from "phosphor-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Alert,
   Linking,
@@ -70,7 +70,11 @@ const interactionLabels: Record<InteractionType, string> = {
 export default function PersonDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, catchUp } = useLocalSearchParams<{
+    id: string;
+    catchUp?: string;
+  }>();
+  const catchUpOpenedRef = useRef(false);
   const quickCapture = useQuickCapture();
   const personData = useRefreshableData(() => getPersonDetails(id));
 
@@ -79,8 +83,19 @@ export default function PersonDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickCapture.revision]);
 
+  useEffect(() => {
+    if (
+      catchUp === "1" &&
+      personData.data &&
+      !catchUpOpenedRef.current
+    ) {
+      catchUpOpenedRef.current = true;
+      quickCapture.catchUp(personData.data.person.id);
+    }
+  }, [catchUp, personData.data, quickCapture]);
+
   if (personData.loading && !personData.data) {
-    return <LoadingState label="Opening their story…" />;
+    return <LoadingState label="Loading profile…" />;
   }
   if (personData.error && !personData.data) {
     return (
@@ -91,8 +106,28 @@ export default function PersonDetailScreen() {
     );
   }
 
-  const { person, interactions, followUps } = personData.data!;
+  const { person, interactions, followUps, updates } = personData.data!;
   const openFollowUps = followUps.filter((followUp) => !followUp.completedAt);
+  const timelineEntries = [
+    ...updates.map((update) => ({
+      kind: "update" as const,
+      id: update.id,
+      occurredAt: update.recordedAt,
+      update,
+    })),
+    ...interactions
+      .filter((interaction) => !interaction.sourceUpdateId)
+      .map((interaction) => ({
+        kind: "interaction" as const,
+        id: interaction.id,
+        occurredAt: interaction.occurredAt,
+        interaction,
+      })),
+  ].sort(
+    (left, right) =>
+      new Date(right.occurredAt).getTime() -
+      new Date(left.occurredAt).getTime(),
+  );
   const reminder = reminderDueDate(person);
   const facts = [
     {
@@ -172,7 +207,7 @@ export default function PersonDetailScreen() {
             accessibilityLabel="Go back"
             accessibilityRole="button"
             onPress={() => router.back()}
-            style={styles.roundButton}
+            style={styles.headerButton}
           >
             <ArrowLeft color={colors.ink} size={21} />
           </Pressable>
@@ -181,7 +216,7 @@ export default function PersonDetailScreen() {
               accessibilityLabel="Edit person"
               accessibilityRole="button"
               onPress={() => router.push(`/people/${person.id}/edit`)}
-              style={styles.roundButton}
+              style={styles.headerButton}
             >
               <PencilSimple color={colors.ink} size={20} />
             </Pressable>
@@ -189,7 +224,7 @@ export default function PersonDetailScreen() {
               accessibilityLabel="Archive person"
               accessibilityRole="button"
               onPress={archive}
-              style={styles.roundButton}
+              style={styles.headerButton}
             >
               <Archive color={colors.coralStrong} size={20} />
             </Pressable>
@@ -352,15 +387,42 @@ export default function PersonDetailScreen() {
 
         <View style={styles.section}>
           <SectionHeading
-            detail={`${interactions.length}`}
-            title="Interaction timeline"
+            detail={`${timelineEntries.length}`}
+            title="Updates"
           />
-          {interactions.length > 0 ? (
+          {timelineEntries.length > 0 ? (
             <Card style={styles.timelineCard}>
-              {interactions.map((interaction) => {
+              {timelineEntries.map((entry) => {
+                if (entry.kind === "update") {
+                  return (
+                    <View key={entry.id} style={styles.timelineItem}>
+                      <View style={styles.interactionIcon}>
+                        <NotePencil
+                          color={colors.sageStrong}
+                          size={19}
+                          weight="duotone"
+                        />
+                      </View>
+                      <View style={styles.timelineCopy}>
+                        <AppText variant="label">
+                          {entry.update.isInteraction
+                            ? entry.update.interactionLabel || "Interaction"
+                            : "Note"}
+                        </AppText>
+                        <AppText variant="caption">
+                          {dateLabel(entry.update.recordedAt)}
+                        </AppText>
+                        <AppText style={styles.note}>
+                          {entry.update.text}
+                        </AppText>
+                      </View>
+                    </View>
+                  );
+                }
+                const { interaction } = entry;
                 const IconComponent = interactionIcons[interaction.type];
                 return (
-                  <View key={interaction.id} style={styles.timelineItem}>
+                  <View key={entry.id} style={styles.timelineItem}>
                     <View style={styles.interactionIcon}>
                       <IconComponent
                         color={colors.sageStrong}
@@ -396,9 +458,9 @@ export default function PersonDetailScreen() {
         ]}
       >
         <Button
-          icon={ChatCircleDots}
-          label="Log interaction"
-          onPress={() => quickCapture.logInteraction(person.id)}
+          icon={NotePencil}
+          label="Add update"
+          onPress={() => quickCapture.addUpdate(person.id)}
         />
         <Pressable
           accessibilityLabel="Add follow-up"
@@ -453,10 +515,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  roundButton: {
+  headerButton: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 44,
     justifyContent: "center",
     width: 44,
@@ -511,7 +573,7 @@ const styles = StyleSheet.create({
   contactAction: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.medium,
+    borderRadius: radii.small,
     gap: 4,
     justifyContent: "center",
     minHeight: 66,
@@ -606,7 +668,7 @@ const styles = StyleSheet.create({
   footerSecondary: {
     alignItems: "center",
     backgroundColor: colors.sage,
-    borderRadius: radii.round,
+    borderRadius: radii.small,
     height: 54,
     justifyContent: "center",
     width: 54,

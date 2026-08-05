@@ -21,6 +21,12 @@ function downloadResponse(
   });
 }
 
+function isMissingUpdatesSchema(error: { code?: string } | null) {
+  return Boolean(
+    error && ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code ?? ""),
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuthenticatedRequest(request);
@@ -81,6 +87,21 @@ export async function GET(request: NextRequest) {
     ].find(Boolean);
 
     if (firstError) return apiError(firstError.message, 500);
+
+    const [updatesResult, updatePeopleResult] = await Promise.all([
+      supabase.from("person_updates").select("*").eq("user_id", user.id),
+      supabase.from("person_update_people").select("*").eq("user_id", user.id),
+    ]);
+    const updates = isMissingUpdatesSchema(updatesResult.error)
+      ? []
+      : updatesResult.data ?? [];
+    const updatePeople = isMissingUpdatesSchema(updatePeopleResult.error)
+      ? []
+      : updatePeopleResult.data ?? [];
+    const updatesError = [updatesResult.error, updatePeopleResult.error].find(
+      (error) => error && !isMissingUpdatesSchema(error),
+    );
+    if (updatesError) return apiError(updatesError.message, 500);
 
     if (format === "people-csv") {
       const headers = [
@@ -152,6 +173,63 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (format === "updates-csv") {
+      const namesById = new Map(
+        (peopleResult.data ?? []).map((person) => [person.id, person.full_name]),
+      );
+      const peopleByUpdateId = new Map<string, string[]>();
+      for (const link of updatePeople) {
+        const names = peopleByUpdateId.get(link.update_id) ?? [];
+        names.push(namesById.get(link.person_id) ?? "Unknown person");
+        peopleByUpdateId.set(link.update_id, names);
+      }
+      const headers = [
+        "People",
+        "Update",
+        "Recorded at",
+        "Interaction",
+        "Interaction type",
+      ];
+      const exportRows = [
+        ...updates.map((update) => ({
+          people: (peopleByUpdateId.get(update.id) ?? []).join("; "),
+          text: update.text,
+          recordedAt: update.recorded_at,
+          isInteraction: update.is_interaction,
+          interactionLabel: update.interaction_label,
+        })),
+        ...(interactionsResult.data ?? [])
+          .filter((interaction) => !interaction.source_update_id)
+          .map((interaction) => ({
+            people: namesById.get(interaction.person_id) ?? "Unknown person",
+            text: interaction.note || interaction.type,
+            recordedAt: interaction.occurred_at,
+            isInteraction: true,
+            interactionLabel: interaction.type,
+          })),
+      ].sort(
+        (left, right) =>
+          new Date(right.recordedAt).getTime() -
+          new Date(left.recordedAt).getTime(),
+      );
+      const rows = exportRows.map((update) =>
+        [
+          update.people,
+          update.text,
+          update.recordedAt,
+          update.isInteraction ? "Yes" : "No",
+          update.interactionLabel,
+        ]
+          .map(csvCell)
+          .join(","),
+      );
+      return downloadResponse(
+        [headers.map(csvCell).join(","), ...rows].join("\n"),
+        "text/csv; charset=utf-8",
+        `${brand.slug}-updates.csv`,
+      );
+    }
+
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -186,8 +264,22 @@ export async function GET(request: NextRequest) {
         type: interaction.type,
         occurredAt: interaction.occurred_at,
         note: interaction.note,
+        sourceUpdateId: interaction.source_update_id,
         createdAt: interaction.created_at,
         updatedAt: interaction.updated_at,
+      })),
+      updates: updates.map((update) => ({
+        id: update.id,
+        text: update.text,
+        recordedAt: update.recorded_at,
+        isInteraction: update.is_interaction,
+        interactionLabel: update.interaction_label,
+        createdAt: update.created_at,
+        updatedAt: update.updated_at,
+      })),
+      updatePeople: updatePeople.map((link) => ({
+        updateId: link.update_id,
+        personId: link.person_id,
       })),
       tags: (tagsResult.data ?? []).map((tag) => ({
         id: tag.id,
