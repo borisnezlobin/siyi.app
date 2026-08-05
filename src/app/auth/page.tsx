@@ -14,8 +14,6 @@ import { brand } from "@/config/brand";
 import {
   sendMagicLink,
   sendPasswordReset,
-  signInWithApple,
-  signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
 } from "@/app/auth/actions";
@@ -32,7 +30,7 @@ function AuthVisual() {
   ];
 
   return (
-    <div className="relative hidden min-h-[720px] overflow-hidden rounded-[2.5rem] bg-ink p-9 text-white shadow-float lg:flex lg:flex-col">
+    <div className="relative hidden overflow-hidden rounded-[2.5rem] bg-ink p-9 text-white shadow-float lg:flex lg:flex-col">
       <div className="relative z-10">
         <p className="flex items-center gap-2 text-xs font-semibold text-sun">
           <UsersThree size={16} weight="fill" aria-hidden="true" />
@@ -104,15 +102,15 @@ export default async function AuthPage({
     parameters.error?.toLowerCase().includes("expired");
 
   return (
-    <main className="min-h-screen bg-porcelain px-4 py-5 sm:px-7 sm:py-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-[1180px] gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="flex min-h-screen items-center bg-porcelain px-4 py-5 sm:px-7 sm:py-8">
+      <div className="mx-auto grid w-full max-w-[1180px] gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <AuthVisual />
 
         <div className="flex items-center justify-center">
           <div className="w-full max-w-[460px]">
             <Link
               href="/"
-              className="mb-9 inline-flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              className="mb-3 inline-flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
             >
               <span className="grid size-10 place-items-center rounded-full bg-coral text-white shadow-card">
                 <UsersThree size={20} weight="fill" aria-hidden="true" />
@@ -120,7 +118,7 @@ export default async function AuthPage({
               <span className="font-display text-2xl">{brand.name}</span>
             </Link>
 
-            <section className="rounded-[2rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-8">
+            <section className="rounded-[2rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-5">
               {parameters.sent ? (
                 <div className="text-center">
                   <span className="mx-auto grid size-14 place-items-center rounded-full bg-sage text-sage-strong">
@@ -141,8 +139,8 @@ export default async function AuthPage({
                       {parameters.sent}
                     </strong>
                     . It can take a minute to arrive. Open it in the same
-                    browser container that requested it, or use Password if
-                    container boundaries get in the way.
+                    browser you asked from — if it doesn&apos;t show up, check
+                    your spam folder.
                   </p>
                   <Link
                     href={
@@ -178,24 +176,24 @@ export default async function AuthPage({
                 </div>
               ) : (
                 <>
-                  <p className="text-xs font-semibold text-coral-strong">
-                    {signupMode
-                      ? "Join your circle"
-                      : forgotMode
-                        ? "Reset securely"
-                        : "Welcome back"}
-                  </p>
-                  <h1 className="mt-2 font-display text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
+                  {signupMode ? null : (
+                    <p className="text-xs font-semibold text-coral-strong">
+                      {forgotMode ? "Reset securely" : "Welcome back"}
+                    </p>
+                  )}
+                  <h1 className="mt-2 font-display text-4xl leading-none tracking-[-0.035em]">
                     {signupMode
                       ? "Create your account."
                       : forgotMode
                         ? "Choose a new password."
                         : "Pick up where you left off."}
                   </h1>
-                  <p className="mt-4 text-sm leading-6 text-ink-muted">
-                    Your people and notes stay private to your account. Choose
-                    the sign-in method that works best in your browser.
-                  </p>
+                  {forgotMode ? (
+                    <p className="mt-3 text-sm leading-6 text-ink-muted">
+                      Enter your email and we&apos;ll send you a link to set a
+                      new one.
+                    </p>
+                  ) : null}
 
                   {parameters.error ? (
                     <p
@@ -207,28 +205,29 @@ export default async function AuthPage({
                     </p>
                   ) : null}
 
-                  <div className="mt-7 grid gap-2">
-                    <form action={signInWithApple}>
-                      <button
-                        type="submit"
-                        className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-[#28332e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                      >
-                        <AppleLogo size={21} weight="fill" aria-hidden="true" />
-                        Continue with Apple
-                      </button>
-                    </form>
-                    <form action={signInWithGoogle}>
-                      <button
-                        type="submit"
-                        className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-white px-5 text-sm font-semibold text-ink shadow-card ring-1 ring-black/[0.055] transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                      >
-                        <GoogleLogo size={20} weight="bold" aria-hidden="true" />
-                        Continue with Google
-                      </button>
-                    </form>
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled
+                      className="flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-porcelain px-4 text-sm font-semibold text-ink/40 ring-1 ring-black/[0.04]"
+                    >
+                      <AppleLogo size={19} weight="fill" aria-hidden="true" />
+                      Apple
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className="flex h-12 cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-porcelain px-4 text-sm font-semibold text-ink/40 ring-1 ring-black/[0.04]"
+                    >
+                      <GoogleLogo size={18} weight="bold" aria-hidden="true" />
+                      Google
+                    </button>
                   </div>
+                  <p className="mt-1 text-center text-[11px] text-ink-muted">
+                    Apple and Google sign-in are coming soon.
+                  </p>
 
-                  <div className="my-5 flex items-center gap-3 text-[11px] text-ink/35">
+                  <div className="my-2 flex items-center gap-3 text-[11px] text-ink/35">
                     <span className="h-px flex-1 bg-ink/10" />
                     or use your email
                     <span className="h-px flex-1 bg-ink/10" />
@@ -240,7 +239,7 @@ export default async function AuthPage({
                   >
                     <Link
                       href="/auth"
-                      className={`rounded-xl px-3 py-2.5 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                      className={`rounded-xl px-3 py-2 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
                         passwordMethod
                           ? "text-ink-muted"
                           : "bg-white text-ink shadow-card"
@@ -251,7 +250,7 @@ export default async function AuthPage({
                     </Link>
                     <Link
                       href="/auth?method=password"
-                      className={`rounded-xl px-3 py-2.5 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                      className={`rounded-xl px-3 py-2 text-center text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
                         passwordMethod
                           ? "bg-white text-ink shadow-card"
                           : "text-ink-muted"
@@ -281,11 +280,11 @@ export default async function AuthPage({
                           required
                           autoComplete="email"
                           placeholder="you@example.edu"
-                          className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+                          className="mt-1 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
                         />
                       </label>
                       {!forgotMode ? (
-                        <label className="mt-3 block text-xs font-semibold text-ink-muted">
+                        <label className="mt-2.5 block text-xs font-semibold text-ink-muted">
                           Password
                           <input
                             name="password"
@@ -294,12 +293,12 @@ export default async function AuthPage({
                             minLength={8}
                             maxLength={72}
                             autoComplete={signupMode ? "new-password" : "current-password"}
-                            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+                            className="mt-1 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
                           />
                         </label>
                       ) : null}
                       {signupMode ? (
-                        <label className="mt-3 block text-xs font-semibold text-ink-muted">
+                        <label className="mt-2.5 block text-xs font-semibold text-ink-muted">
                           Confirm password
                           <input
                             name="passwordConfirmation"
@@ -308,13 +307,13 @@ export default async function AuthPage({
                             minLength={8}
                             maxLength={72}
                             autoComplete="new-password"
-                            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+                            className="mt-1 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
                           />
                         </label>
                       ) : null}
                       <button
                         type="submit"
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                        className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
                       >
                         <LockKey size={17} weight="fill" aria-hidden="true" />
                         {signupMode
@@ -323,7 +322,7 @@ export default async function AuthPage({
                             ? "Send reset link"
                             : "Sign in with password"}
                       </button>
-                      <div className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 text-xs text-ink-muted">
+                      <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-2 text-xs text-ink-muted">
                         <Link
                           href={
                             signupMode || forgotMode
@@ -354,12 +353,12 @@ export default async function AuthPage({
                           required
                           autoComplete="email"
                           placeholder="you@example.edu"
-                          className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+                          className="mt-1 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
                         />
                       </label>
                       <button
                         type="submit"
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                        className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
                       >
                         Email me a sign-in link
                         <ArrowRight size={17} weight="bold" aria-hidden="true" />
@@ -367,14 +366,15 @@ export default async function AuthPage({
                     </form>
                   )}
 
-                  <div className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-ink-muted">
-                    <ShieldCheck size={16} className="mt-0.5 shrink-0 text-sage-strong" aria-hidden="true" />
-                    <p>
-                      {passwordMethod
-                        ? "Passwords are stored and verified by Supabase Auth, never in the CRM database."
-                        : "Each link works once and expires automatically. Open it in the browser container that requested it."}
-                    </p>
-                  </div>
+                  {passwordMethod ? null : (
+                    <div className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-ink-muted">
+                      <ShieldCheck size={16} className="mt-0.5 shrink-0 text-sage-strong" aria-hidden="true" />
+                      <p>
+                        The link works once and expires shortly. Open it in the
+                        same browser you asked from.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </section>

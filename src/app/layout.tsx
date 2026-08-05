@@ -23,6 +23,18 @@ export const metadata: Metadata = {
   description: brand.description,
   applicationName: brand.name,
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    siteName: brand.name,
+    title: brand.name,
+    description: brand.description,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: brand.name,
+    description: brand.description,
+  },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },

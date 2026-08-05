@@ -55,7 +55,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
     package: androidPackage,
     versionCode: 1,
     adaptiveIcon: {
-      backgroundColor: "#17201c",
+      backgroundColor: "#dfe9e2",
       foregroundImage: "./assets/images/adaptive-icon.png",
       monochromeImage: "./assets/images/notification-icon.png",
     },

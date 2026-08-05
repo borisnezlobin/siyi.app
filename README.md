@@ -40,6 +40,41 @@ Vault:
 The job and request history are available in Supabase Dashboard under
 Integrations → Cron.
 
+### Auth configuration
+
+Under Authentication → URL Configuration, set the Site URL to `https://siyi.app`
+and allow these redirect URLs:
+
+```
+https://siyi.app/auth/callback
+https://siyi.app/auth/confirm
+siyi://auth/callback
+```
+
+Sign in with Google and Sign in with Apple are configured under Authentication →
+Providers. Google needs an OAuth client from the Google Cloud console; Apple
+needs a Services ID and a Sign in with Apple key. Both use
+`https://<project-ref>.supabase.co/auth/v1/callback` as the redirect URL. The
+iPhone app signs in natively, so `app.siyi.mobile` also belongs in the Apple
+provider's authorized client IDs.
+
+### Transactional email
+
+The built-in Supabase sender is rate limited to a couple of messages per hour
+and is not meant for production. Resend delivers the auth emails instead. Verify
+`siyi.app` in Resend, then fill in Authentication → Emails → SMTP Settings:
+
+| Field | Value |
+| --- | --- |
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | the Resend API key (`RESEND_API_KEY`) |
+| Sender email | an address on the verified domain, e.g. `noreply@siyi.app` |
+
+The username is the literal string `resend` for every account; only the password
+varies. A send-only API key is enough.
+
 ## Production services
 
 The EAS project is `@randomletters/siyi-app`. Production builds use the
