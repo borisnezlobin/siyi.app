@@ -14,7 +14,7 @@ import { join } from "node:path";
 const metroPort = 8081;
 
 function connectedIphone() {
-  const outputDirectory = mkdtempSync(join(tmpdir(), "frenk-device-"));
+  const outputDirectory = mkdtempSync(join(tmpdir(), "siyi-device-"));
   const outputPath = join(outputDirectory, "devices.json");
 
   try {
@@ -113,7 +113,7 @@ async function launchOnDevice(deviceIdentifier) {
   );
   if (result.status !== 0) {
     throw new Error(
-      "Frenk could not be launched. Install it first with “npm run mobile:ios:device”.",
+      "siyi.app could not be launched. Install it first with “npm run mobile:ios:device”.",
     );
   }
 }

@@ -1,4 +1,4 @@
-import FrenkIntelligence from "../../modules/frenk-intelligence/src/FrenkIntelligenceModule";
+import ContextIntelligence from "../../modules/context-intelligence/src/ContextIntelligenceModule";
 import type { Person } from "@/lib/types";
 
 function personContext(person: Person) {
@@ -19,12 +19,17 @@ function personContext(person: Person) {
 }
 
 export async function onDeviceConversationStarters(person: Person) {
-  if (!FrenkIntelligence || FrenkIntelligence.availability() !== "available") {
+  if (
+    !ContextIntelligence ||
+    ContextIntelligence.availability() !== "available"
+  ) {
     return [];
   }
 
   try {
-    return (await FrenkIntelligence.conversationStarters(personContext(person)))
+    return (
+      await ContextIntelligence.conversationStarters(personContext(person))
+    )
       .map((starter) => starter.trim())
       .filter(Boolean)
       .slice(0, 3);

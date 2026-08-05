@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# siyi.app
 
-## Getting Started
+A private, mobile-first place to remember people, context, updates, and
+follow-ups. The repository contains the Next.js web app/API and the Expo iPhone
+app.
 
-First, run the development server:
+## Local development
+
+Use Node 22 or newer, then install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
+cp apps/mobile/.env.example apps/mobile/.env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Start the web app with `npm run dev`. Start the native development client with
+`npm run mobile:start:device`; install it on an attached iPhone first with
+`npm run mobile:ios:device`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run the complete local verification suite with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run check
+```
 
-## Learn More
+## Supabase
 
-To learn more about Next.js, take a look at the following resources:
+Apply the migrations in `supabase/migrations` in order. Migration `0006`
+enables Supabase Cron and schedules the notification evaluator hourly.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After the production web deployment exists, create these secrets in Supabase
+Vault:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `siyi_notification_cron_url`:
+  `https://siyi.app/api/cron/notifications`
+- `siyi_notification_cron_secret`: the same strong value used for
+  `CRON_SECRET` by the web deployment
 
-## Deploy on Vercel
+The job and request history are available in Supabase Dashboard under
+Integrations → Cron.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Production services
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The EAS project is `@randomletters/siyi-app`. Production builds use the
+`production` EAS environment and bundle identifier `app.siyi.mobile`.
+
+Deploy the repository root to Vercel and configure the variables in
+`.env.example`. Configure the Apple values after creating the Sign in with
+Apple key; they are used for account-deletion token revocation and the
+associated-domain file.

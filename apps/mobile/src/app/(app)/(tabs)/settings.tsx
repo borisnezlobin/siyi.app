@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
+import * as Localization from "expo-localization";
 import {
   ArrowRight,
   BellRinging,
@@ -17,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -27,6 +30,7 @@ import { FormField } from "@/components/form-field";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card, PressableCard, SectionHeading } from "@/components/surface";
+import { TimezonePicker } from "@/components/timezone-picker";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import {
@@ -64,6 +68,10 @@ export default function SettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pendingImport, setPendingImport] = useState<PendingImport>(null);
+  const detectedTimezone =
+    Localization.getCalendars()[0]?.timeZone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "UTC";
 
   if (accountData.loading && !accountData.data) {
     return <LoadingState label="Opening settings…" />;
@@ -191,12 +199,43 @@ export default function SettingsScreen() {
           onPress: () => {
             setBusyAction("delete");
             setError(null);
-            void deleteAccount(auth.session!, brand.webUrl)
-              .then(() =>
-                Haptics.notificationAsync(
+            void (async () => {
+              let appleAuthorizationCode: string | null = null;
+              if (Platform.OS === "ios" && providers.includes("apple")) {
+                const credential =
+                  await AppleAuthentication.signInAsync();
+                const appleIdentity = auth.session!.user.identities?.find(
+                  ({ provider }) => provider === "apple",
+                );
+                const expectedAppleUser =
+                  appleIdentity?.identity_data?.sub || appleIdentity?.id;
+                if (
+                  expectedAppleUser &&
+                  credential.user !== expectedAppleUser
+                ) {
+                  throw new Error(
+                    "Use the same Apple Account that is connected to this account.",
+                  );
+                }
+                appleAuthorizationCode =
+                  credential.authorizationCode || null;
+              }
+
+              const result = await deleteAccount(
+                auth.session!,
+                brand.webUrl,
+                appleAuthorizationCode,
+              );
+              await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success,
-                ),
-              )
+              );
+              if (!result.appleAuthorizationRevoked) {
+                Alert.alert(
+                  "Account deleted",
+                  "Your data is gone. To finish disconnecting Apple, open iPhone Settings, tap your name, then Sign-In & Security and Sign in with Apple.",
+                );
+              }
+            })()
               .catch((deleteError) => {
                 setError(
                   deleteError instanceof Error
@@ -296,11 +335,15 @@ export default function SettingsScreen() {
               <AppText variant="caption">days</AppText>
             </View>
           ))}
-          <FormField
-            autoCapitalize="none"
-            hint="Use an IANA timezone, such as Europe/Berlin."
-            label="Timezone"
-            onChangeText={setTimezoneDraft}
+          <View style={styles.timezoneCopy}>
+            <AppText variant="label">Your local time</AppText>
+            <AppText variant="caption">
+              Used for reminders and upcoming dates.
+            </AppText>
+          </View>
+          <TimezonePicker
+            detectedTimezone={detectedTimezone}
+            onChange={setTimezoneDraft}
             value={timezone}
           />
           <Button
@@ -534,6 +577,10 @@ const styles = StyleSheet.create({
   },
   settingsCard: {
     gap: 13,
+  },
+  timezoneCopy: {
+    gap: 3,
+    marginTop: 4,
   },
   intervalRow: {
     alignItems: "center",

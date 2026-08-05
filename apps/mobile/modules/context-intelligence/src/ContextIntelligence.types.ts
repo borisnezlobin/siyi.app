@@ -1,4 +1,4 @@
-export type FrenkIntelligenceAvailability =
+export type ContextIntelligenceAvailability =
   | "available"
   | "device-not-eligible"
   | "not-enabled"

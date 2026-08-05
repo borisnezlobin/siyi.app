@@ -17,7 +17,7 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { createWidget, type WidgetEnvironment } from "expo-widgets";
 
-export type FrenkTodayWidgetProps = {
+export type SiyiTodayWidgetProps = {
   appName: string;
   needAttention: number;
   comingUp: number;
@@ -26,8 +26,8 @@ export type FrenkTodayWidgetProps = {
   destination: string;
 };
 
-function FrenkTodayWidget(
-  props: FrenkTodayWidgetProps,
+function SiyiTodayWidget(
+  props: SiyiTodayWidgetProps,
   environment: WidgetEnvironment,
 ) {
   "widget";
@@ -156,4 +156,4 @@ function FrenkTodayWidget(
   );
 }
 
-export default createWidget("FrenkTodayWidget", FrenkTodayWidget);
+export default createWidget("SiyiTodayWidget", SiyiTodayWidget);

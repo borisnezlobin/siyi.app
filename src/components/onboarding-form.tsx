@@ -12,21 +12,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SwitchControl } from "@/components/switch-control";
 import { getApiResponseError } from "@/lib/http";
-
-const commonTimezones = [
-  "America/Los_Angeles",
-  "America/Denver",
-  "America/Chicago",
-  "America/New_York",
-  "America/Phoenix",
-  "Pacific/Honolulu",
-  "Europe/London",
-  "Europe/Paris",
-  "Asia/Tokyo",
-  "Asia/Kolkata",
-  "Australia/Sydney",
-  "UTC",
-];
+import { friendlyTimezoneOptions } from "@/lib/timezones";
 
 export function OnboardingForm() {
   const router = useRouter();
@@ -47,7 +33,7 @@ export function OnboardingForm() {
   }, []);
 
   const timezoneOptions = useMemo(
-    () => Array.from(new Set([timezone, ...commonTimezones])),
+    () => friendlyTimezoneOptions(timezone),
     [timezone],
   );
 
@@ -136,9 +122,12 @@ export function OnboardingForm() {
             onChange={(event) => setTimezone(event.target.value)}
             className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
           >
-            {timezoneOptions.map((timezoneName) => (
-              <option key={timezoneName} value={timezoneName}>
-                {timezoneName.replaceAll("_", " ")}
+            {timezoneOptions.map((timezoneOption) => (
+              <option
+                key={timezoneOption.value}
+                value={timezoneOption.value}
+              >
+                {timezoneOption.label}
               </option>
             ))}
           </select>

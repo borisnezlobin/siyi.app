@@ -21,6 +21,7 @@ import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
 import type { FollowUp, Interaction, Person, RelationshipStrength } from "@/lib/types";
 import { importPayloadSchema } from "@/lib/validation";
+import { friendlyTimezoneOptions } from "@/lib/timezones";
 
 type ImportPreview = {
   fileName: string;
@@ -32,21 +33,6 @@ type ImportPreview = {
     tags: number;
   };
 };
-
-const timezoneOptions = [
-  "America/Los_Angeles",
-  "America/Denver",
-  "America/Chicago",
-  "America/New_York",
-  "America/Phoenix",
-  "Pacific/Honolulu",
-  "Europe/London",
-  "Europe/Paris",
-  "Asia/Tokyo",
-  "Asia/Kolkata",
-  "Australia/Sydney",
-  "UTC",
-];
 
 function csvCell(value: string | number | null | undefined) {
   const stringValue = String(value ?? "");
@@ -94,7 +80,7 @@ export function SettingsControls({
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const availableTimezones = useMemo(
-    () => Array.from(new Set([timezone, ...timezoneOptions])),
+    () => friendlyTimezoneOptions(timezone),
     [timezone],
   );
 
@@ -384,9 +370,12 @@ export function SettingsControls({
           onChange={(event) => setTimezone(event.target.value)}
           className="mt-4 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
         >
-          {availableTimezones.map((timezoneName) => (
-            <option key={timezoneName} value={timezoneName}>
-              {timezoneName.replaceAll("_", " ")}
+          {availableTimezones.map((timezoneOption) => (
+            <option
+              key={timezoneOption.value}
+              value={timezoneOption.value}
+            >
+              {timezoneOption.label}
             </option>
           ))}
         </select>

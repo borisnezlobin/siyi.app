@@ -1,4 +1,4 @@
-project_id = "frenk"
+project_id = "siyi-app"
 
 [auth]
 site_url = "http://localhost:3000"

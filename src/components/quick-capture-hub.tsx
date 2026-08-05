@@ -25,7 +25,7 @@ type QuickPerson = Pick<
 >;
 type CaptureMode = "follow-up" | "interaction";
 
-const quickCaptureEvent = "frenk:quick-capture";
+const quickCaptureEvent = "siyi:quick-capture";
 
 type QuickCaptureEventDetail = {
   mode: CaptureMode;

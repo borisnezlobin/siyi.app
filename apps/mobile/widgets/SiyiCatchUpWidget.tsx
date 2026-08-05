@@ -16,14 +16,14 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { createWidget, type WidgetEnvironment } from "expo-widgets";
 
-export type FrenkCatchUpWidgetProps = {
+export type SiyiCatchUpWidgetProps = {
   name: string;
   context: string;
   destination: string;
 };
 
-function FrenkCatchUpWidget(
-  props: FrenkCatchUpWidgetProps,
+function SiyiCatchUpWidget(
+  props: SiyiCatchUpWidgetProps,
   environment: WidgetEnvironment,
 ) {
   "widget";
@@ -94,4 +94,4 @@ function FrenkCatchUpWidget(
   );
 }
 
-export default createWidget("FrenkCatchUpWidget", FrenkCatchUpWidget);
+export default createWidget("SiyiCatchUpWidget", SiyiCatchUpWidget);

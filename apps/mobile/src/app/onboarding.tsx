@@ -1,15 +1,16 @@
 import * as Localization from "expo-localization";
 import * as Haptics from "expo-haptics";
-import { BellRinging, Clock, ShieldCheck } from "phosphor-react-native";
+import { BellRinging, ShieldCheck } from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
 import { LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card } from "@/components/surface";
+import { TimezonePicker } from "@/components/timezone-picker";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import { completeOnboarding } from "@/lib/data";
@@ -27,17 +28,8 @@ export default function OnboardingScreen() {
     auth.profile?.displayName || "",
   );
   const [timezone, setTimezone] = useState(detectedTimezone);
-  const [manualTimezone, setManualTimezone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const timezoneDescription = useMemo(
-    () =>
-      timezone === detectedTimezone
-        ? "Detected from this device"
-        : "Using your manual choice",
-    [detectedTimezone, timezone],
-  );
 
   if (auth.loading) return <LoadingState />;
   if (!auth.session) return <Redirect href="/auth" />;
@@ -51,7 +43,7 @@ export default function OnboardingScreen() {
       return;
     }
     if (!timezone.trim()) {
-      setError("Add a valid IANA timezone, such as Europe/Berlin.");
+      setError("Choose the city or timezone closest to you.");
       return;
     }
 
@@ -97,36 +89,17 @@ export default function OnboardingScreen() {
           placeholder="What should we call you?"
           value={displayName}
         />
-        <View style={styles.timezoneHeader}>
-          <View style={styles.timezoneTitle}>
-            <Clock color={colors.sageStrong} size={21} weight="duotone" />
-            <View style={styles.flex}>
-              <AppText variant="label">Timezone</AppText>
-              <AppText variant="caption">{timezoneDescription}</AppText>
-            </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setManualTimezone((manual) => !manual)}
-          >
-            <AppText style={styles.link} variant="caption">
-              {manualTimezone ? "Use detected" : "Change"}
-            </AppText>
-          </Pressable>
+        <View style={styles.timezoneCopy}>
+          <AppText variant="label">Your local time</AppText>
+          <AppText variant="caption">
+            Used for birthdays, follow-ups, and reminder timing.
+          </AppText>
         </View>
-        {manualTimezone ? (
-          <FormField
-            autoCapitalize="none"
-            label="IANA timezone"
-            onChangeText={setTimezone}
-            placeholder="America/Los_Angeles"
-            value={timezone}
-          />
-        ) : (
-          <View style={styles.timezoneValue}>
-            <AppText>{timezone}</AppText>
-          </View>
-        )}
+        <TimezonePicker
+          detectedTimezone={detectedTimezone}
+          onChange={setTimezone}
+          value={timezone}
+        />
       </Card>
 
       <Card style={styles.notificationCard}>
@@ -176,28 +149,11 @@ const styles = StyleSheet.create({
   formCard: {
     gap: 18,
   },
-  timezoneHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  timezoneTitle: {
-    alignItems: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: 10,
-  },
-  timezoneValue: {
-    backgroundColor: colors.mist,
-    borderRadius: radii.medium,
-    padding: 14,
-  },
   flex: {
     flex: 1,
   },
-  link: {
-    color: colors.sageStrong,
-    textDecorationLine: "underline",
+  timezoneCopy: {
+    gap: 3,
   },
   notificationCard: {
     alignItems: "flex-start",

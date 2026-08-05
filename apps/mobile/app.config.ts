@@ -1,20 +1,24 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Frenk";
-const appSlug = process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "frenk";
-const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "frenk";
+const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "siyi.app";
+const appSlug = process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app";
+const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi";
 const bundleIdentifier =
   process.env.EXPO_PUBLIC_IOS_BUNDLE_ID?.trim() ||
-  "com.borisnezlobin.people";
+  "app.siyi.mobile";
 const androidPackage =
   process.env.EXPO_PUBLIC_ANDROID_PACKAGE?.trim() ||
-  "com.borisnezlobin.people";
+  "app.siyi.mobile";
 const appDomain = process.env.EXPO_PUBLIC_APP_DOMAIN?.trim();
+const easProjectId =
+  process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() ||
+  "2a6e2096-32c9-46c1-af86-9391fa5b48fb";
 const iosProtectedCapabilitiesEnabled =
   process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false";
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
+  owner: "randomletters",
   name: appName,
   slug: appSlug,
   version: "1.0.0",
@@ -28,7 +32,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier,
     buildNumber: "1",
-    supportsTablet: true,
+    supportsTablet: false,
     usesAppleSignIn: iosProtectedCapabilitiesEnabled,
     associatedDomains: appDomain ? [`applinks:${appDomain}`] : undefined,
     infoPlist: {
@@ -99,6 +103,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
         ] as NonNullable<ExpoConfig["plugins"]>)
       : []),
     ...(iosProtectedCapabilitiesEnabled
+      ? ["./plugins/with-iphone-only-widgets"]
+      : []),
+    ...(iosProtectedCapabilitiesEnabled
       ? ([
           [
             "expo-widgets",
@@ -107,7 +114,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
               groupIdentifier: `group.${bundleIdentifier}`,
               widgets: [
                 {
-                  name: "FrenkTodayWidget",
+                  name: "SiyiTodayWidget",
                   contentMarginsDisabled: true,
                   displayName: `${appName} Today`,
                   description:
@@ -115,7 +122,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
                   supportedFamilies: ["systemSmall", "systemMedium"],
                 },
                 {
-                  name: "FrenkCatchUpWidget",
+                  name: "SiyiCatchUpWidget",
                   contentMarginsDisabled: true,
                   displayName: `${appName} Catch Up`,
                   description:
@@ -151,7 +158,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim(),
+      projectId: easProjectId,
     },
   },
 });

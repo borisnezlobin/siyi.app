@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { brand } from "@/config/brand";
 import type { ContactMethod } from "@/lib/contact-links";
 
 const contactMethods = new Set<ContactMethod>([
@@ -9,7 +10,7 @@ const contactMethods = new Set<ContactMethod>([
 ]);
 
 function preferenceKey(personId: string) {
-  return `frenk.contact-method.${personId}`;
+  return `${brand.slug}.contact-method.${personId}`;
 }
 
 export async function getPreferredContactMethod(personId: string) {

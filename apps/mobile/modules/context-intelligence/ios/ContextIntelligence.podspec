@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
-  s.name           = 'FrenkIntelligence'
+  s.name           = 'ContextIntelligence'
   s.version        = '1.0.0'
-  s.summary        = 'Private on-device conversation prompts for Frenk'
+  s.summary        = 'Private on-device conversation prompts'
   s.description    = 'An Expo module that uses Apple Foundation Models when available.'
-  s.author         = 'Frenk'
-  s.homepage       = 'https://github.com/borisnezlobin/collegepeople'
+  s.author         = 'siyi.app'
+  s.homepage       = 'https://siyi.app'
   s.platforms      = { :ios => '16.4' }
   s.source         = { git: '' }
   s.static_framework = true

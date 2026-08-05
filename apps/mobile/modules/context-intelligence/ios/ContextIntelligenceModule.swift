@@ -3,9 +3,9 @@ import ExpoModulesCore
 import FoundationModels
 #endif
 
-public class FrenkIntelligenceModule: Module {
+public class ContextIntelligenceModule: Module {
   public func definition() -> ModuleDefinition {
-    Name("FrenkIntelligence")
+    Name("ContextIntelligence")
 
     Function("availability") { () -> String in
 #if canImport(FoundationModels)

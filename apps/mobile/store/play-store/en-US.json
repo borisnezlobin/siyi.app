@@ -1,7 +1,7 @@
 {
-  "title": "Frenk",
+  "title": "siyi.app",
   "shortDescription": "Remember people, context, and thoughtful follow-ups.",
-  "fullDescription": "Frenk helps you remember the people you meet and the context that makes the next conversation easier.\n\nAdd someone in seconds, log meaningful interactions, keep follow-ups in order, and see birthdays and overdue check-ins without streaks, scores, or guilt.\n\nSearch names, contact details, notes, majors, residences, and tags. Choose reminder timing based on relationship strength or set a person-specific interval. Export your data as JSON or CSV, and delete your account directly from Settings.\n\nYour records stay private to your account. Frenk does not run ads, create public profiles, sell personal information, or scrape social networks.",
+  "fullDescription": "siyi.app helps you remember the people you meet and the context that makes the next conversation easier.\n\nAdd someone in seconds, save quick updates, keep follow-ups in order, and see birthdays and overdue check-ins without streaks, scores, or guilt.\n\nSearch names, contact details, notes, majors, residences, and tags. Choose reminder timing based on relationship strength or set a person-specific interval. Cached people stay available offline, and changes sync when your connection returns. Export your data as JSON or CSV, and delete your account directly from Settings.\n\nYour records stay private to your account. siyi.app does not run ads, create public profiles, sell personal information, or scrape social networks.",
   "appCategory": "LIFESTYLE",
   "supportEmail": "${SUPPORT_EMAIL}",
   "website": "${WEB_URL}",

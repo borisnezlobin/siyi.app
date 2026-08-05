@@ -205,6 +205,20 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+      <footer className="mx-auto flex max-w-[1080px] flex-col gap-4 px-5 py-8 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <span>{brand.name} · Your people, remembered</span>
+        <nav aria-label="Legal and support" className="flex gap-5">
+          <Link className="hover:text-ink" href="/support">
+            Support
+          </Link>
+          <Link className="hover:text-ink" href="/privacy">
+            Privacy
+          </Link>
+          <Link className="hover:text-ink" href="/terms">
+            Terms
+          </Link>
+        </nav>
+      </footer>
     </main>
   );
 }

@@ -8,7 +8,7 @@ test("the public homepage explains the product and offers clear entry points", a
   await expect(
     page.getByRole("heading", { name: "Remember more than a name." }),
   ).toBeVisible();
-  await expect(page.getByText("Frenk", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("siyi.app", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Start your circle" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "I already have an account" }),

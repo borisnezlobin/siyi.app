@@ -45,8 +45,8 @@ export async function refreshHomeWidgets({
   try {
     const [{ default: todayWidget }, { default: catchUpWidget }] =
       await Promise.all([
-        import("../../widgets/FrenkTodayWidget"),
-        import("../../widgets/FrenkCatchUpWidget"),
+        import("../../widgets/SiyiTodayWidget"),
+        import("../../widgets/SiyiCatchUpWidget"),
       ]);
     const now = new Date();
     const cutoff = new Date(now);
