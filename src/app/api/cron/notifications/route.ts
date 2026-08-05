@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
-import { evaluateUserNotifications } from "@/lib/notification-evaluator";
+import {
+  evaluateUserNotifications,
+  isNotificationEvaluationTime,
+} from "@/lib/notification-evaluator";
 import { sendPushToUser } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RelationshipStrength, ReminderDefaults } from "@/lib/types";
@@ -65,37 +68,80 @@ export async function GET(request: NextRequest) {
   try {
     const admin = createAdminClient();
     const now = new Date();
-    const [
-      profilesResult,
-      preferencesResult,
-      settingsResult,
-      peopleResult,
-      interactionsResult,
-      followUpsResult,
-    ] = await Promise.all([
+    const [profilesResult, preferencesResult, settingsResult] =
+      await Promise.all([
       admin.from("user_profiles").select("auth_user_id,timezone"),
       admin.from("notification_preferences").select("*").eq("push_enabled", true),
       admin.from("user_settings").select("*"),
+    ]);
+
+    const initialError = [
+      profilesResult.error,
+      preferencesResult.error,
+      settingsResult.error,
+    ].find(Boolean);
+    if (initialError) {
+      return apiError(initialError.message, 500);
+    }
+
+    const profiles = profilesResult.data as ProfileRow[];
+    const preferences = preferencesResult.data as PreferenceRow[];
+    const settings = settingsResult.data as SettingsRow[];
+    const profilesByUser = new Map(
+      profiles.map((profile) => [profile.auth_user_id, profile]),
+    );
+    const eligiblePreferences = preferences.filter((preference) => {
+      const profile = profilesByUser.get(preference.user_id);
+      if (!profile) return false;
+      try {
+        return isNotificationEvaluationTime(
+          profile.timezone,
+          {
+            pushEnabled: preference.push_enabled,
+            reminderHourLocal: preference.reminder_hour_local,
+            reminderDaysOfWeek: preference.reminder_days_of_week,
+          },
+          now,
+        );
+      } catch {
+        return false;
+      }
+    });
+
+    if (eligiblePreferences.length === 0) {
+      return NextResponse.json({
+        evaluatedAt: now.toISOString(),
+        delivered: 0,
+        skipped: 0,
+        failed: 0,
+      });
+    }
+
+    const eligibleUserIds = eligiblePreferences.map(
+      (preference) => preference.user_id,
+    );
+    const [peopleResult, interactionsResult, followUpsResult] =
+      await Promise.all([
       admin
         .from("people")
         .select(
           "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminder_interval_days,first_met_at",
         )
-        .eq("status", "active"),
+        .eq("status", "active")
+        .in("user_id", eligibleUserIds),
       admin
         .from("interactions")
         .select("person_id,occurred_at")
+        .in("user_id", eligibleUserIds)
         .order("occurred_at", { ascending: false }),
       admin
         .from("follow_ups")
         .select("id,user_id,person_id,text,due_at")
+        .in("user_id", eligibleUserIds)
         .is("completed_at", null),
     ]);
 
     const firstError = [
-      profilesResult.error,
-      preferencesResult.error,
-      settingsResult.error,
       peopleResult.error,
       interactionsResult.error,
       followUpsResult.error,
@@ -105,9 +151,6 @@ export async function GET(request: NextRequest) {
       return apiError(firstError.message, 500);
     }
 
-    const profiles = profilesResult.data as ProfileRow[];
-    const preferences = preferencesResult.data as PreferenceRow[];
-    const settings = settingsResult.data as SettingsRow[];
     const people = peopleResult.data as PersonRow[];
     const interactions = interactionsResult.data as InteractionRow[];
     const followUps = followUpsResult.data as FollowUpRow[];
@@ -122,9 +165,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const profilesByUser = new Map(
-      profiles.map((profile) => [profile.auth_user_id, profile]),
-    );
     const settingsByUser = new Map(
       settings.map((userSettings) => [userSettings.user_id, userSettings]),
     );
@@ -132,7 +172,7 @@ export async function GET(request: NextRequest) {
     let skipped = 0;
     let failed = 0;
 
-    for (const preference of preferences) {
+    for (const preference of eligiblePreferences) {
       const profile = profilesByUser.get(preference.user_id);
       if (!profile) continue;
 

@@ -102,6 +102,22 @@ function addCalendarDays(dateKey: string, days: number) {
   return dateOnlyDayNumber(dateKey) + days;
 }
 
+export function isNotificationEvaluationTime(
+  timezone: string,
+  preferences: Pick<
+    NotificationEvaluationInput["preferences"],
+    "pushEnabled" | "reminderHourLocal" | "reminderDaysOfWeek"
+  >,
+  now = new Date(),
+) {
+  const localNow = localDateParts(now, timezone);
+  return Boolean(
+    preferences.pushEnabled &&
+      preferences.reminderHourLocal === localNow.hour &&
+      preferences.reminderDaysOfWeek.includes(localNow.weekday),
+  );
+}
+
 export function evaluateUserNotifications(
   input: NotificationEvaluationInput,
   now = new Date(),
@@ -109,11 +125,7 @@ export function evaluateUserNotifications(
   const localNow = localDateParts(now, input.timezone);
   const preferences = input.preferences;
 
-  if (
-    !preferences.pushEnabled ||
-    preferences.reminderHourLocal !== localNow.hour ||
-    !preferences.reminderDaysOfWeek.includes(localNow.weekday)
-  ) {
+  if (!isNotificationEvaluationTime(input.timezone, preferences, now)) {
     return [];
   }
 
