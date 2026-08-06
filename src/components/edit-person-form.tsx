@@ -3,7 +3,13 @@
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { Check, SpinnerGap } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  timestampFromDateInput,
+  toDateInputValue,
+  todayDateInputValue,
+} from "@/lib/date-input";
+import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
 import { getApiResponseError } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import type { Person } from "@/lib/types";
@@ -12,16 +18,114 @@ const inputClassName =
   "mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20";
 const labelClassName = "block text-xs font-semibold text-ink-muted";
 
+function initialFormValues(person: Person): FormValues {
+  return {
+    fullName: person.fullName,
+    preferredName: person.preferredName ?? "",
+    instagramUsername: person.instagramUsername ?? "",
+    phoneNumber: formatPhoneNumberInput(person.phoneNumber ?? ""),
+    email: person.email ?? "",
+    birthday: person.birthday ?? "",
+    hometown: person.hometown ?? "",
+    dormOrResidence: person.dormOrResidence ?? "",
+    major: person.major ?? "",
+    graduationYear: person.graduationYear ? String(person.graduationYear) : "",
+    relationshipStrength: String(person.relationshipStrength),
+    reminderIntervalDays: person.reminderIntervalDays
+      ? String(person.reminderIntervalDays)
+      : "",
+    status: person.status,
+    firstMetAt: toDateInputValue(person.firstMetAt),
+    firstMetLocation: person.firstMetLocation ?? "",
+    generalNotes: person.generalNotes ?? "",
+  };
+}
+
+function readFormValues(form: HTMLFormElement): FormValues {
+  return Object.fromEntries(
+    [...new FormData(form).entries()].map(([name, value]) => [
+      name,
+      String(value),
+    ]),
+  );
+}
+
 export function EditPersonForm({ person }: { person: Person }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const discardDialogRef = useRef<HTMLDialogElement>(null);
+  const pendingDestinationRef = useRef(`/people/${person.id}`);
+  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const initialValues = useMemo(() => initialFormValues(person), [person]);
+  const today = todayDateInputValue();
+
+  useEffect(() => {
+    if (!dirty) return;
+
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+
+    // Client-side navigations never reach beforeunload, so links have to be
+    // caught on the way out and replayed once the change is confirmed.
+    const confirmBeforeLeaving = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const link = (event.target as HTMLElement | null)?.closest?.("a[href]");
+      if (!(link instanceof HTMLAnchorElement)) return;
+      const destination = link.getAttribute("href");
+      if (!destination || destination.startsWith("#") || link.target) return;
+
+      event.preventDefault();
+      pendingDestinationRef.current = destination;
+      discardDialogRef.current?.showModal();
+    };
+
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    document.addEventListener("click", confirmBeforeLeaving, true);
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      document.removeEventListener("click", confirmBeforeLeaving, true);
+    };
+  }, [dirty]);
+
+  function refreshDirtyState() {
+    const form = formRef.current;
+    if (!form) return;
+    setDirty(hasUnsavedChanges(initialValues, readFormValues(form)));
+  }
+
+  function leaveWithoutSaving() {
+    setDirty(false);
+    discardDialogRef.current?.close();
+    router.push(pendingDestinationRef.current);
+  }
+
+  function requestLeave() {
+    pendingDestinationRef.current = `/people/${person.id}`;
+    if (!dirty) {
+      router.push(pendingDestinationRef.current);
+      return;
+    }
+    discardDialogRef.current?.showModal();
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError("");
     const formData = new FormData(event.currentTarget);
+    const firstMetDate = String(formData.get("firstMetAt") ?? "");
     const payload = {
       fullName: formData.get("fullName"),
       preferredName: formData.get("preferredName"),
@@ -38,6 +142,10 @@ export function EditPersonForm({ person }: { person: Person }) {
       relationshipStrength: Number(formData.get("relationshipStrength")),
       reminderIntervalDays: formData.get("reminderIntervalDays") || null,
       status: formData.get("status"),
+      firstMetAt:
+        firstMetDate === initialValues.firstMetAt
+          ? person.firstMetAt
+          : timestampFromDateInput(firstMetDate),
       firstMetLocation: formData.get("firstMetLocation"),
       generalNotes: formData.get("generalNotes"),
     };
@@ -59,12 +167,19 @@ export function EditPersonForm({ person }: { person: Person }) {
       await new Promise((resolve) => window.setTimeout(resolve, 300));
     }
 
+    setDirty(false);
     router.push(`/people/${person.id}`);
     router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-7">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      onInput={refreshDirtyState}
+      onChange={refreshDirtyState}
+      className="mt-7"
+    >
       <section className="grid gap-4 rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:grid-cols-2 sm:p-6">
         <label className={`${labelClassName} sm:col-span-2`}>
           Full name
@@ -193,6 +308,16 @@ export function EditPersonForm({ person }: { person: Person }) {
             <option value="archived">Archived</option>
           </select>
         </label>
+        <label className={labelClassName}>
+          First met
+          <input
+            name="firstMetAt"
+            type="date"
+            max={today}
+            defaultValue={initialValues.firstMetAt}
+            className={inputClassName}
+          />
+        </label>
         <label className={`${labelClassName} sm:col-span-2`}>
           Where you met
           <input
@@ -230,6 +355,46 @@ export function EditPersonForm({ person }: { person: Person }) {
         )}
         {saving ? "Saving…" : "Save changes"}
       </button>
+
+      <button
+        type="button"
+        onClick={requestLeave}
+        className="mt-2 flex h-12 w-full items-center justify-center rounded-2xl text-sm font-semibold text-ink-muted transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        Cancel
+      </button>
+
+      <dialog
+        ref={discardDialogRef}
+        className="m-auto w-[min(400px,calc(100vw-2rem))] rounded-[1.5rem] bg-white p-6 text-ink shadow-float backdrop:bg-ink/40"
+        aria-labelledby={`discard-changes-${person.id}`}
+      >
+        <h2
+          id={`discard-changes-${person.id}`}
+          className="font-display text-2xl leading-none"
+        >
+          Leave without saving?
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-ink-muted">
+          You have edits here that have not been saved yet.
+        </p>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => discardDialogRef.current?.close()}
+            className="flex h-12 items-center justify-center rounded-2xl bg-porcelain text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={leaveWithoutSaving}
+            className="flex h-12 items-center justify-center rounded-2xl bg-coral text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+          >
+            Discard changes
+          </button>
+        </div>
+      </dialog>
     </form>
   );
 }

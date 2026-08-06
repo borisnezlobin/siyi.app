@@ -13,6 +13,17 @@ const optionalText = z
   .nullish()
   .transform((value) => value || null);
 
+// A little slack absorbs the difference between the browser clock and ours.
+const clockSkewToleranceMs = 5 * 60 * 1000;
+
+const pastTimestamp = z
+  .string()
+  .datetime()
+  .refine(
+    (value) => Date.parse(value) <= Date.now() + clockSkewToleranceMs,
+    "Pick a date that has already happened.",
+  );
+
 export const personInputSchema = z.object({
   fullName: z.string().trim().min(1, "Add a name").max(120),
   preferredName: z
@@ -74,7 +85,7 @@ export const personInputSchema = z.object({
     .max(1024)
     .nullish()
     .transform((value) => value || null),
-  firstMetAt: z.string().datetime().optional(),
+  firstMetAt: pastTimestamp.optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,
 });
@@ -82,7 +93,7 @@ export const personInputSchema = z.object({
 export const interactionInputSchema = z.object({
   personId: z.string().uuid(),
   type: z.enum(interactionTypes),
-  occurredAt: z.string().datetime(),
+  occurredAt: pastTimestamp,
   note: z
     .string()
     .trim()
@@ -116,6 +127,8 @@ export const importPayloadSchema = z.object({
     .array(
       interactionInputSchema.extend({
         id: z.string().uuid().optional(),
+        // An import replays history as recorded, so it keeps the plain check.
+        occurredAt: z.string().datetime(),
         sourceUpdateId: z.string().uuid().optional().nullable(),
       }),
     )

@@ -70,6 +70,13 @@ import {
   fallbackConversationStarters,
 } from "@/lib/catch-up";
 import {
+  daysAgoDateInputValue,
+  isFutureDateInput,
+  isValidDateInput,
+  timestampFromDateInput,
+  todayDateInputValue,
+} from "@/lib/date-input";
+import {
   contactChoicesForPerson,
   openContactMethod,
   type ContactMethod,
@@ -416,6 +423,8 @@ export function QuickCaptureProvider({
   const [updateText, setUpdateText] = useState("");
   const [updateIsInteraction, setUpdateIsInteraction] = useState(true);
   const [updateType, setUpdateType] = useState("Talked");
+  const [updateDate, setUpdateDate] = useState(todayDateInputValue());
+  const [choosingUpdateDate, setChoosingUpdateDate] = useState(false);
   const [recentUpdateTypes, setRecentUpdateTypes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -454,6 +463,8 @@ export function QuickCaptureProvider({
     setUpdateText("");
     setUpdateIsInteraction(true);
     setUpdateType("Talked");
+    setUpdateDate(todayDateInputValue());
+    setChoosingUpdateDate(false);
     setError(null);
   }, []);
 
@@ -580,13 +591,19 @@ export function QuickCaptureProvider({
       return;
     }
 
+    if (!isValidDateInput(updateDate) || isFutureDateInput(updateDate)) {
+      setError("Use YYYY-MM-DD for a day that has already happened.");
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
       await createPersonUpdate(session.user.id, {
         personIds: selectedPersonIds,
         text: updateText,
-        recordedAt: new Date().toISOString(),
+        recordedAt: timestampFromDateInput(updateDate),
         isInteraction: updateIsInteraction,
         interactionLabel: updateIsInteraction ? updateType : null,
       });
@@ -1228,6 +1245,79 @@ export function QuickCaptureProvider({
                   </View>
                   </View>
                 ) : null}
+
+                <View style={styles.optionGroup}>
+                  <AppText variant="label">When was this?</AppText>
+                  <View style={styles.optionRow}>
+                    {[
+                      { label: "Today", value: todayDateInputValue() },
+                      { label: "Yesterday", value: daysAgoDateInputValue(1) },
+                    ].map((option) => {
+                      const selected =
+                        !choosingUpdateDate && updateDate === option.value;
+                      return (
+                        <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: selected }}
+                          key={option.value}
+                          onPress={() => {
+                            setChoosingUpdateDate(false);
+                            setUpdateDate(option.value);
+                            void Haptics.selectionAsync();
+                          }}
+                          style={[
+                            styles.optionChip,
+                            selected && styles.optionChipSelected,
+                          ]}
+                        >
+                          <AppText
+                            style={selected ? styles.lightText : undefined}
+                            variant="caption"
+                          >
+                            {option.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: choosingUpdateDate }}
+                      onPress={() => {
+                        setChoosingUpdateDate(true);
+                        void Haptics.selectionAsync();
+                      }}
+                      style={[
+                        styles.optionChip,
+                        choosingUpdateDate && styles.optionChipSelected,
+                      ]}
+                    >
+                      <Clock
+                        color={
+                          choosingUpdateDate ? colors.paper : colors.inkMuted
+                        }
+                        size={15}
+                      />
+                      <AppText
+                        style={choosingUpdateDate ? styles.lightText : undefined}
+                        variant="caption"
+                      >
+                        Another day
+                      </AppText>
+                    </Pressable>
+                  </View>
+                  {choosingUpdateDate ? (
+                    <FormField
+                      bottomSheet
+                      hint="Use YYYY-MM-DD."
+                      keyboardType="numbers-and-punctuation"
+                      label="Date"
+                      maxLength={10}
+                      onChangeText={setUpdateDate}
+                      placeholder={daysAgoDateInputValue(7)}
+                      value={updateDate}
+                    />
+                  ) : null}
+                </View>
 
                 {personSelectionLocked && selectedPersonIds.length === 1 ? (
                   <Button

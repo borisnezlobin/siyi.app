@@ -10,8 +10,9 @@ import {
   ImageSquare,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -25,6 +26,13 @@ import { FormField } from "@/components/form-field";
 import { Screen } from "@/components/screen";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
+import {
+  isFutureDateInput,
+  isValidDateInput,
+  timestampFromDateInput,
+  toDateInputValue,
+} from "@/lib/date-input";
+import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { createPerson, updatePerson } from "@/lib/data";
 import { normalizeInstagramUsername } from "@/lib/instagram";
@@ -69,6 +77,9 @@ export function PersonForm({ person }: { person?: Person }) {
   const [reminderIntervalDays, setReminderIntervalDays] = useState(
     person?.reminderIntervalDays ? String(person.reminderIntervalDays) : "",
   );
+  const [firstMetOn, setFirstMetOn] = useState(
+    toDateInputValue(person?.firstMetAt),
+  );
   const [advancedOpen, setAdvancedOpen] = useState(Boolean(person));
   const [photo, setPhoto] = useState<PhotoAsset | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,9 +102,76 @@ export function PersonForm({ person }: { person?: Person }) {
     void Haptics.selectionAsync();
   }
 
+  const currentValues: FormValues = {
+    fullName,
+    instagramUsername,
+    phoneNumber,
+    firstMetLocation,
+    generalNotes,
+    preferredName,
+    email,
+    birthday,
+    hometown,
+    dormOrResidence,
+    major,
+    graduationYear,
+    relationshipStrength: String(relationshipStrength),
+    reminderIntervalDays,
+    firstMetOn,
+    photoUri: photo?.uri ?? "",
+  };
+  const initialValues = useMemo<FormValues>(
+    () => ({
+      fullName: person?.fullName || "",
+      instagramUsername: person?.instagramUsername || "",
+      phoneNumber: person?.phoneNumber || "",
+      firstMetLocation: person?.firstMetLocation || "",
+      generalNotes: person?.generalNotes || "",
+      preferredName: person?.preferredName || "",
+      email: person?.email || "",
+      birthday: person?.birthday || "",
+      hometown: person?.hometown || "",
+      dormOrResidence: person?.dormOrResidence || "",
+      major: person?.major || "",
+      graduationYear: person?.graduationYear
+        ? String(person.graduationYear)
+        : "",
+      relationshipStrength: String(person?.relationshipStrength || 2),
+      reminderIntervalDays: person?.reminderIntervalDays
+        ? String(person.reminderIntervalDays)
+        : "",
+      firstMetOn: toDateInputValue(person?.firstMetAt),
+      photoUri: "",
+    }),
+    [person],
+  );
+  const dirty = hasUnsavedChanges(initialValues, currentValues);
+
+  function goBack() {
+    if (!dirty) {
+      router.back();
+      return;
+    }
+    Alert.alert(
+      "Leave without saving?",
+      "Your edits here have not been saved yet.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        {
+          text: "Discard changes",
+          style: "destructive",
+          onPress: () => router.back(),
+        },
+      ],
+      { cancelable: true },
+    );
+  }
+
   function buildInput(): PersonInput {
     const parsedGraduationYear = Number.parseInt(graduationYear, 10);
     const parsedReminderDays = Number.parseInt(reminderIntervalDays, 10);
+    const firstMetChanged =
+      firstMetOn !== initialValues.firstMetOn && isValidDateInput(firstMetOn);
     return {
       fullName,
       instagramUsername,
@@ -113,11 +191,22 @@ export function PersonForm({ person }: { person?: Person }) {
       reminderIntervalDays: Number.isNaN(parsedReminderDays)
         ? null
         : parsedReminderDays,
+      firstMetAt: firstMetChanged
+        ? timestampFromDateInput(firstMetOn)
+        : person?.firstMetAt,
     };
   }
 
   async function save() {
     if (!session) return;
+    if (firstMetOn && !isValidDateInput(firstMetOn)) {
+      setError("Write the date you met as YYYY-MM-DD.");
+      return;
+    }
+    if (isFutureDateInput(firstMetOn)) {
+      setError("You can’t have met them later than today.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -174,7 +263,7 @@ export function PersonForm({ person }: { person?: Person }) {
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.back}
           >
             <ArrowLeft color={colors.ink} size={21} />
@@ -387,6 +476,17 @@ export function PersonForm({ person }: { person?: Person }) {
                 especially close to.
               </AppText>
             </View>
+            {person ? (
+              <FormField
+                hint="Use YYYY-MM-DD. Change it if you actually met earlier."
+                keyboardType="numbers-and-punctuation"
+                label="First met"
+                maxLength={10}
+                onChangeText={setFirstMetOn}
+                placeholder="2026-02-14"
+                value={firstMetOn}
+              />
+            ) : null}
             <FormField
               hint="Leave blank to use your default for this strength."
               keyboardType="number-pad"

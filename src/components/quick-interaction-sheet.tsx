@@ -8,6 +8,10 @@ import {
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+  timestampFromDateInput,
+  todayDateInputValue,
+} from "@/lib/date-input";
 import { interactionOptions } from "@/lib/interaction-options";
 import type { InteractionType } from "@/lib/types";
 
@@ -25,7 +29,9 @@ export function QuickInteractionSheet({
   compact = false,
 }: QuickInteractionSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const today = todayDateInputValue();
   const [selectedType, setSelectedType] = useState<InteractionType>("texted");
+  const [occurredOn, setOccurredOn] = useState(today);
   const [note, setNote] = useState("");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -38,6 +44,7 @@ export function QuickInteractionSheet({
 
     const handleClose = () => {
       setNote("");
+      setOccurredOn(todayDateInputValue());
       setSaved(false);
     };
 
@@ -56,7 +63,7 @@ export function QuickInteractionSheet({
         body: JSON.stringify({
           personId,
           type: selectedType,
-          occurredAt: new Date().toISOString(),
+          occurredAt: timestampFromDateInput(occurredOn),
           note,
         }),
       });
@@ -150,6 +157,21 @@ export function QuickInteractionSheet({
               })}
             </div>
           </fieldset>
+
+          <label
+            className="mt-5 block text-xs font-semibold text-ink-muted"
+            htmlFor={`occurred-on-${personId}`}
+          >
+            When did this happen?
+            <input
+              id={`occurred-on-${personId}`}
+              type="date"
+              value={occurredOn}
+              max={today}
+              onChange={(event) => setOccurredOn(event.target.value)}
+              className="mt-1.5 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            />
+          </label>
 
           <label className="mt-5 block text-sm font-semibold" htmlFor={`note-${personId}`}>
             Add a note <span className="font-normal text-ink-muted">(optional)</span>

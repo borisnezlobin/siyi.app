@@ -2,6 +2,7 @@ import {
   followUpInputSchema,
   importPreviewSchema,
   personInputSchema,
+  personUpdateInputSchema,
 } from "@/lib/validation";
 
 describe("mobile validation", () => {
@@ -13,6 +14,36 @@ describe("mobile validation", () => {
     });
 
     expect(person.instagramUsername).toBe("jordan.lee");
+  });
+
+  it("keeps a backdated first met date and rejects a future one", () => {
+    const met = new Date(Date.now() - 86_400_000).toISOString();
+    const person = personInputSchema.parse({
+      fullName: "Jordan Lee",
+      relationshipStrength: 2,
+      firstMetAt: met,
+    });
+
+    expect(person.firstMetAt).toBe(met);
+    expect(
+      personInputSchema.safeParse({
+        fullName: "Jordan Lee",
+        relationshipStrength: 2,
+        firstMetAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an update recorded in the future", () => {
+    const result = personUpdateInputSchema.safeParse({
+      personIds: ["11111111-1111-4111-8111-111111111111"],
+      text: "Grabbed coffee",
+      recordedAt: new Date(Date.now() + 86_400_000).toISOString(),
+      isInteraction: true,
+      interactionLabel: "Coffee",
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it("rejects an invalid follow-up date", () => {

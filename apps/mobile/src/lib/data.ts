@@ -642,7 +642,7 @@ function optimisticPerson(
     relationshipStrength: input.relationshipStrength,
     reminderIntervalDays: input.reminderIntervalDays ?? null,
     status: current?.status ?? "active",
-    firstMetAt: current?.firstMetAt ?? now,
+    firstMetAt: input.firstMetAt ?? current?.firstMetAt ?? now,
     firstMetLocation: input.firstMetLocation,
     generalNotes: input.generalNotes,
     createdAt: current?.createdAt ?? now,
@@ -1283,7 +1283,7 @@ function personRecord(
     relationship_strength: person.relationshipStrength,
     reminder_interval_days: person.reminderIntervalDays,
     status: "active" as const,
-    first_met_at: firstMetAt,
+    first_met_at: person.firstMetAt ?? firstMetAt,
     first_met_location: person.firstMetLocation,
     general_notes: person.generalNotes,
   };
@@ -1353,6 +1353,9 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         graduation_year: mutation.input.graduationYear,
         relationship_strength: mutation.input.relationshipStrength,
         reminder_interval_days: mutation.input.reminderIntervalDays,
+        ...(mutation.input.firstMetAt
+          ? { first_met_at: mutation.input.firstMetAt }
+          : {}),
         first_met_location: mutation.input.firstMetLocation,
         general_notes: mutation.input.generalNotes,
       })
