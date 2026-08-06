@@ -4,7 +4,14 @@ import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@
 import { resolveAvatarUrls, resolvedAvatarUrl } from "@/lib/avatar-urls";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import type { FollowUp, Interaction, Person, RelationshipStrength, Tag } from "@/lib/types";
+import type {
+  FollowUp,
+  Interaction,
+  Person,
+  PersonUpdate,
+  RelationshipStrength,
+  Tag,
+} from "@/lib/types";
 
 type PersonRow = {
   id: string;
@@ -152,6 +159,43 @@ export async function getPerson(personId: string): Promise<Person> {
   );
 }
 
+/** Older deployments may not have the person_updates tables yet. */
+function isMissingUpdatesSchema(code: string | undefined) {
+  return ["42P01", "42883", "PGRST202", "PGRST205"].includes(code || "");
+}
+
+export async function getPersonUpdates(
+  personId: string,
+): Promise<PersonUpdate[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("person_updates")
+    .select("*, person_update_people!inner(person_id)")
+    .eq("person_update_people.person_id", personId)
+    .order("recorded_at", { ascending: false });
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code)) return [];
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    text: row.text,
+    recordedAt: row.recorded_at,
+    isInteraction: row.is_interaction,
+    interactionLabel: row.interaction_label,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    personIds: (row.person_update_people ?? []).map(
+      (link: { person_id: string }) => link.person_id,
+    ),
+  }));
+}
+
 export async function getInteractions(personId?: string): Promise<Interaction[]> {
   if (!isSupabaseConfigured()) {
     return createDemoInteractions().filter(
@@ -179,6 +223,7 @@ export async function getInteractions(personId?: string): Promise<Interaction[]>
     type: row.type,
     occurredAt: row.occurred_at,
     note: row.note,
+    sourceUpdateId: row.source_update_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));

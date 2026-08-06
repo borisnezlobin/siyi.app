@@ -20,7 +20,7 @@ type QuickInteractionSheetProps = {
 export function QuickInteractionSheet({
   personId,
   personName,
-  buttonLabel = "Log interaction",
+  buttonLabel = "Add update",
   compact = false,
 }: QuickInteractionSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -81,7 +81,7 @@ export function QuickInteractionSheet({
             ? "relative z-10 size-10 shrink-0 rounded-full bg-sage text-sage-strong hover:bg-[#d3e1d7]"
             : "rounded-xl bg-ink px-4 py-3 text-sm text-white shadow-card hover:bg-[#28332e]",
         )}
-        aria-label={compact ? `Log an interaction with ${personName}` : undefined}
+        aria-label={compact ? `Add an update about ${personName}` : undefined}
       >
         <Plus size={compact ? 18 : 17} weight="bold" aria-hidden="true" />
         {!compact ? buttonLabel : null}
@@ -108,7 +108,7 @@ export function QuickInteractionSheet({
               type="button"
               onClick={() => dialogRef.current?.close()}
               className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              aria-label="Close interaction sheet"
+              aria-label="Close update sheet"
             >
               <X size={18} aria-hidden="true" />
             </button>
@@ -167,7 +167,7 @@ export function QuickInteractionSheet({
             ) : saving ? (
               "Saving…"
             ) : (
-              "Save interaction"
+              "Save update"
             )}
           </button>
         </div>

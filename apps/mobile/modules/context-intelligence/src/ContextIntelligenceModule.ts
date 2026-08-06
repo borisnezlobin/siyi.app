@@ -6,6 +6,7 @@ declare class ContextIntelligenceModule extends NativeModule<
 > {
   availability(): ContextIntelligenceAvailability;
   conversationStarters(context: string): Promise<string[]>;
+  shortBio(context: string): Promise<string>;
 }
 
 export default requireOptionalNativeModule<ContextIntelligenceModule>(

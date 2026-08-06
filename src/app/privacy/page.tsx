@@ -45,7 +45,7 @@ const sections = [
     content: (
       <ul>
         <li>Provide, synchronize, and secure your account.</li>
-        <li>Show your people, interactions, reminders, and follow-ups.</li>
+        <li>Show your people, updates, reminders, and follow-ups.</li>
         <li>Send notifications only for the categories you enable.</li>
         <li>Respond to support requests and investigate technical problems.</li>
         <li>Prevent fraud, misuse, and unauthorized access.</li>

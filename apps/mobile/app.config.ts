@@ -1,6 +1,6 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "siyi.app";
+const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Siyi.app";
 const appSlug = process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app";
 const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi";
 const bundleIdentifier =
@@ -146,6 +146,13 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
       "expo-web-browser",
       {
         experimentalLauncherActivity: false,
+      },
+    ],
+    [
+      "expo-contacts",
+      {
+        contactsPermission:
+          "Allow Siyi to add the people you save to your contacts.",
       },
     ],
     ...(iosProtectedCapabilitiesEnabled

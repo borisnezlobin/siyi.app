@@ -64,5 +64,36 @@ public class ContextIntelligenceModule: Module {
 #endif
       return []
     }
+
+    AsyncFunction("shortBio") { (context: String) async throws -> String in
+#if canImport(FoundationModels)
+      if #available(iOS 26.0, *) {
+        guard SystemLanguageModel.default.isAvailable else {
+          return ""
+        }
+        let session = LanguageModelSession(
+          instructions: """
+          You write a one-sentence introduction of a person, meant to be shared
+          with someone who has not met them yet.
+          Use only the supplied context and never invent facts.
+          Never include contact details, addresses, birthdays, or anything
+          stated as private, sensitive, or confidential.
+          Never include opinions or judgements about the person.
+          Keep it under 25 words and write it in a warm, plain voice.
+          """
+        )
+        let response = try await session.respond(
+          to: """
+          Context about one person:
+          \(context)
+
+          Return only the sentence, with no preamble or quotation marks.
+          """
+        )
+        return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+      }
+#endif
+      return ""
+    }
   }
 }

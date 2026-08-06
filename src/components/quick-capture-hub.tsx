@@ -211,7 +211,7 @@ export function QuickCaptureHub({
         setError(
           await getApiResponseError(
             response,
-            "The interaction could not be saved.",
+            "That update could not be saved.",
           ),
         );
         setSaving(false);
@@ -277,7 +277,7 @@ export function QuickCaptureHub({
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-[#fff5d8] px-2 text-[11px] font-semibold text-[#705513] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
         >
           <ChatCircleDots size={23} weight="fill" aria-hidden="true" />
-          Interaction
+          Update
         </button>
       </div>
 
@@ -483,7 +483,7 @@ export function QuickCaptureHub({
                 ) : mode === "follow-up" ? (
                   "Save follow-up"
                 ) : (
-                  "Save interaction"
+                  "Save update"
                 )}
               </button>
             </>
@@ -491,7 +491,7 @@ export function QuickCaptureHub({
             <div className="mt-6 rounded-2xl bg-porcelain p-5 text-center">
               <p className="text-sm font-semibold">Add someone first.</p>
               <p className="mt-1 text-xs leading-5 text-ink-muted">
-                Follow-ups and interactions need a person to belong to.
+                Follow-ups and updates need a person to belong to.
               </p>
               <Link
                 href="/people/new"

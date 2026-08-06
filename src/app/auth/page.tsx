@@ -138,9 +138,8 @@ export default async function AuthPage({
                     <strong className="font-semibold text-ink">
                       {parameters.sent}
                     </strong>
-                    . It can take a minute to arrive. Open it in the same
-                    browser you asked from — if it doesn&apos;t show up, check
-                    your spam folder.
+                    . It can take a minute to arrive — if it doesn&apos;t show
+                    up, check your spam folder.
                   </p>
                   <Link
                     href={
@@ -370,8 +369,8 @@ export default async function AuthPage({
                     <div className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-ink-muted">
                       <ShieldCheck size={16} className="mt-0.5 shrink-0 text-sage-strong" aria-hidden="true" />
                       <p>
-                        The link works once and expires shortly. Open it in the
-                        same browser you asked from.
+                        The link works once. It expires after a while, so use
+                        it while it&apos;s fresh.
                       </p>
                     </div>
                   )}

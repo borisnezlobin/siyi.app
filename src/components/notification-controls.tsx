@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { brand } from "@/config/brand";
 import { SwitchControl } from "@/components/switch-control";
 
+type StatusMessage = { text: string; tone: "success" | "error" };
+
 type PermissionState = NotificationPermission | "unsupported";
 
 const weekDays = [
@@ -65,7 +67,7 @@ export function NotificationControls({
   );
   const [days, setDays] = useState(initialPreferences.reminderDaysOfWeek);
   const [working, setWorking] = useState<"push" | "test" | "save" | null>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<StatusMessage | null>(null);
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
@@ -82,7 +84,7 @@ export function NotificationControls({
 
   async function enablePush() {
     setWorking("push");
-    setMessage("");
+    setMessage(null);
 
     try {
       if (
@@ -114,7 +116,7 @@ export function NotificationControls({
             throw new Error("Push keys have not been configured.");
           }
           setPushEnabled(true);
-          setMessage("Push is enabled for this preview.");
+          setMessage({ text: "Push is enabled for this preview.", tone: "success" });
           setWorking(null);
           return;
         }
@@ -135,13 +137,15 @@ export function NotificationControls({
       }
 
       setPushEnabled(true);
-      setMessage("Push notifications are enabled.");
+      setMessage({ text: "Push notifications are enabled.", tone: "success" });
     } catch (caughtError) {
-      setMessage(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Push could not be enabled.",
-      );
+      setMessage({
+        text:
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Push could not be enabled.",
+        tone: "error",
+      });
     }
 
     setWorking(null);
@@ -149,7 +153,7 @@ export function NotificationControls({
 
   async function disablePush() {
     setWorking("push");
-    setMessage("");
+    setMessage(null);
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
 
@@ -163,20 +167,20 @@ export function NotificationControls({
 
     await subscription?.unsubscribe();
     setPushEnabled(false);
-    setMessage("Push notifications are off on this browser.");
+    setMessage({ text: "Push notifications are off on this browser.", tone: "success" });
     setWorking(null);
   }
 
   async function sendTestNotification() {
     setWorking("test");
-    setMessage("");
+    setMessage(null);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       const response = await fetch("/api/push/test", { method: "POST" });
       setMessage(
         response.ok
-          ? "Test notification sent."
-          : "The test notification could not be sent.",
+          ? { text: "Test notification sent.", tone: "success" }
+          : { text: "The test notification could not be sent.", tone: "error" },
       );
     } else if (permission === "granted") {
       const registration = await navigator.serviceWorker.ready;
@@ -185,9 +189,9 @@ export function NotificationControls({
         icon: "/icon-192.png",
         data: { url: "/today" },
       });
-      setMessage("Test notification sent.");
+      setMessage({ text: "Test notification sent.", tone: "success" });
     } else {
-      setMessage("Enable push before sending a test.");
+      setMessage({ text: "Enable push before sending a test.", tone: "error" });
     }
 
     setWorking(null);
@@ -195,7 +199,7 @@ export function NotificationControls({
 
   async function savePreferences() {
     setWorking("save");
-    setMessage("");
+    setMessage(null);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       const response = await fetch("/api/notification-preferences", {
@@ -211,7 +215,7 @@ export function NotificationControls({
         }),
       });
       if (!response.ok) {
-        setMessage("Preferences could not be saved.");
+        setMessage({ text: "Preferences could not be saved.", tone: "error" });
         setWorking(null);
         return;
       }
@@ -219,7 +223,7 @@ export function NotificationControls({
       await new Promise((resolve) => window.setTimeout(resolve, 250));
     }
 
-    setMessage("Notification preferences saved.");
+    setMessage({ text: "Notification preferences saved.", tone: "success" });
     setWorking(null);
   }
 
@@ -380,10 +384,19 @@ export function NotificationControls({
       {message ? (
         <p
           role="status"
-          className="flex items-center gap-2 rounded-2xl bg-sage px-4 py-3 text-xs font-semibold text-sage-strong"
+          className={clsx(
+            "flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold",
+            message.tone === "success"
+              ? "bg-sage text-sage-strong"
+              : "bg-[#fbe5e0] text-coral-strong",
+          )}
         >
-          <CheckCircle size={17} weight="fill" aria-hidden="true" />
-          {message}
+          {message.tone === "success" ? (
+            <CheckCircle size={17} weight="fill" aria-hidden="true" />
+          ) : (
+            <WarningCircle size={17} weight="fill" aria-hidden="true" />
+          )}
+          {message.text}
         </p>
       ) : null}
 

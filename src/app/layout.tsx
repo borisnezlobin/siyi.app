@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${manrope.variable} ${newsreader.variable} antialiased`}
+        className={`${manrope.variable} ${newsreader.variable} ${manrope.className} antialiased`}
       >
         {children}
         <ServiceWorkerRegistration />

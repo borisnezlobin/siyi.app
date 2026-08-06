@@ -15,12 +15,13 @@ import {
   MapPin,
   NotePencil,
   PencilSimple,
+  ShareNetwork,
   Phone,
   PhoneCall,
   UsersThree,
 } from "phosphor-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Linking,
@@ -32,6 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
+import { SharePersonSheet } from "@/components/share-person-sheet";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card, SectionHeading } from "@/components/surface";
@@ -75,6 +77,7 @@ export default function PersonDetailScreen() {
     catchUp?: string;
   }>();
   const catchUpOpenedRef = useRef(false);
+  const [sharing, setSharing] = useState(false);
   const quickCapture = useQuickCapture();
   const personData = useRefreshableData(() => getPersonDetails(id));
 
@@ -212,6 +215,14 @@ export default function PersonDetailScreen() {
             <ArrowLeft color={colors.ink} size={21} />
           </Pressable>
           <View style={styles.topActions}>
+            <Pressable
+              accessibilityLabel="Share person"
+              accessibilityRole="button"
+              onPress={() => setSharing(true)}
+              style={styles.headerButton}
+            >
+              <ShareNetwork color={colors.ink} size={20} />
+            </Pressable>
             <Pressable
               accessibilityLabel="Edit person"
               accessibilityRole="button"
@@ -471,6 +482,12 @@ export default function PersonDetailScreen() {
           <CalendarCheck color={colors.sageStrong} size={22} weight="bold" />
         </Pressable>
       </View>
+
+      <SharePersonSheet
+        person={person}
+        visible={sharing}
+        onClose={() => setSharing(false)}
+      />
     </View>
   );
 }

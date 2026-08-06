@@ -24,6 +24,7 @@ import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
 import { Screen } from "@/components/screen";
 import { colors, floatShadow, radii } from "@/constants/theme";
+import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
 import { createPerson, updatePerson } from "@/lib/data";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import type { Person, RelationshipStrength } from "@/lib/types";
@@ -130,6 +131,7 @@ export function PersonForm({ person }: { person?: Person }) {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         );
+        void offerContactSyncAfterSave({ ...person, ...buildInput() } as Person);
         router.back();
       } else {
         const created = await createPerson(
@@ -140,6 +142,7 @@ export function PersonForm({ person }: { person?: Person }) {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         );
+        void offerContactSyncAfterSave(created);
         router.replace(`/people/${created.id}`);
       }
     } catch (saveError) {

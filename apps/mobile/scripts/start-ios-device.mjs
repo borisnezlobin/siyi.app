@@ -113,7 +113,7 @@ async function launchOnDevice(deviceIdentifier) {
   );
   if (result.status !== 0) {
     throw new Error(
-      "siyi.app could not be launched. Install it first with “npm run mobile:ios:device”.",
+      "Siyi.app could not be launched. Install it first with “npm run mobile:ios:device”.",
     );
   }
 }

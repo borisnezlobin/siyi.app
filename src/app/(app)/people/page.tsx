@@ -43,7 +43,7 @@ export default async function PeoplePage({
           role="status"
           className="mt-5 rounded-2xl bg-sage px-4 py-3 text-sm font-semibold text-sage-strong"
         >
-          Person saved. A “met” interaction was logged automatically.
+          Person saved. A “met” update was logged automatically.
         </p>
       ) : null}
       <PeopleDirectory people={people} initialFilter={initialFilter} />
