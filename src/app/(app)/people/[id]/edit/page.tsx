@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EditPersonForm } from "@/components/edit-person-form";
 import { PageHeader } from "@/components/page-header";
-import { getPerson } from "@/lib/data";
+import {
+  getPerson,
+  getPersonNoteSections,
+  getUsedNoteHeadings,
+} from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +21,11 @@ export default async function EditPersonPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const person = await getPerson(id);
+  const [person, noteSections, headingsUsedElsewhere] = await Promise.all([
+    getPerson(id),
+    getPersonNoteSections(id),
+    getUsedNoteHeadings(),
+  ]);
 
   return (
     <div className="mx-auto max-w-[720px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
@@ -35,7 +43,12 @@ export default async function EditPersonPage({
           </Link>
         }
       />
-      <EditPersonForm person={person} />
+      <EditPersonForm
+        person={person}
+        noteSections={noteSections.sections}
+        noteSectionsAvailable={noteSections.available}
+        headingsUsedElsewhere={headingsUsedElsewhere}
+      />
     </div>
   );
 }
