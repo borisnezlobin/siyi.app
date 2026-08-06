@@ -6,6 +6,11 @@ import {
   maxContactMethodsPerKind,
 } from "@/lib/contact-methods";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import {
+  defaultShareExpiryChoiceId,
+  normalizeShareSelection,
+  shareExpiryChoices,
+} from "@/lib/person-share";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import {
   maxNoteBodyLength,
@@ -344,3 +349,22 @@ export const importPayloadSchema = z.object({
 });
 
 export type PersonInput = z.infer<typeof personInputSchema>;
+
+/**
+ * Creating a share link. The selection is read field by field and defaults to
+ * false, so an unrecognised or missing key can only ever expose less.
+ */
+export const personShareInputSchema = z.object({
+  personId: z.string().uuid(),
+  expiry: z
+    .enum(shareExpiryChoices.map((choice) => choice.id) as [string, ...string[]])
+    .optional()
+    .default(defaultShareExpiryChoiceId),
+  selection: z
+    .record(z.string(), z.boolean())
+    .optional()
+    .default({})
+    .transform(normalizeShareSelection),
+});
+
+export type PersonShareInput = z.infer<typeof personShareInputSchema>;
