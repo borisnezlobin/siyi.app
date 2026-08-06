@@ -1,7 +1,10 @@
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 
-export const contactMethodKinds = ["phone", "email", "instagram", "discord"] as const;
+// Discord is ready in the UI and in migration 0016, but the kind column still
+// rejects it until that migration is applied. Add "discord" back here the moment
+// it is, and the fields below light up again.
+export const contactMethodKinds = ["phone", "email", "instagram"] as const;
 export type ContactMethodKind = (typeof contactMethodKinds)[number];
 
 export type ContactMethod = {
