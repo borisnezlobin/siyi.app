@@ -124,3 +124,27 @@ against production; both are additive and touch no existing data:
 - `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
   and reminders_enabled, and replaces the create-person RPC. Until it runs,
   relationship labels silently do not persist and every person gets reminders.
+
+## In flight (four agents, isolated worktrees)
+
+Migration numbers are reserved per agent so they cannot collide:
+
+- `0010_person_notes.sql` — named note sections + Edit Person page grouping.
+  Also builds "How to reach them" as its own component, which the
+  multiple-contacts task below is meant to extend.
+- `0011_admin_announcements.sql` — /admin, allowlisted by `ADMIN_EMAILS`,
+  anonymised aggregate stats, segment announcements and push.
+- `0012_person_slugs.sql` — always-suffixed person slugs, uuid keeps resolving.
+- `0014_person_coordinates.sql` — hometown map, offline dataset only, no new
+  dependency and no external requests.
+
+Queued, NOT started — it rewrites the same contact fields agent 0010 is
+restructuring, so it must run after that lands:
+
+- [ ] **Multiple emails / phones / Instagram handles per person.** Child
+      tables. Touches import/export, vCard, contact sync, and search.
+
+Rules every agent was given, worth keeping for the next one:
+no `npm install` (worktrees resolve node_modules from the repo root, and a
+concurrent install corrupts the shared npm cache); additive migrations only;
+graceful degradation so a deploy can precede its migration; no emoji anywhere.
