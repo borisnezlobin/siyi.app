@@ -42,6 +42,13 @@ const presentation: Record<ContactMethodKind, KindPresentation> = {
       keyboardType: "email-address",
     },
   },
+  discord: {
+    heading: "Discord",
+    noun: "username",
+    placeholder: "username",
+    labelPlaceholder: "server",
+    inputProps: { autoCapitalize: "none", autoCorrect: false },
+  },
   instagram: {
     heading: "Instagram",
     noun: "handle",

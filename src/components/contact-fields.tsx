@@ -51,6 +51,13 @@ const presentation: Record<ContactMethodKind, KindPresentation> = {
     labelPlaceholder: "finsta",
     inputProps: { autoCapitalize: "none", autoCorrect: "off" },
   },
+  discord: {
+    heading: "Discord",
+    noun: "username",
+    placeholder: "username",
+    labelPlaceholder: "server",
+    inputProps: { autoCapitalize: "none", autoCorrect: "off" },
+  },
 };
 
 /** A row needs an identity that survives editing, and a brand new row has no

@@ -1,7 +1,7 @@
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 
-export const contactMethodKinds = ["phone", "email", "instagram"] as const;
+export const contactMethodKinds = ["phone", "email", "instagram", "discord"] as const;
 export type ContactMethodKind = (typeof contactMethodKinds)[number];
 
 export type ContactMethod = {
