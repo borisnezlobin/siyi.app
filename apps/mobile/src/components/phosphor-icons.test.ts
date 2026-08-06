@@ -1,5 +1,6 @@
 import {
   BellRinging,
+  ClockCountdown,
   House,
   Plus,
   UsersThree,
@@ -11,5 +12,6 @@ describe("Phosphor icon layer", () => {
     expect(UsersThree).toBeDefined();
     expect(Plus).toBeDefined();
     expect(BellRinging).toBeDefined();
+    expect(ClockCountdown).toBeDefined();
   });
 });

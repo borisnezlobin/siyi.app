@@ -6,17 +6,19 @@ import {
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
+import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
   ArrowRight,
-  CalendarCheck,
+  CalendarBlank,
   ChatCircle,
   ChatCircleDots,
   Check,
   Clock,
+  ClockCountdown,
   DiscordLogo,
   Envelope,
   InstagramLogo,
@@ -102,6 +104,13 @@ import {
   setPreferredContactMethod,
 } from "@/lib/contact-preferences";
 import { elapsedLabel } from "@/lib/date-labels";
+import {
+  followUpDayFromDaysAway,
+  followUpDayLabel,
+  followUpDayValue,
+  followUpDueAt,
+  followUpQuickChoices,
+} from "@/lib/follow-up-due";
 import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
 import {
   type InteractionType,
@@ -130,13 +139,6 @@ type QuickCaptureContextValue = {
 
 const QuickCaptureContext =
   createContext<QuickCaptureContextValue | null>(null);
-
-function dueAtFromOption(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  date.setHours(days === 0 ? 20 : 17, 0, 0, 0);
-  return date.toISOString();
-}
 
 function CaptureAction({
   icon: IconComponent,
@@ -421,7 +423,8 @@ export function QuickCaptureProvider({
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
   const [followUpText, setFollowUpText] = useState("");
-  const [dueOption, setDueOption] = useState(1);
+  const [dueDay, setDueDay] = useState(() => followUpDayFromDaysAway(1));
+  const [pickingDueDate, setPickingDueDate] = useState(false);
   const [updateText, setUpdateText] = useState("");
   const [updateIsInteraction, setUpdateIsInteraction] = useState(true);
   const [updateType, setUpdateType] = useState<InteractionType>("texted");
@@ -465,7 +468,8 @@ export function QuickCaptureProvider({
 
   const resetForm = useCallback(() => {
     setFollowUpText("");
-    setDueOption(1);
+    setDueDay(followUpDayFromDaysAway(1));
+    setPickingDueDate(false);
     setUpdateText("");
     setUpdateIsInteraction(true);
     setUpdateType("texted");
@@ -596,7 +600,7 @@ export function QuickCaptureProvider({
       await createFollowUp(session.user.id, {
         personId,
         text: followUpText,
-        dueAt: dueAtFromOption(dueOption),
+        dueAt: followUpDueAt(dueDay),
       });
       setRevision((value) => value + 1);
       await Haptics.notificationAsync(
@@ -835,7 +839,7 @@ export function QuickCaptureProvider({
               />
               <CaptureAction
                 body="Set something useful for later"
-                icon={CalendarCheck}
+                icon={ClockCountdown}
                 onPress={() => present("follow-up")}
                 title="Add a follow-up"
               />
@@ -1168,49 +1172,85 @@ export function QuickCaptureProvider({
                 <View style={styles.optionGroup}>
                   <AppText variant="label">When?</AppText>
                   <View style={styles.optionRow}>
-                    {[
-                      { label: "Today", value: 0 },
-                      { label: "Tomorrow", value: 1 },
-                      { label: "Next week", value: 7 },
-                      { label: "In 2 weeks", value: 14 },
-                    ].map((option) => (
-                      <Pressable
-                        accessibilityRole="radio"
-                        accessibilityState={{
-                          checked: dueOption === option.value,
-                        }}
-                        key={option.value}
-                        onPress={() => {
-                          setDueOption(option.value);
-                          void Haptics.selectionAsync();
-                        }}
-                        style={[
-                          styles.optionChip,
-                          dueOption === option.value &&
-                            styles.optionChipSelected,
-                        ]}
-                      >
-                        <Clock
-                          color={
-                            dueOption === option.value
-                              ? colors.paper
-                              : colors.inkMuted
-                          }
-                          size={15}
-                        />
-                        <AppText
-                          style={
-                            dueOption === option.value
-                              ? styles.lightText
-                              : undefined
-                          }
-                          variant="caption"
+                    {followUpQuickChoices.map((option) => {
+                      const optionDay = followUpDayFromDaysAway(
+                        option.daysAway,
+                      );
+                      const selected =
+                        !pickingDueDate &&
+                        followUpDayValue(dueDay) ===
+                          followUpDayValue(optionDay);
+                      return (
+                        <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: selected }}
+                          key={option.label}
+                          onPress={() => {
+                            setPickingDueDate(false);
+                            setDueDay(optionDay);
+                            void Haptics.selectionAsync();
+                          }}
+                          style={[
+                            styles.optionChip,
+                            selected && styles.optionChipSelected,
+                          ]}
                         >
-                          {option.label}
-                        </AppText>
-                      </Pressable>
-                    ))}
+                          <Clock
+                            color={selected ? colors.paper : colors.inkMuted}
+                            size={15}
+                          />
+                          <AppText
+                            style={selected ? styles.lightText : undefined}
+                            variant="caption"
+                          >
+                            {option.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: pickingDueDate }}
+                      onPress={() => {
+                        setPickingDueDate(true);
+                        void Haptics.selectionAsync();
+                      }}
+                      style={[
+                        styles.optionChip,
+                        pickingDueDate && styles.optionChipSelected,
+                      ]}
+                    >
+                      <CalendarBlank
+                        color={pickingDueDate ? colors.paper : colors.inkMuted}
+                        size={15}
+                      />
+                      <AppText
+                        style={pickingDueDate ? styles.lightText : undefined}
+                        variant="caption"
+                      >
+                        {pickingDueDate
+                          ? followUpDayLabel(dueDay)
+                          : "Pick a date"}
+                      </AppText>
+                    </Pressable>
                   </View>
+                  {pickingDueDate ? (
+                    <DateTimePicker
+                      accentColor={colors.coral}
+                      display="inline"
+                      minimumDate={followUpDayFromDaysAway(0)}
+                      mode="date"
+                      onValueChange={(_event, date) => {
+                        setDueDay(date);
+                      }}
+                      presentation="inline"
+                      style={styles.datePicker}
+                      value={dueDay}
+                    />
+                  ) : null}
+                  <AppText style={styles.dueSummary} variant="caption">
+                    Due {followUpDayLabel(dueDay)}
+                  </AppText>
                 </View>
                 <Button
                   disabled={!selectedPersonIds[0] || !followUpText.trim()}
@@ -1688,6 +1728,12 @@ const styles = StyleSheet.create({
   },
   optionChipSelected: {
     backgroundColor: colors.ink,
+  },
+  datePicker: {
+    alignSelf: "stretch",
+  },
+  dueSummary: {
+    color: colors.inkMuted,
   },
   typeGrid: {
     flexDirection: "row",

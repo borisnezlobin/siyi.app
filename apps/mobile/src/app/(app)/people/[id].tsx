@@ -7,6 +7,7 @@ import {
   Cake,
   CalendarCheck,
   ChatCircleDots,
+  ClockCountdown,
   Envelope,
   GraduationCap,
   HouseLine,
@@ -430,7 +431,7 @@ export default function PersonDetailScreen() {
               </AppText>
               <Button
                 compact
-                icon={CalendarCheck}
+                icon={ClockCountdown}
                 label="Add one"
                 onPress={() => quickCapture.addFollowUp(person.id)}
                 variant="secondary"
@@ -543,7 +544,7 @@ export default function PersonDetailScreen() {
           onPress={() => quickCapture.addFollowUp(person.id)}
           style={styles.footerSecondary}
         >
-          <CalendarCheck color={colors.sageStrong} size={22} weight="bold" />
+          <ClockCountdown color={colors.sageStrong} size={22} weight="bold" />
         </Pressable>
       </View>
 

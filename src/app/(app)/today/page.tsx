@@ -1,6 +1,5 @@
 import {
   Cake,
-  CheckSquareOffset,
   ClockCountdown,
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
@@ -227,7 +226,7 @@ export default async function TodayPage() {
                   `}
                 >
                   {item.kind === "follow-up" ? (
-                    <CheckSquareOffset size={19} weight="fill" aria-hidden="true" />
+                    <ClockCountdown size={19} weight="fill" aria-hidden="true" />
                   ) : item.kind === "birthday" ? (
                     <Cake size={19} weight="fill" aria-hidden="true" />
                   ) : (
@@ -267,7 +266,7 @@ export default async function TodayPage() {
           ) : (
             <div className="px-5 py-8 text-center">
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-sage text-sage-strong">
-                <CheckSquareOffset size={21} weight="fill" aria-hidden="true" />
+                <ClockCountdown size={21} weight="fill" aria-hidden="true" />
               </span>
               <p className="mt-3 text-sm font-semibold">Nothing has a deadline.</p>
               <p className="mt-1 text-xs text-ink-muted">

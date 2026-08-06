@@ -1,81 +1,59 @@
 import * as Haptics from "expo-haptics";
-import {
-  CalendarCheck,
-  Check,
-  CheckCircle,
-  Funnel,
-} from "phosphor-react-native";
 import { useRouter } from "expo-router";
+import { Check, ClockCountdown, MagnifyingGlass } from "phosphor-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
-import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
+import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
-import { EmptyState, PressableCard, SectionHeading } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
 import { getFollowUps, setFollowUpComplete } from "@/lib/data";
-import { relativeDayLabel } from "@/lib/date-labels";
+import {
+  countsByBucket,
+  followUpBucketEmptyLabels,
+  followUpBucketLabels,
+  followUpBucketOrder,
+  followUpDueLabel,
+  groupFollowUpsByBucket,
+  type FollowUpBucket,
+} from "@/lib/follow-up-buckets";
 import type { FollowUp } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
-
-type StatusFilter = "open" | "completed" | "all";
-
-function isSameLocalDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
 
 export default function FollowUpsScreen() {
   const router = useRouter();
   const quickCapture = useQuickCapture();
   const screenData = useRefreshableData(getFollowUps);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<StatusFilter>("open");
+  const [focusedBucket, setFocusedBucket] = useState<FollowUpBucket | null>(
+    null,
+  );
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     if (quickCapture.revision > 0) void screenData.reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickCapture.revision]);
 
-  const grouped = useMemo(() => {
-    const now = new Date();
+  const { groups, completed, counts } = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const visible = (screenData.data || []).filter((followUp) => {
-      const completed = Boolean(followUp.completedAt);
-      if (filter === "open" && completed) return false;
-      if (filter === "completed" && !completed) return false;
-      return [followUp.text, followUp.person?.fullName, followUp.person?.preferredName]
+    const visible = (screenData.data || []).filter((followUp) =>
+      [
+        followUp.text,
+        followUp.person?.fullName,
+        followUp.person?.preferredName,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(normalized);
-    });
-
-    return {
-      overdue: visible.filter(
-        (item) =>
-          !item.completedAt &&
-          new Date(item.dueAt).getTime() < now.getTime() &&
-          !isSameLocalDay(new Date(item.dueAt), now),
-      ),
-      today: visible.filter(
-        (item) => !item.completedAt && isSameLocalDay(new Date(item.dueAt), now),
-      ),
-      upcoming: visible.filter(
-        (item) =>
-          !item.completedAt &&
-          new Date(item.dueAt).getTime() >= now.getTime() &&
-          !isSameLocalDay(new Date(item.dueAt), now),
-      ),
-      completed: visible.filter((item) => Boolean(item.completedAt)),
-    };
-  }, [filter, query, screenData.data]);
+        .includes(normalized),
+    );
+    const bucketed = groupFollowUpsByBucket(visible);
+    return { ...bucketed, counts: countsByBucket(bucketed.groups) };
+  }, [query, screenData.data]);
 
   if (screenData.loading && !screenData.data) {
     return <LoadingState label="Gathering your follow-ups…" />;
@@ -92,23 +70,16 @@ export default function FollowUpsScreen() {
   async function toggleComplete(followUp: FollowUp) {
     try {
       await setFollowUpComplete(followUp.id, !followUp.completedAt);
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await screenData.reload();
     } catch {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   }
 
-  const groups = [
-    { key: "overdue", title: "Overdue", items: grouped.overdue },
-    { key: "today", title: "Due today", items: grouped.today },
-    { key: "upcoming", title: "Upcoming", items: grouped.upcoming },
-    { key: "completed", title: "Completed", items: grouped.completed },
-  ];
-  const totalVisible = groups.reduce(
-    (total, group) => total + group.items.length,
+  const shownBuckets = focusedBucket ? [focusedBucket] : followUpBucketOrder;
+  const openTotal = followUpBucketOrder.reduce(
+    (total, bucket) => total + counts[bucket],
     0,
   );
 
@@ -117,147 +88,146 @@ export default function FollowUpsScreen() {
       eyebrow="Promises to your future self"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="Overdue items come first. Completing one is always a single tap."
+      subtitle="What is coming up, and when it lands."
       title="Follow-ups"
     >
-      <View style={styles.controls}>
-        <View style={styles.search}>
-          <Funnel color={colors.inkMuted} size={19} />
-          <TextInput
-            accessibilityLabel="Filter follow-ups"
-            onChangeText={setQuery}
-            onSubmitEditing={() => Keyboard.dismiss()}
-            placeholder="Person or follow-up"
-            placeholderTextColor={colors.inkMuted}
-            returnKeyType="search"
-            selectionColor={colors.coral}
-            style={styles.searchInput}
-            value={query}
-          />
-        </View>
-        <View style={styles.filters}>
-          {(["open", "completed", "all"] as const).map((value) => (
+      <View style={styles.distribution}>
+        {followUpBucketOrder.map((bucket, index) => {
+          const focused = focusedBucket === bucket;
+          return (
             <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ checked: filter === value }}
-              key={value}
-              onPress={() => setFilter(value)}
+              accessibilityHint="Shows only this part of the list"
+              accessibilityLabel={`${followUpBucketLabels[bucket]}: ${counts[bucket]}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              key={bucket}
+              onPress={() => {
+                setFocusedBucket(focused ? null : bucket);
+                void Haptics.selectionAsync();
+              }}
               style={[
-                styles.filter,
-                filter === value && styles.filterSelected,
+                styles.distributionCell,
+                index > 0 && styles.distributionDivider,
+                focused && styles.distributionCellFocused,
               ]}
             >
               <AppText
-                style={filter === value ? styles.filterTextSelected : undefined}
-                variant="caption"
+                style={[
+                  styles.distributionCount,
+                  counts[bucket] === 0 && styles.distributionCountEmpty,
+                  bucket === "overdue" &&
+                    counts[bucket] > 0 &&
+                    styles.overdueText,
+                ]}
               >
-                {value === "open"
-                  ? "Open"
-                  : value === "completed"
-                    ? "Completed"
-                    : "All"}
+                {counts[bucket]}
+              </AppText>
+              <AppText style={styles.distributionLabel} variant="caption">
+                {followUpBucketLabels[bucket]}
               </AppText>
             </Pressable>
-          ))}
-        </View>
+          );
+        })}
       </View>
 
-      {totalVisible === 0 ? (
-        <EmptyState
-          body={
-            screenData.data!.length === 0
-              ? "Use the coral plus button to attach a thoughtful next step to someone."
-              : "Nothing matches this filter."
-          }
-          icon={filter === "completed" ? CheckCircle : CalendarCheck}
-          title={
-            screenData.data!.length === 0
-              ? "No follow-ups yet"
-              : "All clear here"
-          }
+      <View style={styles.search}>
+        <MagnifyingGlass color={colors.inkMuted} size={18} />
+        <TextInput
+          accessibilityLabel="Filter follow-ups"
+          onChangeText={setQuery}
+          onSubmitEditing={() => Keyboard.dismiss()}
+          placeholder="Person or follow-up"
+          placeholderTextColor={colors.inkMuted}
+          returnKeyType="search"
+          selectionColor={colors.coral}
+          style={styles.searchInput}
+          value={query}
         />
+      </View>
+
+      {openTotal === 0 && !showCompleted ? (
+        <View style={styles.empty}>
+          <ClockCountdown color={colors.inkMuted} size={28} />
+          <AppText variant="heading">
+            {(screenData.data || []).length === 0
+              ? "No follow-ups yet"
+              : "Nothing is waiting"}
+          </AppText>
+          <AppText style={styles.emptyBody}>
+            {(screenData.data || []).length === 0
+              ? "Use the coral plus button to attach a thoughtful next step to someone."
+              : "Everything here is either done or filtered out."}
+          </AppText>
+        </View>
       ) : (
-        groups.map((group) =>
-          group.items.length > 0 ? (
-            <View key={group.key} style={styles.section}>
-              <SectionHeading
-                detail={`${group.items.length}`}
-                title={group.title}
-              />
-              <View style={styles.list}>
-                {group.items.map((followUp) => (
-                  <PressableCard
-                    key={followUp.id}
-                    onPress={() =>
-                      router.push(`/people/${followUp.personId}`)
-                    }
-                    style={[
-                      styles.row,
-                      group.key === "overdue" && styles.overdueRow,
-                    ]}
-                  >
-                    <Avatar
-                      name={followUp.person?.fullName || "Someone"}
-                      size={46}
-                      uri={followUp.person?.profilePhotoUrl}
-                    />
-                    <View style={styles.copy}>
-                      <AppText numberOfLines={2} variant="label">
-                        {followUp.text}
-                      </AppText>
-                      <AppText
-                        style={
-                          group.key === "overdue"
-                            ? styles.overdueText
-                            : undefined
-                        }
-                        variant="caption"
-                      >
-                        {followUp.person?.preferredName ||
-                          followUp.person?.fullName ||
-                          "Someone"}{" "}
-                        · {relativeDayLabel(followUp.dueAt)}
-                      </AppText>
-                    </View>
-                    <Pressable
-                      accessibilityLabel={
-                        followUp.completedAt
-                          ? "Mark as open"
-                          : "Mark complete"
-                      }
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: Boolean(followUp.completedAt),
-                      }}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        void toggleComplete(followUp);
-                      }}
-                      style={[
-                        styles.checkbox,
-                        followUp.completedAt && styles.checkboxCompleted,
-                      ]}
-                    >
-                      <Check
-                        color={
-                          followUp.completedAt
-                            ? colors.paper
-                            : colors.sageStrong
-                        }
-                        size={19}
-                        weight="bold"
-                      />
-                    </Pressable>
-                  </PressableCard>
-                ))}
-              </View>
+        shownBuckets.map((bucket) => (
+          <View key={bucket} style={styles.section}>
+            <View style={styles.sectionHeading}>
+              <AppText
+                style={
+                  bucket === "overdue" && counts[bucket] > 0
+                    ? styles.overdueText
+                    : undefined
+                }
+                variant="heading"
+              >
+                {followUpBucketLabels[bucket]}
+              </AppText>
+              <AppText style={styles.sectionCount} variant="caption">
+                {counts[bucket]}
+              </AppText>
             </View>
-          ) : null,
-        )
+            {groups[bucket].length === 0 ? (
+              <AppText style={styles.sectionEmpty} variant="caption">
+                {followUpBucketEmptyLabels[bucket]}
+              </AppText>
+            ) : (
+              groups[bucket].map((followUp) => (
+                <FollowUpRow
+                  followUp={followUp}
+                  key={followUp.id}
+                  onOpen={() => router.push(`/people/${followUp.personId}`)}
+                  onToggle={() => void toggleComplete(followUp)}
+                  overdue={bucket === "overdue"}
+                />
+              ))
+            )}
+          </View>
+        ))
       )}
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showCompleted }}
+        onPress={() => setShowCompleted((value) => !value)}
+        style={styles.doneToggle}
+      >
+        <AppText style={styles.doneToggleText} variant="label">
+          {showCompleted ? "Hide done" : `Done (${completed.length})`}
+        </AppText>
+      </Pressable>
+
+      {showCompleted ? (
+        <View style={styles.section}>
+          {completed.length === 0 ? (
+            <AppText style={styles.sectionEmpty} variant="caption">
+              Nothing finished yet.
+            </AppText>
+          ) : (
+            completed.map((followUp) => (
+              <FollowUpRow
+                followUp={followUp}
+                key={followUp.id}
+                onOpen={() => router.push(`/people/${followUp.personId}`)}
+                onToggle={() => void toggleComplete(followUp)}
+              />
+            ))
+          )}
+        </View>
+      ) : null}
+
       <Button
-        icon={CalendarCheck}
+        icon={ClockCountdown}
         label="Add a follow-up"
         onPress={() => quickCapture.addFollowUp()}
       />
@@ -265,9 +235,104 @@ export default function FollowUpsScreen() {
   );
 }
 
+function FollowUpRow({
+  followUp,
+  onOpen,
+  onToggle,
+  overdue = false,
+}: {
+  followUp: FollowUp;
+  onOpen: () => void;
+  onToggle: () => void;
+  overdue?: boolean;
+}) {
+  const done = Boolean(followUp.completedAt);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+    >
+      <Avatar
+        name={followUp.person?.fullName || "Someone"}
+        size={40}
+        uri={followUp.person?.profilePhotoUrl}
+      />
+      <View style={styles.rowCopy}>
+        <AppText
+          numberOfLines={2}
+          style={done ? styles.doneText : undefined}
+          variant="label"
+        >
+          {followUp.text}
+        </AppText>
+        <AppText numberOfLines={1} variant="caption">
+          {followUp.person?.preferredName ||
+            followUp.person?.fullName ||
+            "Someone"}
+          {done ? "" : ` · ${followUpDueLabel(followUp.dueAt)}`}
+        </AppText>
+      </View>
+      <Pressable
+        accessibilityLabel={done ? "Mark as open" : "Mark complete"}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: done }}
+        hitSlop={10}
+        onPress={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        style={[styles.check, done && styles.checkDone]}
+      >
+        <Check
+          color={done ? colors.paper : overdue ? colors.coralStrong : colors.inkMuted}
+          size={17}
+          weight="bold"
+        />
+      </Pressable>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  controls: {
-    gap: 10,
+  distribution: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+  },
+  distributionCell: {
+    flex: 1,
+    gap: 3,
+    paddingBottom: 14,
+    paddingTop: 14,
+  },
+  distributionDivider: {
+    borderLeftColor: colors.mist,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    paddingLeft: 12,
+  },
+  distributionCellFocused: {
+    borderBottomColor: colors.ink,
+    borderBottomWidth: 2,
+  },
+  distributionCount: {
+    color: colors.ink,
+    fontFamily: fontFamilies.display,
+    fontSize: 30,
+    letterSpacing: -1,
+    lineHeight: 32,
+  },
+  distributionCountEmpty: {
+    color: colors.inkMuted,
+    opacity: 0.5,
+  },
+  distributionLabel: {
+    fontFamily: fontFamilies.bodySemibold,
+  },
+  overdueText: {
+    color: colors.coralStrong,
   },
   search: {
     alignItems: "center",
@@ -277,7 +342,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     gap: 9,
-    minHeight: 52,
+    minHeight: 48,
     paddingHorizontal: 15,
   },
   searchInput: {
@@ -286,54 +351,70 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.body,
     fontSize: 15,
   },
-  filters: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  filter: {
-    backgroundColor: colors.mist,
-    borderRadius: radii.small,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  filterSelected: {
-    backgroundColor: colors.ink,
-  },
-  filterTextSelected: {
-    color: colors.paper,
-  },
   section: {
-    gap: 11,
+    gap: 2,
   },
-  list: {
-    gap: 9,
+  sectionHeading: {
+    alignItems: "baseline",
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 7,
+  },
+  sectionCount: {
+    fontFamily: fontFamilies.bodySemibold,
+  },
+  sectionEmpty: {
+    paddingVertical: 14,
   },
   row: {
     alignItems: "center",
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: 12,
-    padding: 14,
+    minHeight: 68,
+    paddingVertical: 12,
   },
-  overdueRow: {
-    backgroundColor: colors.coralSoft,
+  rowPressed: {
+    opacity: 0.6,
   },
-  copy: {
+  rowCopy: {
     flex: 1,
-    gap: 3,
+    gap: 2,
     minWidth: 0,
   },
-  overdueText: {
-    color: colors.coralStrong,
+  doneText: {
+    color: colors.inkMuted,
+    textDecorationLine: "line-through",
   },
-  checkbox: {
+  check: {
     alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.small,
-    height: 38,
+    backgroundColor: colors.mist,
+    borderRadius: radii.round,
+    height: 34,
     justifyContent: "center",
-    width: 38,
+    width: 34,
   },
-  checkboxCompleted: {
+  checkDone: {
     backgroundColor: colors.sageStrong,
+  },
+  doneToggle: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
+  doneToggleText: {
+    color: colors.inkMuted,
+    textDecorationLine: "underline",
+  },
+  empty: {
+    alignItems: "flex-start",
+    gap: 8,
+    paddingVertical: 28,
+  },
+  emptyBody: {
+    color: colors.inkMuted,
+    maxWidth: 340,
   },
 });

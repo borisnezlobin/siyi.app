@@ -4,7 +4,7 @@ import {
   CalendarBlank,
   ChatCircleDots,
   Check,
-  CheckSquareOffset,
+  ClockCountdown,
   SpinnerGap,
   UserPlus,
   X,
@@ -49,7 +49,7 @@ export function QuickCaptureTrigger({
   compact?: boolean;
   surface?: "default" | "sidebar";
 }) {
-  const Icon = mode === "follow-up" ? CheckSquareOffset : ChatCircleDots;
+  const Icon = mode === "follow-up" ? ClockCountdown : ChatCircleDots;
 
   return (
     <button
@@ -63,7 +63,7 @@ export function QuickCaptureTrigger({
       }
       className={
         compact
-          ? "grid size-9 shrink-0 place-items-center rounded-full bg-sage text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          ? "grid size-9 shrink-0 place-items-center rounded-full bg-mist text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           : clsx(
               "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
               surface === "sidebar"
@@ -298,7 +298,7 @@ export function QuickCaptureHub({
           }}
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-sage px-2 text-[11px] font-semibold text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
         >
-          <CheckSquareOffset size={23} weight="fill" aria-hidden="true" />
+          <ClockCountdown size={23} weight="fill" aria-hidden="true" />
           Follow-up
         </button>
         <button

@@ -2,10 +2,10 @@
 
 import {
   BellSimple,
+  ClockCountdown,
   GearSix,
   House,
   Plus,
-  SquaresFour,
   UsersThree,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
@@ -23,7 +23,7 @@ import { InstallPrompt } from "@/components/install-prompt";
 const primaryNavigation = [
   { href: "/today", label: "Today", icon: House },
   { href: "/people", label: "People", icon: UsersThree },
-  { href: "/follow-ups", label: "Follow-ups", icon: SquaresFour },
+  { href: "/follow-ups", label: "Follow-ups", icon: ClockCountdown },
 ] as const;
 
 const secondaryNavigation = [
