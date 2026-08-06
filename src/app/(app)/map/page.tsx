@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HometownMap } from "@/components/hometown-map";
 import { PageHeader } from "@/components/page-header";
-import { summariseHometowns } from "@/lib/geocode";
+import { type MapMode, summariseHometowns } from "@/lib/geocode";
 import { getPeople } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "Hometowns",
+  title: "Map",
 };
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,12 @@ function PersonLinks({ people }: { people: { id: string; name: string }[] }) {
   );
 }
 
-export default async function MapPage() {
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ by?: string }>;
+}) {
+  const mode: MapMode = (await searchParams).by === "college" ? "college" : "hometown";
   const people = await getPeople();
   const { places, unplaced, withoutHometown } = summariseHometowns(
     people
@@ -43,8 +48,12 @@ export default async function MapPage() {
         id: person.id,
         name: person.preferredName || person.fullName,
         hometown: person.hometown,
+        university: person.university,
       })),
+    mode,
   );
+
+  const noun = mode === "college" ? "school" : "hometown";
 
   const placedCount = places.reduce((total, place) => total + place.people.length, 0);
   const approximate = places.filter((place) => place.precision !== "city");
@@ -61,13 +70,44 @@ export default async function MapPage() {
 
       <PageHeader
         eyebrow="Your circle"
-        title="Where everyone's from"
-        description="Built from the hometowns you've written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this."
+        title={mode === "college" ? "Where everyone studies" : "Where everyone's from"}
+        description={
+          mode === "college"
+            ? "Built from the schools you've written down, placed with a college list kept inside the app. Nothing about your people is sent anywhere to draw this."
+            : "Built from the hometowns you've written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this."
+        }
       />
+
+      <div
+        className="mt-6 inline-flex rounded-2xl bg-ink/[0.06] p-1"
+        role="tablist"
+        aria-label="Map by"
+      >
+        {(
+          [
+            ["hometown", "Hometown", "/map"],
+            ["college", "College", "/map?by=college"],
+          ] as const
+        ).map(([value, label, href]) => (
+          <Link
+            key={value}
+            href={href}
+            role="tab"
+            aria-selected={mode === value}
+            className={
+              mode === value
+                ? "rounded-xl bg-paper px-4 py-2 text-sm font-semibold text-ink shadow-card"
+                : "rounded-xl px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink"
+            }
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
       {places.length === 0 && unplaced.length === 0 ? (
         <p className="mt-8 rounded-3xl bg-paper p-6 text-sm leading-6 text-ink-muted shadow-card">
-          No one has a hometown saved yet. Add one to someone&rsquo;s profile and
+          No one has a {noun} saved yet. Add one to someone&rsquo;s profile and
           they&rsquo;ll show up here.
         </p>
       ) : (
