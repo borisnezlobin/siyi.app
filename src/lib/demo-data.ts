@@ -30,8 +30,8 @@ export function createDemoPeople(now = new Date()): Person[] {
     {
       id: "20000000-0000-4000-8000-000000000001",
       userId: DEMO_USER_ID,
-      fullName: "Maya Chen",
-      preferredName: "Maya",
+      fullName: "Amelia Chen",
+      preferredName: "Amelia",
       profilePhotoUrl: null,
       instagramUsername: "mayamakes",
       phoneNumber: "(415) 555-0142",

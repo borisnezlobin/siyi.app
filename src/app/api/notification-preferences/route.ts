@@ -21,15 +21,20 @@ export async function PATCH(request: NextRequest) {
 
     const preferences = validation.data;
     const supabase = await createClient();
-    const { error } = await supabase.from("notification_preferences").upsert({
-      user_id: user.id,
-      push_enabled: preferences.pushEnabled,
-      overdue_contact_enabled: preferences.overdueContactEnabled,
-      birthday_enabled: preferences.birthdayEnabled,
-      follow_up_enabled: preferences.followUpEnabled,
-      reminder_hour_local: preferences.reminderHourLocal,
-      reminder_days_of_week: preferences.reminderDaysOfWeek,
-    });
+    // The primary key is id, so the conflict target has to be named
+    // explicitly or every save tries to insert a second row for the user.
+    const { error } = await supabase.from("notification_preferences").upsert(
+      {
+        user_id: user.id,
+        push_enabled: preferences.pushEnabled,
+        overdue_contact_enabled: preferences.overdueContactEnabled,
+        birthday_enabled: preferences.birthdayEnabled,
+        follow_up_enabled: preferences.followUpEnabled,
+        reminder_hour_local: preferences.reminderHourLocal,
+        reminder_days_of_week: preferences.reminderDaysOfWeek,
+      },
+      { onConflict: "user_id" },
+    );
 
     if (error) return apiError(error.message, 400);
     return NextResponse.json({ ok: true });

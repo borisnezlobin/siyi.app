@@ -8,6 +8,7 @@ import {
   SpinnerGap,
   X,
 } from "@phosphor-icons/react";
+import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
@@ -235,6 +236,11 @@ export function AddPersonForm() {
                 autoComplete="tel"
                 inputMode="tel"
                 placeholder="(555) 555-0123"
+                onChange={(event) => {
+                  event.currentTarget.value = formatPhoneNumberInput(
+                    event.currentTarget.value,
+                  );
+                }}
                 className={inputClassName}
               />
             </label>

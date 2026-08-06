@@ -25,6 +25,7 @@ import { FormField } from "@/components/form-field";
 import { Screen } from "@/components/screen";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
+import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { createPerson, updatePerson } from "@/lib/data";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import type { Person, RelationshipStrength } from "@/lib/types";
@@ -250,7 +251,9 @@ export function PersonForm({ person }: { person?: Person }) {
             autoComplete="tel"
             keyboardType="phone-pad"
             label="Phone"
-            onChangeText={setPhoneNumber}
+            onChangeText={(value) =>
+              setPhoneNumber(formatPhoneNumberInput(value))
+            }
             placeholder="(555) 555-0123"
             value={phoneNumber}
           />
