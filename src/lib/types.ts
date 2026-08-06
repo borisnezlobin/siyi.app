@@ -117,3 +117,19 @@ export type NotificationPreference = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  segment: string;
+  startsAt: string;
+  endsAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  audienceSize: number | null;
+  pushSentAt: string | null;
+  pushRecipientCount: number | null;
+  pushDeliveredCount: number | null;
+  pushFailedCount: number | null;
+};
