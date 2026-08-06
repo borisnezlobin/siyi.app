@@ -59,7 +59,6 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto max-w-[900px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="Just for the two of us"
         title="Admin"
         description="Aggregate numbers, and a way to tell everyone something."
       />
