@@ -11,6 +11,11 @@ export type EditableEntry = {
   type: InteractionType;
   body: string;
   at: string;
+  /**
+   * False for an update that only records something you learned. Rows written
+   * before the two were told apart say true, and keep saying true.
+   */
+  countsAsContact: boolean;
   customLabel: string | null;
   customIcon: string | null;
 };
@@ -41,6 +46,7 @@ export function editableEntryFromUpdate(
     type,
     body: update.text,
     at: update.recordedAt,
+    countsAsContact: update.isInteraction,
     customLabel,
     customIcon: linkedInteraction?.customIcon ?? null,
   };
@@ -60,6 +66,7 @@ export function editableEntryFromInteraction(
     type: interaction.type,
     body: interaction.note ?? "",
     at: interaction.occurredAt,
+    countsAsContact: true,
     customLabel: interaction.customLabel,
     customIcon: interaction.customIcon,
   };
