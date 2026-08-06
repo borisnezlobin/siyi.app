@@ -32,6 +32,8 @@ export type UserProfile = {
 
 export type Person = {
   id: string;
+  /** Null until migration 0012 has been applied; links fall back to the id. */
+  slug: string | null;
   userId: string;
   fullName: string;
   preferredName: string | null;

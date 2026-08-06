@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { personSlug } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
 
@@ -43,6 +44,9 @@ export async function POST(request: NextRequest) {
           first_met_at: person.firstMetAt ?? new Date().toISOString(),
           first_met_location: person.firstMetLocation,
           general_notes: person.generalNotes,
+          // Ignored by the database until migration 0012 has run, and replaced
+          // there if this account already holds the same slug.
+          slug: personSlug(person.fullName),
         },
       },
     );

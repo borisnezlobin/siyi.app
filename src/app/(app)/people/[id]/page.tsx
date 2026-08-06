@@ -16,6 +16,7 @@ import {
 import { format, formatDistanceToNowStrict } from "date-fns";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArchivePersonButton } from "@/components/archive-person-button";
 import { SharePersonButton } from "@/components/share-person-button";
 import { Avatar } from "@/components/avatar";
@@ -69,20 +70,25 @@ export default async function PersonDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // The uuid keeps resolving forever, for every link shared before slugs
+  // existed; it just moves along to the readable URL.
+  const person = await getPerson(id);
+  if (person.slug && person.slug !== id) redirect(`/people/${person.slug}`);
+
+  // Everything below is keyed by the uuid, not the URL, so a slug visit reads
+  // the same rows a uuid visit does.
   const [
-    person,
     interactions,
     personUpdates,
     allFollowUps,
     recentCustomLabels,
     noteSections,
   ] = await Promise.all([
-    getPerson(id),
-    getInteractions(id),
-    getPersonUpdates(id),
+    getInteractions(person.id),
+    getPersonUpdates(person.id),
     getFollowUps(),
     getRecentCustomLabels(),
-    getPersonNoteSections(id),
+    getPersonNoteSections(person.id),
   ]);
 
   // Updates written on the phone and interactions logged here share one
@@ -123,7 +129,7 @@ export default async function PersonDetailPage({
     (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
   );
   const openFollowUps = allFollowUps.filter(
-    (followUp) => followUp.personId === id && !followUp.completedAt,
+    (followUp) => followUp.personId === person.id && !followUp.completedAt,
   );
   const visibleNoteSections = noteSections.sections.filter((noteSection) =>
     noteSection.body.trim(),

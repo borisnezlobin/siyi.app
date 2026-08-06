@@ -6,6 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { brand } from "@/config/brand";
+import { personRouteIdentifier } from "@/lib/person-links";
 import { supabase } from "@/lib/supabase";
 
 const deviceIdKey = `${brand.slug}.push-device-id`;
@@ -186,7 +187,8 @@ export async function sendNativeTestNotification(
 
 export function appRouteFromNotificationUrl(value: unknown) {
   if (typeof value !== "string") return "/today" as const;
-  if (/^\/people\/[0-9a-f-]+$/i.test(value)) return value as `/people/${string}`;
+  const personIdentifier = personRouteIdentifier(value);
+  if (personIdentifier) return `/people/${personIdentifier}` as const;
   if (value === "/follow-ups") return "/follow-ups" as const;
   if (value === "/notifications") return "/notifications" as const;
   return "/today" as const;

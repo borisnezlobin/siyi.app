@@ -39,6 +39,8 @@ export type Tag = {
 
 export type Person = {
   id: string;
+  /** Null until migration 0012 has been applied on the server. */
+  slug: string | null;
   userId: string;
   fullName: string;
   preferredName: string | null;

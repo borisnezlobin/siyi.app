@@ -66,6 +66,15 @@ describe("saving while a migration is still pending", () => {
     expect(write).toHaveBeenCalledTimes(1);
   });
 
+  it("drops the slug while migration 0012 is still pending", () => {
+    expect(
+      droppingPendingColumns({
+        full_name: "Amelia",
+        slug: "amelia-chen-4hkq",
+      }),
+    ).toEqual({ full_name: "Amelia" });
+  });
+
   it("keeps every column the database already has", () => {
     expect(
       droppingPendingColumns({

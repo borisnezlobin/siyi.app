@@ -7,6 +7,7 @@ import type { Person } from "@/lib/types";
 function person(overrides: Partial<Person>): Person {
   return {
     id: "person",
+    slug: null,
     userId: "user",
     fullName: "Jordan Lee",
     preferredName: null,

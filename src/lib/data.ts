@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@/lib/demo-data";
 import { resolveAvatarUrls, resolvedAvatarUrl } from "@/lib/avatar-urls";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { looksLikeUuid } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
 import { orderedNoteSections } from "@/lib/note-sections";
 import type {
@@ -18,6 +19,7 @@ import type {
 
 type PersonRow = {
   id: string;
+  slug?: string | null;
   user_id: string;
   full_name: string;
   preferred_name: string | null;
@@ -68,6 +70,7 @@ function mapPerson(row: PersonRow, profilePhotoUrl = row.profile_photo_url): Per
 
   return {
     id: row.id,
+    slug: row.slug ?? null,
     userId: row.user_id,
     fullName: row.full_name,
     preferredName: row.preferred_name,
@@ -133,9 +136,20 @@ const loadPeople = async (): Promise<Person[]> => {
 
 export const getPeople = cache(loadPeople);
 
-export async function getPerson(personId: string): Promise<Person> {
+/**
+ * Accepts either the uuid that every existing link, bookmark and push
+ * notification carries, or the slug introduced by migration 0012. Row level
+ * security scopes the lookup to the signed-in user, so a slug only ever
+ * resolves inside the account that owns it and two accounts may hold the same
+ * slug without meeting.
+ */
+export async function getPerson(identifier: string): Promise<Person> {
+  const lookupColumn = looksLikeUuid(identifier) ? "id" : "slug";
+
   if (!isSupabaseConfigured()) {
-    const person = createDemoPeople().find(({ id }) => id === personId);
+    const person = createDemoPeople().find(
+      (candidate) => candidate[lookupColumn] === identifier,
+    );
     if (!person) notFound();
     return person;
   }
@@ -146,7 +160,7 @@ export async function getPerson(personId: string): Promise<Person> {
     .select(
       "*, interactions(occurred_at), person_tags(tags(id,user_id,name,created_at))",
     )
-    .eq("id", personId)
+    .eq(lookupColumn, identifier)
     .order("occurred_at", {
       referencedTable: "interactions",
       ascending: false,
