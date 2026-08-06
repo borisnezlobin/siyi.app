@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import {
   CalendarBlank,
   Cake,
+  CaretRight,
   Check,
   CheckCircle,
   ChatCircleDots,
@@ -322,6 +323,19 @@ export default function TodayScreen() {
           : "Today"
       }
     >
+      <PressableCard
+        onPress={() => router.push("/check-in")}
+        style={styles.checkInPrompt}
+      >
+        <View style={styles.checkInBody}>
+          <AppText variant="body">Who did you talk to today?</AppText>
+          <AppText variant="caption">
+            One pass, one tap each — log everyone you saw.
+          </AppText>
+        </View>
+        <CaretRight color={colors.inkMuted} size={16} weight="bold" />
+      </PressableCard>
+
       <Card style={styles.overview}>
         <View style={styles.overviewItem}>
           <View style={[styles.overviewIcon, styles.summaryUrgent]}>
@@ -496,6 +510,16 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  checkInPrompt: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    padding: 15,
+  },
+  checkInBody: {
+    flex: 1,
+    gap: 3,
+  },
   overview: {
     alignItems: "center",
     flexDirection: "row",
