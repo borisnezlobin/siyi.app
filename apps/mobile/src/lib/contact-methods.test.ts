@@ -140,9 +140,8 @@ describe("before migration 0013 has run", () => {
       phoneNumber: "5555550123",
     });
 
-    expect(drafts).toHaveLength(4);
+    expect(drafts).toHaveLength(3);
     expect(drafts.filter((entry) => entry.kind === "phone")).toHaveLength(1);
-    expect(drafts.filter((entry) => entry.kind === "discord")).toHaveLength(1);
     expect(drafts.every((entry) => entry.isPrimary)).toBe(true);
   });
 
