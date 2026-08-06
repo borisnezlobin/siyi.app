@@ -204,6 +204,9 @@ export function redactedSharePerson(
 
   return {
     ...person,
+    // Neither identifier is any use to a viewer, and both are ours rather than
+    // the shared person's.
+    id: "",
     userId: "",
     slug: null,
     profilePhotoUrl: null,
