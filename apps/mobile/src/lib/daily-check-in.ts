@@ -1,4 +1,10 @@
-import { displayNameOf, type FilterablePerson } from "@/lib/people-filters";
+import type { FilterablePerson } from "@/lib/people-filters";
+
+// Deliberately not imported from people-filters: that module pulls in the whole
+// college table, and this screen only needs a name to sort by.
+function displayNameOf(person: { fullName: string; preferredName?: string | null }) {
+  return person.preferredName?.trim() || person.fullName;
+}
 
 export type CheckInPerson = FilterablePerson & {
   id: string;

@@ -1,4 +1,5 @@
-import { collegeSearchTerms, normalizeCollegeText } from "@/lib/colleges";
+import { normalizeCollegeText } from "@/lib/college-text";
+import { plainCollegeTerms, type CollegeTermsLookup } from "@/lib/college-terms";
 
 type ContactMethodish = { kind: string; value: string | null } | undefined;
 
@@ -53,7 +54,11 @@ export function displayNameOf(person: FilterablePerson): string {
  * Matches the query against everything recorded about someone, plus every name
  * their school goes by — so "CMU" finds the person filed under Carnegie Mellon.
  */
-export function matchesPeopleQuery(person: FilterablePerson, rawQuery: string): boolean {
+export function matchesPeopleQuery(
+  person: FilterablePerson,
+  rawQuery: string,
+  collegeTerms: CollegeTermsLookup = plainCollegeTerms
+): boolean {
   const query = normalizeCollegeText(rawQuery);
   if (!query) return true;
 
@@ -76,7 +81,8 @@ export function matchesPeopleQuery(person: FilterablePerson, rawQuery: string): 
     .join(" ");
 
   if (haystack.includes(query)) return true;
-  return collegeSearchTerms(person.university ?? null).some((term) => term.includes(query));
+  if (!person.university) return false;
+  return collegeTerms(person.university).some((term) => term.includes(query));
 }
 
 export type PeopleSection<T> = {

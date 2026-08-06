@@ -10,9 +10,10 @@ import {
 import clsx from "clsx";
 import { differenceInCalendarDays } from "date-fns";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PersonRow } from "@/components/person-row";
 import { contactDraftsOf } from "@/lib/contact-methods";
+import { plainCollegeTerms, type CollegeTermsLookup } from "@/lib/college-terms";
 import {
   type MissingDetail,
   isMissingDetail,
@@ -42,6 +43,23 @@ export function PeopleDirectory({
   const [sort, setSort] = useState<SortOption>("recently-contacted");
   const [missing, setMissing] = useState<MissingDetail[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(initialFilter !== "all");
+  // The college table is close to a megabyte, so it is fetched the first time
+  // someone searches rather than on page load. Until it lands, a query still
+  // matches the school name as written; afterwards "CMU" matches Carnegie Mellon.
+  const [collegeTerms, setCollegeTerms] = useState<CollegeTermsLookup>(
+    () => plainCollegeTerms,
+  );
+
+  useEffect(() => {
+    if (!search.trim() || collegeTerms !== plainCollegeTerms) return;
+    let stillMounted = true;
+    void import("@/lib/colleges").then(({ collegeSearchTerms }) => {
+      if (stillMounted) setCollegeTerms(() => collegeSearchTerms);
+    });
+    return () => {
+      stillMounted = false;
+    };
+  }, [collegeTerms, search]);
 
   const allTags = useMemo(
     () =>
@@ -63,7 +81,7 @@ export function PeopleDirectory({
           contactMethods: contactDraftsOf(person),
         };
 
-        if (!matchesPeopleQuery(searchable, search)) {
+        if (!matchesPeopleQuery(searchable, search, collegeTerms)) {
           return false;
         }
         if (missing.some((detail) => !isMissingDetail(person, detail))) {
@@ -107,7 +125,7 @@ export function PeopleDirectory({
           ? firstContact - secondContact
           : secondContact - firstContact;
       });
-  }, [filter, missing, people, search, sort, strength, tag]);
+  }, [collegeTerms, filter, missing, people, search, sort, strength, tag]);
 
   const sections = useMemo(
     () => (sort === "name" ? sectionPeopleAlphabetically(filteredPeople) : []),
