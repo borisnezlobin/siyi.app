@@ -15,8 +15,9 @@ import {
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { PageHeader } from "@/components/page-header";
+import { LogInteractionPanel } from "@/components/log-interaction-panel";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
-import { getFollowUps, getPeople } from "@/lib/data";
+import { getFollowUps, getPeople, getQuickPeople } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
 
@@ -62,7 +63,11 @@ function getDisplayName(person: Person) {
 export default async function TodayPage() {
   const now = new Date();
   const today = startOfDay(now);
-  const [people, followUps] = await Promise.all([getPeople(), getFollowUps()]);
+  const [people, followUps, quickPeople] = await Promise.all([
+    getPeople(),
+    getFollowUps(),
+    getQuickPeople(),
+  ]);
   const timeSensitiveItems: TimeSensitiveItem[] = [];
 
   for (const followUp of followUps.filter(({ completedAt }) => !completedAt)) {
@@ -187,7 +192,9 @@ export default async function TodayPage() {
         }
       />
 
-      <section className="mt-8" aria-labelledby="time-sensitive-heading">
+      {quickPeople.length ? <LogInteractionPanel people={quickPeople} /> : null}
+
+      <section className="mt-9" aria-labelledby="time-sensitive-heading">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 id="time-sensitive-heading" className="text-base font-bold">

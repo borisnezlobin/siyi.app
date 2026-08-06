@@ -2,11 +2,12 @@
 
 import {
   CalendarBlank,
-  ChatCircleDots,
   Check,
   ClockCountdown,
+  NotePencil,
   SpinnerGap,
   UserPlus,
+  UsersThree,
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
@@ -15,27 +16,54 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  timestampFromDateInput,
-  todayDateInputValue,
-} from "@/lib/date-input";
-import { getApiResponseError } from "@/lib/http";
-import { CustomTypeFields } from "@/components/custom-type-fields";
-import type { CustomTypeIconKey } from "@/lib/custom-type-icons";
+  emptyInteractionDraft,
+  InteractionComposer,
+  type InteractionDraft,
+} from "@/components/interaction-composer";
 import { PersonPicker } from "@/components/person-picker";
-import { interactionOptions } from "@/lib/interaction-options";
-import type { InteractionType, Person } from "@/lib/types";
+import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
+import { todayDateInputValue } from "@/lib/date-input";
+import { getApiResponseError } from "@/lib/http";
+import type { Person } from "@/lib/types";
 
 type QuickPerson = Pick<
   Person,
   "id" | "fullName" | "preferredName" | "profilePhotoUrl" | "lastInteractionAt"
 >;
-type CaptureMode = "follow-up" | "interaction";
+
+/**
+ * Three separate things, and the difference between the last two is the whole
+ * point: an interaction says you saw someone, an update says you learned
+ * something about them.
+ */
+type CaptureMode = "follow-up" | "interaction" | "update";
 
 const quickCaptureEvent = "siyi:quick-capture";
 
 type QuickCaptureEventDetail = {
   mode: CaptureMode;
   personId?: string;
+};
+
+const modeCopy: Record<
+  CaptureMode,
+  { eyebrow: string; title: string; save: string }
+> = {
+  "follow-up": {
+    eyebrow: "Keep a promise",
+    title: "What needs following up?",
+    save: "Save follow-up",
+  },
+  interaction: {
+    eyebrow: "Log time together",
+    title: "Who did you see?",
+    save: "Log interaction",
+  },
+  update: {
+    eyebrow: "Something you learned",
+    title: "What did you find out?",
+    save: "Save update",
+  },
 };
 
 export function QuickCaptureTrigger({
@@ -47,9 +75,14 @@ export function QuickCaptureTrigger({
 }: QuickCaptureEventDetail & {
   label: string;
   compact?: boolean;
-  surface?: "default" | "sidebar";
+  surface?: "default" | "sidebar" | "quiet";
 }) {
-  const Icon = mode === "follow-up" ? ClockCountdown : ChatCircleDots;
+  const Icon =
+    mode === "follow-up"
+      ? ClockCountdown
+      : mode === "interaction"
+        ? UsersThree
+        : NotePencil;
 
   return (
     <button
@@ -63,12 +96,14 @@ export function QuickCaptureTrigger({
       }
       className={
         compact
-          ? "grid size-9 shrink-0 place-items-center rounded-full bg-mist text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          ? "grid size-9 shrink-0 place-items-center rounded-full bg-mist text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           : clsx(
-              "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
+              "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
               surface === "sidebar"
-                ? "bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
-                : "bg-ink text-white shadow-card focus-visible:ring-coral",
+                ? "w-full bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
+                : surface === "quiet"
+                  ? "text-ink-muted hover:text-ink focus-visible:ring-coral"
+                  : "w-full bg-ink text-white shadow-card focus-visible:ring-coral",
             )
       }
       aria-label={compact ? label : undefined}
@@ -94,12 +129,10 @@ export function QuickCaptureHub({
   const [personId, setPersonId] = useState("");
   const [followUpText, setFollowUpText] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [interactionType, setInteractionType] =
-    useState<InteractionType>("texted");
-  const [occurredOn, setOccurredOn] = useState(todayDateInputValue());
-  const [customLabel, setCustomLabel] = useState("");
-  const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
-  const [note, setNote] = useState("");
+  const [interactionDraft, setInteractionDraft] = useState<InteractionDraft>(
+    emptyInteractionDraft(),
+  );
+  const [updateText, setUpdateText] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -109,7 +142,9 @@ export function QuickCaptureHub({
       onMenuOpenChange(false);
       setPersonId(nextPersonId ?? "");
       setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
-      setOccurredOn(todayDateInputValue());
+      setInteractionDraft(
+        emptyInteractionDraft(nextPersonId ? [nextPersonId] : []),
+      );
       setMode(nextMode);
       setError("");
       setSaved(false);
@@ -155,11 +190,8 @@ export function QuickCaptureHub({
     setMode(null);
     setPersonId("");
     setFollowUpText("");
-    setInteractionType("texted");
-    setOccurredOn(todayDateInputValue());
-    setCustomLabel("");
-    setCustomIcon("");
-    setNote("");
+    setInteractionDraft(emptyInteractionDraft());
+    setUpdateText("");
     setSaving(false);
     setSaved(false);
     setError("");
@@ -167,6 +199,13 @@ export function QuickCaptureHub({
 
   function closeSheet() {
     dialogRef.current?.close();
+  }
+
+  function finish() {
+    setSaving(false);
+    setSaved(true);
+    router.refresh();
+    window.setTimeout(closeSheet, 550);
   }
 
   async function saveFollowUp() {
@@ -186,81 +225,75 @@ export function QuickCaptureHub({
     setSaving(true);
     setError("");
 
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const response = await fetch("/api/follow-ups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personId,
-          text: followUpText,
-          dueAt: new Date(`${dueDate}T12:00:00`).toISOString(),
-        }),
-      });
-
-      if (!response.ok) {
-        setError(
-          await getApiResponseError(
-            response,
-            "The follow-up could not be saved.",
-          ),
-        );
-        setSaving(false);
-        return;
-      }
-    } else {
+    if (isPreviewOnly()) {
       await new Promise((resolve) => window.setTimeout(resolve, 300));
+      finish();
+      return;
     }
 
-    setSaving(false);
-    setSaved(true);
-    router.refresh();
-    window.setTimeout(closeSheet, 550);
+    const response = await fetch("/api/follow-ups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personId,
+        text: followUpText,
+        dueAt: new Date(`${dueDate}T12:00:00`).toISOString(),
+      }),
+    });
+
+    if (!response.ok) {
+      setError(
+        await getApiResponseError(response, "The follow-up could not be saved."),
+      );
+      setSaving(false);
+      return;
+    }
+    finish();
   }
 
   async function saveInteraction() {
-    if (!personId) {
-      setError("Choose who you spent time with.");
+    if (!interactionDraft.personIds.length) {
+      setError("Choose who you saw.");
       return;
     }
 
     setSaving(true);
     setError("");
-
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const response = await fetch("/api/interactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personId,
-          type: interactionType,
-          occurredAt: timestampFromDateInput(occurredOn),
-          note,
-          customLabel: interactionType === "other" ? customLabel : null,
-          customIcon: interactionType === "other" ? customIcon : null,
-        }),
-      });
-
-      if (!response.ok) {
-        setError(
-          await getApiResponseError(
-            response,
-            "That update could not be saved.",
-          ),
-        );
-        setSaving(false);
-        return;
-      }
-    } else {
-      await new Promise((resolve) => window.setTimeout(resolve, 300));
+    const failure = await logInteraction(interactionDraft);
+    if (failure) {
+      setError(failure);
+      setSaving(false);
+      return;
     }
-
-    setSaving(false);
-    setSaved(true);
-    router.refresh();
-    window.setTimeout(closeSheet, 550);
+    finish();
   }
 
-  const selectedPerson = people.find((person) => person.id === personId);
+  async function savePersonUpdate() {
+    if (!personId) {
+      setError("Choose who this is about.");
+      return;
+    }
+    if (!updateText.trim()) {
+      setError("Write what you learned.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    const failure = await saveUpdate({
+      personId,
+      text: updateText,
+      recordedOn: todayDateInputValue(),
+    });
+    if (failure) {
+      setError(failure);
+      setSaving(false);
+      return;
+    }
+    finish();
+  }
+
+  const copy = modeCopy[mode ?? "interaction"];
 
   return (
     <>
@@ -275,43 +308,81 @@ export function QuickCaptureHub({
 
       <div
         className={clsx(
-          "fixed bottom-[calc(5.4rem+env(safe-area-inset-bottom))] left-1/2 z-50 grid w-[min(360px,calc(100vw-2rem))] -translate-x-1/2 grid-cols-3 gap-2 rounded-[1.4rem] bg-ink p-2 shadow-float transition-all duration-200 ease-out lg:hidden",
+          "fixed bottom-[calc(5.4rem+env(safe-area-inset-bottom))] left-1/2 z-50 w-[min(360px,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-white shadow-float transition-all duration-200 ease-out lg:hidden",
           menuOpen
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
             : "pointer-events-none translate-y-3 scale-95 opacity-0",
         )}
         aria-hidden={!menuOpen}
       >
-        <Link
-          href="/people/new"
-          onClick={() => onMenuOpenChange(false)}
-          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-white px-2 text-[11px] font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-        >
-          <UserPlus size={23} weight="fill" className="text-coral" aria-hidden="true" />
-          Person
-        </Link>
-        <button
-          type="button"
-          onClick={() => {
-            onMenuOpenChange(false);
-            window.setTimeout(() => openCapture("follow-up"), 130);
-          }}
-          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-sage px-2 text-[11px] font-semibold text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-        >
-          <ClockCountdown size={23} weight="fill" aria-hidden="true" />
-          Follow-up
-        </button>
         <button
           type="button"
           onClick={() => {
             onMenuOpenChange(false);
             window.setTimeout(() => openCapture("interaction"), 130);
           }}
-          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl bg-[#fff5d8] px-2 text-[11px] font-semibold text-[#705513] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
+          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
-          <ChatCircleDots size={23} weight="fill" aria-hidden="true" />
-          Update
+          <UsersThree size={19} className="shrink-0 text-ink" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Log an interaction</span>
+            <span className="block text-[11px] text-ink-muted">
+              Who you saw or spoke to
+            </span>
+          </span>
         </button>
+        <span className="mx-4 block h-px bg-ink/[0.07]" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => {
+            onMenuOpenChange(false);
+            window.setTimeout(() => openCapture("update"), 130);
+          }}
+          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        >
+          <NotePencil size={19} className="shrink-0 text-ink" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Add an update</span>
+            <span className="block text-[11px] text-ink-muted">
+              Something you learned about them
+            </span>
+          </span>
+        </button>
+        <span className="mx-4 block h-px bg-ink/[0.07]" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => {
+            onMenuOpenChange(false);
+            window.setTimeout(() => openCapture("follow-up"), 130);
+          }}
+          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        >
+          <CheckSquareOffset
+            size={19}
+            className="shrink-0 text-ink"
+            aria-hidden="true"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Add a follow-up</span>
+            <span className="block text-[11px] text-ink-muted">
+              Something to do before you forget
+            </span>
+          </span>
+        </button>
+        <span className="mx-4 block h-px bg-ink/[0.07]" aria-hidden="true" />
+        <Link
+          href="/people/new"
+          onClick={() => onMenuOpenChange(false)}
+          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        >
+          <UserPlus size={19} className="shrink-0 text-ink" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Add a person</span>
+            <span className="block text-[11px] text-ink-muted">
+              Someone new to remember
+            </span>
+          </span>
+        </Link>
       </div>
 
       <dialog
@@ -325,15 +396,13 @@ export function QuickCaptureHub({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-coral-strong">
-                {mode === "follow-up" ? "Keep a promise" : "Add a moment"}
+                {copy.eyebrow}
               </p>
               <h2
                 id="quick-capture-title"
                 className="mt-1 font-display text-3xl leading-none"
               >
-                {mode === "follow-up"
-                  ? "What needs following up?"
-                  : "Who did you spend time with?"}
+                {copy.title}
               </h2>
             </div>
             <button
@@ -348,11 +417,23 @@ export function QuickCaptureHub({
 
           {!peopleLoaded || people.length ? (
             <>
-              <PersonPicker
-                people={people}
-                value={personId}
-                onChange={setPersonId}
-              />
+              {mode === "interaction" ? (
+                <div className="mt-6">
+                  <InteractionComposer
+                    people={people}
+                    draft={interactionDraft}
+                    onDraftChange={setInteractionDraft}
+                    facesShown={8}
+                  />
+                </div>
+              ) : (
+                <PersonPicker
+                  people={people}
+                  value={personId}
+                  onChange={setPersonId}
+                  label={mode === "update" ? "Who is this about?" : "Person"}
+                />
+              )}
 
               {mode === "follow-up" ? (
                 <>
@@ -388,7 +469,7 @@ export function QuickCaptureHub({
                             className={clsx(
                               "rounded-xl px-2 py-3 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
                               dueDate === value
-                                ? "bg-sage text-sage-strong"
+                                ? "bg-ink text-white"
                                 : "bg-porcelain text-ink-muted",
                             )}
                           >
@@ -416,80 +497,27 @@ export function QuickCaptureHub({
                     </span>
                   </label>
                 </>
-              ) : (
+              ) : null}
+
+              {mode === "update" ? (
                 <>
-                  <fieldset className="mt-5">
-                    <legend className="text-xs font-semibold text-ink-muted">
-                      What did you do?
-                    </legend>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      {interactionOptions.map(
-                        ({ value, label, icon: Icon }) => {
-                          const active = interactionType === value;
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => setInteractionType(value)}
-                              className={clsx(
-                                "flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl px-2 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-                                active
-                                  ? "bg-sage text-sage-strong"
-                                  : "bg-porcelain text-ink-muted",
-                              )}
-                              aria-pressed={active}
-                            >
-                              <Icon
-                                size={19}
-                                weight={active ? "fill" : "regular"}
-                                aria-hidden="true"
-                              />
-                              {label}
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                  </fieldset>
-                  {interactionType === "other" ? (
-                    <CustomTypeFields
-                      idPrefix="quick-capture"
-                      label={customLabel}
-                      icon={customIcon}
-                      onLabelChange={setCustomLabel}
-                      onIconChange={setCustomIcon}
-                    />
-                  ) : null}
-                  <label className="mt-4 block text-xs font-semibold text-ink-muted">
-                    When did this happen?
-                    <span className="relative mt-1.5 block">
-                      <CalendarBlank
-                        size={17}
-                        className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-ink-muted"
-                        aria-hidden="true"
-                      />
-                      <input
-                        type="date"
-                        value={occurredOn}
-                        max={todayDateInputValue()}
-                        onChange={(event) => setOccurredOn(event.target.value)}
-                        className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-                      />
-                    </span>
-                  </label>
-                  <label className="mt-4 block text-xs font-semibold text-ink-muted">
-                    Note <span className="font-normal">(optional)</span>
+                  <label className="mt-5 block text-xs font-semibold text-ink-muted">
+                    What did you learn?
                     <textarea
-                      value={note}
-                      onChange={(event) => setNote(event.target.value)}
-                      rows={2}
-                      maxLength={1000}
-                      placeholder="Anything worth remembering?"
+                      value={updateText}
+                      onChange={(event) => setUpdateText(event.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="Is interested in photography"
                       className="mt-1.5 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
                     />
                   </label>
+                  <p className="mt-2 text-[11px] leading-5 text-ink-muted">
+                    This goes on their profile. It does not count as seeing
+                    them, so their reminder stays where it is.
+                  </p>
                 </>
-              )}
+              ) : null}
 
               {error ? (
                 <p
@@ -503,10 +531,14 @@ export function QuickCaptureHub({
               <button
                 type="button"
                 onClick={
-                  mode === "follow-up" ? saveFollowUp : saveInteraction
+                  mode === "follow-up"
+                    ? saveFollowUp
+                    : mode === "update"
+                      ? savePersonUpdate
+                      : saveInteraction
                 }
                 disabled={saving || saved}
-                className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-float disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                className="mt-5 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-float disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               >
                 {saved ? (
                   <>
@@ -522,10 +554,8 @@ export function QuickCaptureHub({
                     />
                     Saving…
                   </>
-                ) : mode === "follow-up" ? (
-                  "Save follow-up"
                 ) : (
-                  "Save update"
+                  copy.save
                 )}
               </button>
             </>
@@ -533,7 +563,8 @@ export function QuickCaptureHub({
             <div className="mt-6 rounded-2xl bg-porcelain p-5 text-center">
               <p className="text-sm font-semibold">Add someone first.</p>
               <p className="mt-1 text-xs leading-5 text-ink-muted">
-                Follow-ups and updates need a person to belong to.
+                Interactions, updates and follow-ups all need a person to belong
+                to.
               </p>
               <Link
                 href="/people/new"
@@ -545,12 +576,6 @@ export function QuickCaptureHub({
               </Link>
             </div>
           )}
-
-          {selectedPerson ? (
-            <p className="sr-only">
-              Selected {selectedPerson.preferredName ?? selectedPerson.fullName}
-            </p>
-          ) : null}
         </div>
       </dialog>
     </>

@@ -111,13 +111,18 @@ export function AppShell({
             Add someone
           </Link>
           <QuickCaptureTrigger
-            mode="follow-up"
-            label="Follow-up"
+            mode="interaction"
+            label="Log interaction"
             surface="sidebar"
           />
           <QuickCaptureTrigger
-            mode="interaction"
-            label="Update"
+            mode="update"
+            label="Add update"
+            surface="sidebar"
+          />
+          <QuickCaptureTrigger
+            mode="follow-up"
+            label="Follow-up"
             surface="sidebar"
           />
         </div>

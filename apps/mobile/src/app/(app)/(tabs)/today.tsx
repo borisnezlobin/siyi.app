@@ -7,7 +7,6 @@ import {
   ChatCircleDots,
   ClockCountdown,
   HandWaving,
-  NotePencil,
   UsersThree,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
@@ -388,9 +387,11 @@ export default function TodayScreen() {
                   trailing={
                     <Button
                       compact
-                      icon={NotePencil}
-                      label="Update"
-                      onPress={() => quickCapture.addUpdate(item.person.id)}
+                      icon={UsersThree}
+                      label="Saw them"
+                      onPress={() =>
+                        quickCapture.logInteraction(item.person.id)
+                      }
                       variant="secondary"
                     />
                   }

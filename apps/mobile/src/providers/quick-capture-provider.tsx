@@ -30,6 +30,7 @@ import {
   Shuffle,
   Trash,
   UserPlus,
+  UsersThree,
   X,
 } from "phosphor-react-native";
 import {
@@ -63,6 +64,7 @@ import {
 } from "@/constants/theme";
 import {
   createFollowUp,
+  createInteraction,
   createPersonUpdate,
   deleteInteraction,
   deletePersonUpdate,
@@ -73,13 +75,17 @@ import {
   getRecentCustomLabels,
   type PersonDetails,
 } from "@/lib/data";
-import { CustomTypeFields } from "@/components/custom-type-fields";
+import { CustomTypeIconPicker } from "@/components/custom-type-fields";
 import {
   isCustomTypeIconKey,
   type CustomTypeIconKey,
 } from "@/lib/custom-type-icons";
+import { interactionRowsFor, learnedUpdateFor } from "@/lib/capture-drafts";
 import { interactionLabels } from "@/lib/interaction-labels";
-import { interactionOptions } from "@/lib/interaction-options";
+import {
+  interactionFromTitle,
+  interactionTitleSuggestions,
+} from "@/lib/interaction-title";
 import { rankPeopleForPicker } from "@/lib/person-search";
 import type { EditableEntry } from "@/lib/update-entries";
 import {
@@ -121,6 +127,7 @@ import { useAuth } from "@/providers/auth-provider";
 type CapturePhase =
   | "menu"
   | "follow-up"
+  | "interaction"
   | "update"
   | "catch-up"
   | "choose-catch-up"
@@ -131,6 +138,7 @@ type QuickCaptureContextValue = {
   open: () => void;
   addPerson: () => void;
   addFollowUp: (personId?: string) => void;
+  logInteraction: (personId?: string) => void;
   addUpdate: (personId?: string) => void;
   editEntry: (entry: EditableEntry) => void;
   catchUp: (personId?: string) => void;
@@ -144,13 +152,13 @@ function CaptureAction({
   icon: IconComponent,
   title,
   body,
-  accent,
+  divided = true,
   onPress,
 }: {
   icon: typeof UserPlus;
   title: string;
   body: string;
-  accent?: boolean;
+  divided?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -159,35 +167,14 @@ function CaptureAction({
       onPress={onPress}
       style={({ pressed }) => [
         styles.captureAction,
-        accent && styles.captureActionAccent,
+        divided && styles.captureActionDivided,
         pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.captureIcon,
-          accent && styles.captureIconAccent,
-        ]}
-      >
-        <IconComponent
-          color={accent ? colors.paper : colors.sageStrong}
-          size={25}
-          weight="duotone"
-        />
-      </View>
+      <IconComponent color={colors.ink} size={21} />
       <View style={styles.captureCopy}>
-        <AppText
-          style={accent ? styles.lightText : undefined}
-          variant="heading"
-        >
-          {title}
-        </AppText>
-        <AppText
-          style={accent ? styles.lightMuted : undefined}
-          variant="caption"
-        >
-          {body}
-        </AppText>
+        <AppText variant="label">{title}</AppText>
+        <AppText variant="caption">{body}</AppText>
       </View>
     </Pressable>
   );
@@ -426,9 +413,7 @@ export function QuickCaptureProvider({
   const [dueDay, setDueDay] = useState(() => followUpDayFromDaysAway(1));
   const [pickingDueDate, setPickingDueDate] = useState(false);
   const [updateText, setUpdateText] = useState("");
-  const [updateIsInteraction, setUpdateIsInteraction] = useState(true);
-  const [updateType, setUpdateType] = useState<InteractionType>("texted");
-  const [customLabel, setCustomLabel] = useState("");
+  const [title, setTitle] = useState("");
   const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
   const [updateDate, setUpdateDate] = useState(todayDateInputValue());
   const [choosingUpdateDate, setChoosingUpdateDate] = useState(false);
@@ -471,9 +456,7 @@ export function QuickCaptureProvider({
     setDueDay(followUpDayFromDaysAway(1));
     setPickingDueDate(false);
     setUpdateText("");
-    setUpdateIsInteraction(true);
-    setUpdateType("texted");
-    setCustomLabel("");
+    setTitle("");
     setCustomIcon("");
     setUpdateDate(todayDateInputValue());
     setChoosingUpdateDate(false);
@@ -493,7 +476,7 @@ export function QuickCaptureProvider({
       if (nextPhase !== "menu") {
         void loadPeople();
       }
-      if (nextPhase === "update") {
+      if (nextPhase === "update" || nextPhase === "interaction") {
         void getRecentCustomLabels()
           .then(setRecentCustomLabels)
           .catch(() => setRecentCustomLabels([]));
@@ -510,8 +493,7 @@ export function QuickCaptureProvider({
       setSelectedPersonIds([]);
       setPersonSelectionLocked(true);
       setUpdateText(entry.body);
-      setUpdateType(entry.type);
-      setCustomLabel(entry.customLabel ?? "");
+      setTitle(entry.customLabel?.trim() || interactionLabels[entry.type] || "");
       setCustomIcon(
         isCustomTypeIconKey(entry.customIcon) ? entry.customIcon : "",
       );
@@ -619,74 +601,207 @@ export function QuickCaptureProvider({
     }
   }
 
-  const savedCustomLabel =
-    updateType === "other" ? customLabel.trim() || null : null;
-  const savedCustomIcon =
-    updateType === "other" && customIcon ? customIcon : null;
-  const savedTypeLabel = savedCustomLabel || interactionLabels[updateType];
+  const resolvedTitle = interactionFromTitle(title);
+  const titleChoices = Array.from(
+    new Set([...interactionTitleSuggestions, ...recentCustomLabels]),
+  ).slice(0, 10);
 
+  /**
+   * Called rather than rendered as a component, so retyping the date does not
+   * remount the field and drop the keyboard.
+   */
+  function whenChooser() {
+    return (
+      <View style={styles.optionGroup}>
+        <AppText variant="label">When was this?</AppText>
+        <View style={styles.optionRow}>
+          {[
+            { label: "Today", value: todayDateInputValue() },
+            { label: "Yesterday", value: daysAgoDateInputValue(1) },
+          ].map((option) => {
+            const selected =
+              !choosingUpdateDate && updateDate === option.value;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={option.value}
+                onPress={() => {
+                  setChoosingUpdateDate(false);
+                  setUpdateDate(option.value);
+                  void Haptics.selectionAsync();
+                }}
+                style={[
+                  styles.optionChip,
+                  selected && styles.optionChipSelected,
+                ]}
+              >
+                <AppText
+                  style={selected ? styles.lightText : undefined}
+                  variant="caption"
+                >
+                  {option.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: choosingUpdateDate }}
+            onPress={() => {
+              setChoosingUpdateDate(true);
+              void Haptics.selectionAsync();
+            }}
+            style={[
+              styles.optionChip,
+              choosingUpdateDate && styles.optionChipSelected,
+            ]}
+          >
+            <Clock
+              color={choosingUpdateDate ? colors.paper : colors.inkMuted}
+              size={15}
+            />
+            <AppText
+              style={choosingUpdateDate ? styles.lightText : undefined}
+              variant="caption"
+            >
+              Another day
+            </AppText>
+          </Pressable>
+        </View>
+        {choosingUpdateDate ? (
+          <FormField
+            bottomSheet
+            hint="Use YYYY-MM-DD."
+            keyboardType="numbers-and-punctuation"
+            label="Date"
+            maxLength={10}
+            onChangeText={setUpdateDate}
+            placeholder={daysAgoDateInputValue(7)}
+            value={updateDate}
+          />
+        ) : null}
+      </View>
+    );
+  }
+  const savedCustomLabel = resolvedTitle.customLabel;
+  const savedCustomIcon =
+    resolvedTitle.type === "other" && customIcon ? customIcon : null;
+
+  function warnAbout(message: string) {
+    setError(message);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  }
+
+  function dateIsUsable() {
+    if (isValidDateInput(updateDate) && !isFutureDateInput(updateDate)) {
+      return true;
+    }
+    warnAbout("Use YYYY-MM-DD for a day that has already happened.");
+    return false;
+  }
+
+  async function finishSaving() {
+    setRevision((value) => value + 1);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    modalRef.current?.dismiss();
+  }
+
+  function reportFailure(saveError: unknown, fallback: string) {
+    setError(saveError instanceof Error ? saveError.message : fallback);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  }
+
+  /**
+   * Seeing four people at once is one evening to you and four separate rows in
+   * the database, because each of them has their own answer to "when did I last
+   * see them" — which is the date every reminder is measured from.
+   */
+  async function saveInteraction() {
+    if (!session || selectedPersonIds.length === 0) {
+      warnAbout("Choose who you saw.");
+      return;
+    }
+    if (!dateIsUsable()) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const rows = interactionRowsFor({
+        personIds: selectedPersonIds,
+        title,
+        occurredOn: updateDate,
+        note: updateText,
+        icon: savedCustomIcon,
+      });
+      for (const row of rows) {
+        await createInteraction(session.user.id, row);
+      }
+      await finishSaving();
+    } catch (saveError) {
+      reportFailure(saveError, "That could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * An update is something you learned, so it is written with is_interaction
+   * false and nobody's last-seen date moves. Editing an older entry keeps
+   * whatever it was saved as: nothing here quietly changes its meaning.
+   */
   async function saveUpdate() {
     if (!session || !updateText.trim()) {
-      setError("Add what you learned.");
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      warnAbout(editingEntry ? "Add a few words." : "Write what you learned.");
       return;
     }
     if (!editingEntry && selectedPersonIds.length === 0) {
-      setError("Choose someone this update is about.");
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      warnAbout("Choose who this update is about.");
       return;
     }
-
-    if (!isValidDateInput(updateDate) || isFutureDateInput(updateDate)) {
-      setError("Use YYYY-MM-DD for a day that has already happened.");
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      return;
-    }
+    if (!dateIsUsable()) return;
 
     setSaving(true);
     setError(null);
     try {
       const recordedAt = timestampFromDateInput(updateDate);
+      const naming = editingEntry?.countsAsContact
+        ? {
+            type: resolvedTitle.type,
+            customLabel: savedCustomLabel,
+            customIcon: savedCustomIcon,
+          }
+        : {
+            type: "other" as InteractionType,
+            customLabel: null,
+            customIcon: null,
+          };
+
       if (editingEntry?.kind === "update") {
         await editPersonUpdate(session.user.id, editingEntry.id, {
           text: updateText,
           recordedAt,
-          type: updateType,
-          customLabel: savedCustomLabel,
-          customIcon: savedCustomIcon,
+          ...naming,
         });
       } else if (editingEntry?.kind === "interaction") {
         await editInteraction(session.user.id, editingEntry.id, {
-          type: updateType,
           occurredAt: recordedAt,
           note: updateText,
-          customLabel: savedCustomLabel,
-          customIcon: savedCustomIcon,
+          ...naming,
         });
       } else {
-        await createPersonUpdate(session.user.id, {
-          personIds: selectedPersonIds,
-          text: updateText,
-          recordedAt,
-          isInteraction: updateIsInteraction,
-          interactionLabel: updateIsInteraction ? savedTypeLabel : null,
-          type: updateIsInteraction ? updateType : null,
-          customLabel: updateIsInteraction ? savedCustomLabel : null,
-          customIcon: updateIsInteraction ? savedCustomIcon : null,
-        });
+        await createPersonUpdate(
+          session.user.id,
+          learnedUpdateFor({
+            personIds: selectedPersonIds,
+            text: updateText,
+            recordedOn: updateDate,
+          }),
+        );
       }
-      setRevision((value) => value + 1);
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      );
-      modalRef.current?.dismiss();
+      await finishSaving();
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "That update could not be saved.",
-      );
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      reportFailure(saveError, "That update could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -738,6 +853,7 @@ export function QuickCaptureProvider({
       open: () => present("menu"),
       addPerson,
       addFollowUp: (personId) => present("follow-up", personId),
+      logInteraction: (personId) => present("interaction", personId),
       addUpdate: (personId) => present("update", personId),
       editEntry,
       catchUp: (personId) => {
@@ -831,23 +947,29 @@ export function QuickCaptureProvider({
             </View>
             <View style={styles.actionStack}>
               <CaptureAction
-                accent
-                body="Name, contact, and where you met"
-                icon={UserPlus}
-                onPress={addPerson}
-                title="Add someone"
+                body="Who you saw or spoke to"
+                divided={false}
+                icon={UsersThree}
+                onPress={() => present("interaction")}
+                title="Log an interaction"
               />
               <CaptureAction
-                body="Set something useful for later"
+                body="Something you learned about them"
+                icon={NotePencil}
+                onPress={() => present("update")}
+                title="Add an update"
+              />
+              <CaptureAction
+                body="Something to do before you forget"
                 icon={ClockCountdown}
                 onPress={() => present("follow-up")}
                 title="Add a follow-up"
               />
               <CaptureAction
-                body="Save what you learned in a few seconds"
-                icon={NotePencil}
-                onPress={() => present("update")}
-                title="Add an update"
+                body="Someone new to remember"
+                icon={UserPlus}
+                onPress={addPerson}
+                title="Add a person"
               />
             </View>
           </BottomSheetView>
@@ -1110,15 +1232,19 @@ export function QuickCaptureProvider({
                   {phase === "follow-up"
                     ? "Add a follow-up"
                     : editingEntry
-                      ? "Edit this update"
-                      : "Add an update"}
+                      ? "Edit this entry"
+                      : phase === "interaction"
+                        ? "Who did you see?"
+                        : "What did you find out?"}
                 </AppText>
                 <AppText style={styles.muted}>
                   {phase === "follow-up"
                     ? "A small promise to your future self."
                     : editingEntry
                       ? "Change what you wrote, or take it off the timeline."
-                      : "One sentence is enough. You can be done in seconds."}
+                      : phase === "interaction"
+                        ? "Tap a face. Everything after that is optional."
+                        : "Something you learned, saved to their profile."}
                 </AppText>
               </View>
               <Pressable
@@ -1259,19 +1385,104 @@ export function QuickCaptureProvider({
                   onPress={() => void saveFollowUp()}
                 />
               </>
+            ) : phase === "interaction" ? (
+              <>
+                {loadingPeople ? (
+                  <ActivityIndicator
+                    color={colors.coral}
+                    style={styles.loader}
+                  />
+                ) : people.length > 0 ? (
+                  <PersonPicker
+                    label="You saw"
+                    locked={personSelectionLocked}
+                    multiple
+                    onToggle={(personId) => togglePerson(personId, true)}
+                    people={people}
+                    selectedIds={selectedPersonIds}
+                  />
+                ) : (
+                  <View style={styles.noPeople}>
+                    <AppText variant="heading">Add someone first</AppText>
+                    <AppText style={styles.muted}>
+                      An interaction is time spent with a person.
+                    </AppText>
+                    <Button
+                      compact
+                      icon={Plus}
+                      label="Add someone"
+                      onPress={addPerson}
+                    />
+                  </View>
+                )}
+
+                {selectedPersonIds.length > 0 ? (
+                  <>
+                    <View style={styles.optionGroup}>
+                      <FormField
+                        bottomSheet
+                        label="What was it? (optional)"
+                        maxLength={40}
+                        onChangeText={setTitle}
+                        placeholder="Coffee, studio night, ran into them…"
+                        value={title}
+                      />
+                      <View style={styles.optionRow}>
+                        {titleChoices.map((choice) => (
+                          <Pressable
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: title === choice }}
+                            key={choice}
+                            onPress={() => {
+                              setTitle(choice);
+                              void Haptics.selectionAsync();
+                            }}
+                            style={[
+                              styles.optionChip,
+                              title === choice && styles.optionChipSelected,
+                            ]}
+                          >
+                            <AppText
+                              style={
+                                title === choice ? styles.lightText : undefined
+                              }
+                              variant="caption"
+                            >
+                              {choice}
+                            </AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                      {resolvedTitle.type === "other" && title.trim() ? (
+                        <CustomTypeIconPicker
+                          icon={customIcon}
+                          onIconChange={setCustomIcon}
+                        />
+                      ) : null}
+                    </View>
+
+                    {whenChooser()}
+
+                    <FormField
+                      bottomSheet
+                      label="Anything to remember? (optional)"
+                      multiline
+                      onChangeText={setUpdateText}
+                      placeholder="A line is plenty."
+                      value={updateText}
+                    />
+                  </>
+                ) : null}
+
+                <Button
+                  disabled={selectedPersonIds.length === 0}
+                  label="Log interaction"
+                  loading={saving}
+                  onPress={() => void saveInteraction()}
+                />
+              </>
             ) : (
               <>
-                <FormField
-                  autoFocus
-                  bottomSheet
-                  label="What did you learn?"
-                  multiline
-                  onChangeText={setUpdateText}
-                  placeholder="Joshua has been getting into photography"
-                  style={styles.fastUpdateInput}
-                  value={updateText}
-                />
-
                 {editingEntry ? null : loadingPeople ? (
                   <ActivityIndicator
                     color={colors.coral}
@@ -1279,10 +1490,9 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
-                    label="Adding this update to"
+                    label="This is about"
                     locked={personSelectionLocked}
-                    multiple
-                    onToggle={(personId) => togglePerson(personId, true)}
+                    onToggle={(personId) => togglePerson(personId, false)}
                     people={people}
                     selectedIds={selectedPersonIds}
                   />
@@ -1301,156 +1511,74 @@ export function QuickCaptureProvider({
                   </View>
                 )}
 
-                {editingEntry ? null : (
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: updateIsInteraction }}
-                    onPress={() => {
-                      setUpdateIsInteraction((value) => !value);
-                      void Haptics.selectionAsync();
-                    }}
-                    style={styles.interactionToggle}
-                  >
-                    <View
-                      style={[
-                        styles.toggleCheck,
-                        updateIsInteraction && styles.toggleCheckSelected,
-                      ]}
-                    >
-                      {updateIsInteraction ? (
-                        <Check color={colors.paper} size={15} weight="bold" />
-                      ) : null}
-                    </View>
-                    <View style={styles.flex}>
-                      <AppText variant="label">This was an interaction</AppText>
-                      <AppText variant="caption">
-                        Counts as the latest time you spoke or spent time
-                        together
-                      </AppText>
-                    </View>
-                  </Pressable>
-                )}
-
-                {updateIsInteraction || editingEntry ? (
+                {editingEntry?.countsAsContact ? (
                   <View style={styles.optionGroup}>
-                    <AppText variant="label">What did you do?</AppText>
-                    <View style={styles.typeGrid}>
-                      {interactionOptions.map((option) => {
-                        const active = updateType === option.value;
-                        const IconComponent = option.icon;
-                        return (
-                          <Pressable
-                            accessibilityRole="radio"
-                            accessibilityState={{ checked: active }}
-                            key={option.value}
-                            onPress={() => {
-                              setUpdateType(option.value);
-                              void Haptics.selectionAsync();
-                            }}
-                            style={[
-                              styles.typeOption,
-                              active && styles.typeOptionSelected,
-                            ]}
+                    <FormField
+                      bottomSheet
+                      label="What was it?"
+                      maxLength={40}
+                      onChangeText={setTitle}
+                      placeholder="Coffee, studio night, ran into them…"
+                      value={title}
+                    />
+                    <View style={styles.optionRow}>
+                      {titleChoices.map((choice) => (
+                        <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: title === choice }}
+                          key={choice}
+                          onPress={() => {
+                            setTitle(choice);
+                            void Haptics.selectionAsync();
+                          }}
+                          style={[
+                            styles.optionChip,
+                            title === choice && styles.optionChipSelected,
+                          ]}
+                        >
+                          <AppText
+                            style={
+                              title === choice ? styles.lightText : undefined
+                            }
+                            variant="caption"
                           >
-                            <IconComponent
-                              color={active ? colors.paper : colors.inkMuted}
-                              size={21}
-                              weight={active ? "fill" : "regular"}
-                            />
-                            <AppText
-                              style={active ? styles.lightText : undefined}
-                              variant="caption"
-                            >
-                              {option.label}
-                            </AppText>
-                          </Pressable>
-                        );
-                      })}
+                            {choice}
+                          </AppText>
+                        </Pressable>
+                      ))}
                     </View>
-                    {updateType === "other" ? (
-                      <CustomTypeFields
+                    {resolvedTitle.type === "other" ? (
+                      <CustomTypeIconPicker
                         icon={customIcon}
-                        label={customLabel}
                         onIconChange={setCustomIcon}
-                        onLabelChange={setCustomLabel}
-                        recentLabels={recentCustomLabels}
                       />
                     ) : null}
                   </View>
                 ) : null}
 
-                <View style={styles.optionGroup}>
-                  <AppText variant="label">When was this?</AppText>
-                  <View style={styles.optionRow}>
-                    {[
-                      { label: "Today", value: todayDateInputValue() },
-                      { label: "Yesterday", value: daysAgoDateInputValue(1) },
-                    ].map((option) => {
-                      const selected =
-                        !choosingUpdateDate && updateDate === option.value;
-                      return (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: selected }}
-                          key={option.value}
-                          onPress={() => {
-                            setChoosingUpdateDate(false);
-                            setUpdateDate(option.value);
-                            void Haptics.selectionAsync();
-                          }}
-                          style={[
-                            styles.optionChip,
-                            selected && styles.optionChipSelected,
-                          ]}
-                        >
-                          <AppText
-                            style={selected ? styles.lightText : undefined}
-                            variant="caption"
-                          >
-                            {option.label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: choosingUpdateDate }}
-                      onPress={() => {
-                        setChoosingUpdateDate(true);
-                        void Haptics.selectionAsync();
-                      }}
-                      style={[
-                        styles.optionChip,
-                        choosingUpdateDate && styles.optionChipSelected,
-                      ]}
-                    >
-                      <Clock
-                        color={
-                          choosingUpdateDate ? colors.paper : colors.inkMuted
-                        }
-                        size={15}
-                      />
-                      <AppText
-                        style={choosingUpdateDate ? styles.lightText : undefined}
-                        variant="caption"
-                      >
-                        Another day
-                      </AppText>
-                    </Pressable>
-                  </View>
-                  {choosingUpdateDate ? (
-                    <FormField
-                      bottomSheet
-                      hint="Use YYYY-MM-DD."
-                      keyboardType="numbers-and-punctuation"
-                      label="Date"
-                      maxLength={10}
-                      onChangeText={setUpdateDate}
-                      placeholder={daysAgoDateInputValue(7)}
-                      value={updateDate}
-                    />
-                  ) : null}
-                </View>
+                <FormField
+                  autoFocus
+                  bottomSheet
+                  label={
+                    editingEntry?.countsAsContact
+                      ? "Anything to remember?"
+                      : "What did you learn?"
+                  }
+                  multiline
+                  onChangeText={setUpdateText}
+                  placeholder="Joshua has been getting into photography"
+                  style={styles.fastUpdateInput}
+                  value={updateText}
+                />
+
+                {editingEntry ? (
+                  whenChooser()
+                ) : (
+                  <AppText style={styles.muted} variant="caption">
+                    This goes on their profile. It does not count as seeing
+                    them, so their reminder stays where it is.
+                  </AppText>
+                )}
 
                 {!editingEntry &&
                 personSelectionLocked &&
@@ -1467,6 +1595,7 @@ export function QuickCaptureProvider({
                     variant="quiet"
                   />
                 ) : null}
+
                 <Button
                   disabled={
                     !updateText.trim() ||
@@ -1481,8 +1610,9 @@ export function QuickCaptureProvider({
                   confirmingDelete ? (
                     <View style={styles.confirmDelete}>
                       <AppText variant="label">
-                        Delete this update? You will not get it back, and your
-                        reminders will move back accordingly.
+                        {editingEntry.countsAsContact
+                          ? "Delete this? You will not get it back, and your reminders will move back accordingly."
+                          : "Delete this update? You will not get it back."}
                       </AppText>
                       <View style={styles.confirmRow}>
                         <Button
@@ -1506,7 +1636,7 @@ export function QuickCaptureProvider({
                     <Button
                       compact
                       icon={Trash}
-                      label="Delete this update"
+                      label="Delete this entry"
                       onPress={() => setConfirmingDelete(true)}
                       variant="quiet"
                     />
@@ -1567,34 +1697,24 @@ const styles = StyleSheet.create({
     width: 42,
   },
   actionStack: {
-    gap: 12,
+    backgroundColor: colors.paper,
+    borderRadius: radii.medium,
+    paddingHorizontal: 16,
   },
   captureAction: {
     alignItems: "center",
-    backgroundColor: colors.paper,
-    borderRadius: radii.small,
     flexDirection: "row",
     gap: 14,
-    minHeight: 92,
-    padding: 16,
+    minHeight: 64,
+    paddingVertical: 14,
   },
-  captureActionAccent: {
-    backgroundColor: colors.coral,
-  },
-  captureIcon: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.small,
-    height: 52,
-    justifyContent: "center",
-    width: 52,
-  },
-  captureIconAccent: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+  captureActionDivided: {
+    borderTopColor: colors.mist,
+    borderTopWidth: 1,
   },
   captureCopy: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   lightText: {
     color: colors.paper,

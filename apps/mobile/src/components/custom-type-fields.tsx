@@ -1,7 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
-import { FormField } from "@/components/form-field";
 import { colors, radii } from "@/constants/theme";
 import { customTypeIconFor } from "@/lib/custom-type-icon";
 import {
@@ -9,50 +8,19 @@ import {
   type CustomTypeIconKey,
 } from "@/lib/custom-type-icons";
 
-type CustomTypeFieldsProps = {
-  label: string;
-  icon: CustomTypeIconKey | "";
-  onLabelChange: (label: string) => void;
-  onIconChange: (icon: CustomTypeIconKey | "") => void;
-  recentLabels?: string[];
-};
-
-export function CustomTypeFields({
-  label,
+/**
+ * Only entries the user named themselves get an icon; the name itself is
+ * asked for by the composer, next to its suggestions.
+ */
+export function CustomTypeIconPicker({
   icon,
-  onLabelChange,
   onIconChange,
-  recentLabels = [],
-}: CustomTypeFieldsProps) {
+}: {
+  icon: CustomTypeIconKey | "";
+  onIconChange: (icon: CustomTypeIconKey | "") => void;
+}) {
   return (
-    <View style={styles.group}>
-      <FormField
-        bottomSheet
-        label="What would you call it?"
-        maxLength={40}
-        onChangeText={onLabelChange}
-        placeholder="Went bouldering"
-        value={label}
-      />
-
-      {recentLabels.length > 0 ? (
-        <View style={styles.chipRow}>
-          {recentLabels.map((recent) => (
-            <Pressable
-              accessibilityRole="button"
-              key={recent}
-              onPress={() => {
-                void Haptics.selectionAsync();
-                onLabelChange(recent);
-              }}
-              style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
-            >
-              <AppText variant="caption">{recent}</AppText>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-
+    <View style={styles.iconGroup}>
       <AppText variant="caption">Pick an icon (optional)</AppText>
       <View style={styles.chipRow}>
         {customTypeIconKeys.map((key) => {
@@ -88,22 +56,13 @@ export function CustomTypeFields({
 }
 
 const styles = StyleSheet.create({
-  group: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.medium,
+  iconGroup: {
     gap: 10,
-    padding: 14,
   },
   chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  chip: {
-    backgroundColor: colors.mist,
-    borderRadius: radii.round,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
   },
   iconChoice: {
     alignItems: "center",

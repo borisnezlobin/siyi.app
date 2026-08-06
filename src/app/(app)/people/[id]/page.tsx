@@ -23,9 +23,9 @@ import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { CustomTypeIcon } from "@/components/custom-type-icon";
 import { UpdateSheet } from "@/components/update-sheet";
+import { buildPersonTimeline } from "@/lib/person-timeline";
 import { contactDraftsOf } from "@/lib/contact-methods";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
-import { interactionTypeFromLabel } from "@/lib/interaction-labels";
 import {
   getFollowUps,
   getInteractions,
@@ -46,22 +46,6 @@ export async function generateMetadata({
   const { id } = await params;
   const person = await getPerson(id);
   return { title: person.fullName };
-}
-
-function interactionLabel(type: string) {
-  return (
-    {
-      met: "Met",
-      texted: "Texted",
-      called: "Called",
-      coffee: "Coffee",
-      meal: "Shared a meal",
-      party: "Party",
-      class: "Class",
-      event: "Event",
-      other: "Other",
-    }[type] ?? type
-  );
 }
 
 export default async function PersonDetailPage({
@@ -89,43 +73,7 @@ export default async function PersonDetailPage({
     getPersonNoteSections(person.id),
   ]);
 
-  // Updates written on the phone and interactions logged here share one
-  // timeline. An interaction created by an update would otherwise show twice.
-  const updateEntries = personUpdates.map((update) => ({
-    id: `update-${update.id}`,
-    at: update.recordedAt,
-    title: update.interactionLabel || "Update",
-    icon: null as string | null,
-    body: update.text,
-    editable: {
-      kind: "update" as const,
-      id: update.id,
-      type: interactionTypeFromLabel(update.interactionLabel),
-      body: update.text,
-      at: update.recordedAt,
-    },
-  }));
-  const interactionEntries = interactions
-    .filter((interaction) => !interaction.sourceUpdateId)
-    .map((interaction) => ({
-      id: `interaction-${interaction.id}`,
-      at: interaction.occurredAt,
-      title: interaction.customLabel || interactionLabel(interaction.type),
-      icon: interaction.customIcon,
-      body: interaction.note,
-      editable: {
-        kind: "interaction" as const,
-        id: interaction.id,
-        type: interaction.type,
-        body: interaction.note ?? "",
-        at: interaction.occurredAt,
-        customLabel: interaction.customLabel,
-        customIcon: interaction.customIcon,
-      },
-    }));
-  const timeline = [...updateEntries, ...interactionEntries].sort(
-    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
-  );
+  const timeline = buildPersonTimeline(personUpdates, interactions);
   const openFollowUps = allFollowUps.filter(
     (followUp) => followUp.personId === person.id && !followUp.completedAt,
   );
@@ -343,30 +291,37 @@ export default async function PersonDetailPage({
             </section>
           ) : null}
 
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-            <div className="flex items-center justify-between gap-4">
+          <section>
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-sm font-bold">Updates</h2>
-                <p className="mt-1 text-[11px] text-ink-muted">
-                  Most recent first
+                <h2 className="text-base font-bold">History</h2>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Time you spent together, and what you have learned
                 </p>
               </div>
-              <UpdateSheet
-                personId={person.id}
-                personName={displayName}
-              />
+              <div className="flex items-center gap-1">
+                <QuickCaptureTrigger
+                  mode="interaction"
+                  personId={person.id}
+                  label="Log interaction"
+                  surface="quiet"
+                />
+                <QuickCaptureTrigger
+                  mode="update"
+                  personId={person.id}
+                  label="Add update"
+                  surface="quiet"
+                />
+              </div>
             </div>
-            <ol className="mt-5 space-y-5">
+            <ol className="mt-2">
               {timeline.length ? (
-                timeline.map((entry, index) => (
-                  <li key={entry.id} className="relative flex gap-3">
-                    {index < timeline.length - 1 ? (
-                      <span
-                        className="absolute bottom-[-1.25rem] left-[15px] top-8 w-px bg-ink/10"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    <span className="relative z-10 grid size-8 shrink-0 place-items-center rounded-full bg-sage text-sage-strong">
+                timeline.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex gap-3 border-t border-ink/[0.08] py-4"
+                  >
+                    <span className="mt-0.5 shrink-0 text-ink-muted">
                       <CustomTypeIcon
                         iconKey={
                           isCustomTypeIconKey(entry.icon) ? entry.icon : null
@@ -375,24 +330,22 @@ export default async function PersonDetailPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="text-xs font-bold">{entry.title}</p>
+                        <p className="text-sm font-semibold">{entry.title}</p>
                         <div className="flex shrink-0 items-center gap-1">
                           <time
                             dateTime={entry.at}
-                            className="text-[10px] text-ink-muted"
+                            className="text-[11px] text-ink-muted"
                           >
                             {format(new Date(entry.at), "MMM d, yyyy")}
                           </time>
                           <UpdateSheet
-                            personId={person.id}
                             personName={displayName}
-                            variant="edit"
                             entry={entry.editable}
                           />
                         </div>
                       </div>
                       {entry.body ? (
-                        <p className="mt-1 text-xs leading-5 text-ink-muted">
+                        <p className="mt-1 text-sm leading-6 text-ink/78">
                           {entry.body}
                         </p>
                       ) : null}
@@ -400,8 +353,8 @@ export default async function PersonDetailPage({
                   </li>
                 ))
               ) : (
-                <li className="text-sm text-ink-muted">
-                  Add your first update to start the timeline.
+                <li className="border-t border-ink/[0.08] py-5 text-sm text-ink-muted">
+                  Nothing yet. Log who you saw, or add something you learned.
                 </li>
               )}
             </ol>
@@ -416,7 +369,7 @@ export default async function PersonDetailPage({
             </p>
             <p className="mt-2 text-[11px] leading-5 text-ink-muted">
               {reminder
-                ? `Every ${reminder.intervalDays} days. Adding an update resets it.`
+                ? `Every ${reminder.intervalDays} days. Logging an interaction resets it.`
                 : person.remindersEnabled === false
                   ? "Reminders are off for them. Turn them back on when you edit."
                   : "Muted and archived people do not appear in reminders."}

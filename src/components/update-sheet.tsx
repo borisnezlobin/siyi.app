@@ -1,20 +1,29 @@
 "use client";
 
-import { Check, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
+import { Check, PencilSimple, Trash, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { CustomTypeFields } from "@/components/custom-type-fields";
+import { useEffect, useRef, useState } from "react";
+import {
+  CustomTypeIconPicker,
+  useRecentCustomLabels,
+} from "@/components/custom-type-fields";
+import { isPreviewOnly } from "@/lib/capture-client";
 import {
   isCustomTypeIconKey,
   type CustomTypeIconKey,
 } from "@/lib/custom-type-icons";
-import { useEffect, useRef, useState } from "react";
 import {
   timestampFromDateInput,
   toDateInputValue,
   todayDateInputValue,
 } from "@/lib/date-input";
-import { interactionOptions } from "@/lib/interaction-options";
+import { getApiResponseError } from "@/lib/http";
+import { interactionLabels } from "@/lib/interaction-labels";
+import {
+  interactionFromTitle,
+  interactionTitleSuggestions,
+} from "@/lib/interaction-title";
 import type { InteractionType } from "@/lib/types";
 
 export type EditableEntry = {
@@ -23,59 +32,63 @@ export type EditableEntry = {
   type: InteractionType;
   body: string;
   at: string;
+  /**
+   * False for an update that only records something you learned. Rows written
+   * before the two were told apart say true, and keep saying true.
+   */
+  countsAsContact: boolean;
   customLabel?: string | null;
   customIcon?: string | null;
 };
 
+function titleOf(entry: EditableEntry) {
+  return entry.customLabel?.trim() || interactionLabels[entry.type] || "";
+}
 
-type UpdateSheetProps = {
-  personId: string;
-  personName: string;
-  variant?: "primary" | "compact" | "edit";
-  buttonLabel?: string;
-  entry?: EditableEntry;
-};
-
-const isPreviewOnly = () => !process.env.NEXT_PUBLIC_SUPABASE_URL;
-
+/**
+ * Corrects an entry that is already on the timeline. Whether it counted as
+ * contact was decided when it was saved and is never quietly changed here — an
+ * old entry keeps driving reminders exactly as it did before.
+ */
 export function UpdateSheet({
-  personId,
   personName,
-  variant = "primary",
-  buttonLabel = "Add update",
   entry,
-}: UpdateSheetProps) {
+}: {
+  personName: string;
+  entry: EditableEntry;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const today = todayDateInputValue();
-  const editing = Boolean(entry);
 
-  const [selectedType, setSelectedType] = useState<InteractionType>(
-    entry?.type ?? "texted",
-  );
-  const [occurredOn, setOccurredOn] = useState(
-    entry ? toDateInputValue(entry.at) : today,
-  );
-  const [note, setNote] = useState(entry?.body ?? "");
-  const [customLabel, setCustomLabel] = useState(entry?.customLabel ?? "");
+  const [title, setTitle] = useState(titleOf(entry));
+  const [occurredOn, setOccurredOn] = useState(toDateInputValue(entry.at));
+  const [body, setBody] = useState(entry.body);
   const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">(
-    isCustomTypeIconKey(entry?.customIcon) ? entry.customIcon : "",
+    isCustomTypeIconKey(entry.customIcon) ? entry.customIcon : "",
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resolved = interactionFromTitle(title);
+  const recentLabels = useRecentCustomLabels(entry.countsAsContact);
+  const titleChoices = Array.from(
+    new Set([...interactionTitleSuggestions, ...recentLabels]),
+  ).slice(0, 10);
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
     const handleClose = () => {
-      setSelectedType(entry?.type ?? "texted");
-      setOccurredOn(entry ? toDateInputValue(entry.at) : todayDateInputValue());
-      setNote(entry?.body ?? "");
-      setCustomLabel(entry?.customLabel ?? "");
-      setCustomIcon(isCustomTypeIconKey(entry?.customIcon) ? entry.customIcon : "");
+      setTitle(titleOf(entry));
+      setOccurredOn(toDateInputValue(entry.at));
+      setBody(entry.body);
+      setCustomIcon(
+        isCustomTypeIconKey(entry.customIcon) ? entry.customIcon : "",
+      );
       setSaved(false);
       setConfirmingDelete(false);
       setError(null);
@@ -84,13 +97,6 @@ export function UpdateSheet({
     dialog.addEventListener("close", handleClose);
     return () => dialog.removeEventListener("close", handleClose);
   }, [entry]);
-
-  async function readError(response: Response) {
-    return response
-      .json()
-      .then((body) => body?.error as string | undefined)
-      .catch(() => undefined);
-  }
 
   function finish() {
     setSaving(false);
@@ -101,8 +107,8 @@ export function UpdateSheet({
   }
 
   async function save() {
-    if (!note.trim() && editing) {
-      setError("An update needs a few words before it can be saved.");
+    if (!body.trim()) {
+      setError("An entry needs a few words before it can be saved.");
       return;
     }
     setSaving(true);
@@ -115,48 +121,38 @@ export function UpdateSheet({
     }
 
     const naming = {
-      customLabel: selectedType === "other" ? customLabel : null,
-      customIcon: selectedType === "other" ? customIcon : null,
+      customLabel: resolved.customLabel,
+      customIcon: resolved.type === "other" ? customIcon || null : null,
     };
-    const request = entry
-      ? entry.kind === "update"
+    const request =
+      entry.kind === "update"
         ? {
             url: `/api/updates/${entry.id}`,
             body: {
-              text: note,
+              text: body,
               recordedAt: timestampFromDateInput(occurredOn),
-              type: selectedType,
+              type: resolved.type,
               ...naming,
             },
           }
         : {
             url: `/api/interactions/${entry.id}`,
             body: {
-              type: selectedType,
+              type: resolved.type,
               occurredAt: timestampFromDateInput(occurredOn),
-              note,
+              note: body,
               ...naming,
             },
-          }
-      : {
-          url: "/api/interactions",
-          body: {
-            personId,
-            type: selectedType,
-            occurredAt: timestampFromDateInput(occurredOn),
-            note,
-            ...naming,
-          },
-        };
+          };
 
     const response = await fetch(request.url, {
-      method: editing ? "PATCH" : "POST",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request.body),
     });
 
     if (!response.ok) {
-      setError((await readError(response)) || "That update could not be saved.");
+      setError(await getApiResponseError(response, "That could not be saved."));
       setSaving(false);
       return;
     }
@@ -164,7 +160,6 @@ export function UpdateSheet({
   }
 
   async function remove() {
-    if (!entry) return;
     setSaving(true);
     setError(null);
 
@@ -182,7 +177,7 @@ export function UpdateSheet({
 
     if (!response.ok) {
       setError(
-        (await readError(response)) || "That update could not be deleted.",
+        await getApiResponseError(response, "That could not be deleted."),
       );
       setSaving(false);
       return;
@@ -190,136 +185,118 @@ export function UpdateSheet({
     finish();
   }
 
-  const triggerClassName = {
-    primary:
-      "rounded-xl bg-ink px-4 py-3 text-sm text-white shadow-card hover:bg-[#28332e]",
-    compact:
-      "relative z-10 size-10 shrink-0 rounded-full bg-sage text-sage-strong hover:bg-[#d3e1d7]",
-    edit: "size-8 shrink-0 rounded-full text-ink-muted hover:bg-mist hover:text-ink",
-  }[variant];
-
   return (
     <>
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className={clsx(
-          "inline-flex items-center justify-center gap-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2",
-          triggerClassName,
-        )}
-        aria-label={
-          variant === "edit"
-            ? `Edit this update about ${personName}`
-            : variant === "compact"
-              ? `Add an update about ${personName}`
-              : undefined
-        }
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        aria-label={`Edit this entry about ${personName}`}
       >
-        {variant === "edit" ? (
-          <PencilSimple size={15} aria-hidden="true" />
-        ) : (
-          <Plus size={variant === "compact" ? 18 : 17} weight="bold" aria-hidden="true" />
-        )}
-        {variant === "primary" ? buttonLabel : null}
+        <PencilSimple size={15} aria-hidden="true" />
       </button>
 
       <dialog
         ref={dialogRef}
         className="m-0 mt-auto max-h-[88vh] w-full max-w-none overflow-visible rounded-t-[2rem] bg-white p-0 text-ink shadow-float backdrop:bg-ink/40 sm:m-auto sm:w-[440px] sm:rounded-[2rem]"
-        aria-labelledby={`update-sheet-${entry?.id ?? personId}`}
+        aria-labelledby={`update-sheet-${entry.id}`}
       >
         <div className="max-h-[88vh] overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:p-6">
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/12 sm:hidden" />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-coral-strong">
-                {editing ? "Edit update" : "Quick log"}
+                {entry.countsAsContact ? "Edit interaction" : "Edit update"}
               </p>
               <h2
-                id={`update-sheet-${entry?.id ?? personId}`}
+                id={`update-sheet-${entry.id}`}
                 className="mt-1 font-display text-3xl leading-none"
               >
-                Time with {personName}
+                {personName}
               </h2>
             </div>
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
-              className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              aria-label="Close update sheet"
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-mist text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              aria-label="Close edit sheet"
             >
               <X size={18} aria-hidden="true" />
             </button>
           </div>
 
-          <fieldset className="mt-6">
-            <legend className="text-sm font-semibold">What did you do?</legend>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {interactionOptions.map(({ value, label, icon: Icon }) => {
-                const active = selectedType === value;
-                return (
+          {entry.countsAsContact ? (
+            <>
+              <label
+                className="mt-6 block text-xs font-semibold text-ink-muted"
+                htmlFor={`title-${entry.id}`}
+              >
+                What was it?
+              </label>
+              <input
+                id={`title-${entry.id}`}
+                type="text"
+                value={title}
+                maxLength={40}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Coffee, studio night, ran into them…"
+                className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {titleChoices.map((choice) => (
                   <button
-                    key={value}
+                    key={choice}
                     type="button"
-                    onClick={() => setSelectedType(value)}
+                    onClick={() => setTitle(choice)}
                     className={clsx(
-                      "flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-                      active
-                        ? "bg-sage text-sage-strong shadow-card"
-                        : "bg-porcelain text-ink-muted hover:bg-mist",
+                      "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                      title === choice
+                        ? "bg-ink text-white"
+                        : "bg-porcelain text-ink-muted hover:text-ink",
                     )}
-                    aria-pressed={active}
                   >
-                    <Icon size={22} weight={active ? "fill" : "regular"} aria-hidden="true" />
-                    {label}
+                    {choice}
                   </button>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          {selectedType === "other" ? (
-            <CustomTypeFields
-              idPrefix={entry?.id ?? personId}
-              label={customLabel}
-              icon={customIcon}
-              onLabelChange={setCustomLabel}
-              onIconChange={setCustomIcon}
-            />
+                ))}
+              </div>
+              {resolved.type === "other" ? (
+                <CustomTypeIconPicker
+                  icon={customIcon}
+                  onIconChange={setCustomIcon}
+                />
+              ) : null}
+            </>
           ) : null}
 
           <label
             className="mt-5 block text-xs font-semibold text-ink-muted"
-            htmlFor={`occurred-on-${entry?.id ?? personId}`}
+            htmlFor={`occurred-on-${entry.id}`}
           >
-            When did this happen?
-            <input
-              id={`occurred-on-${entry?.id ?? personId}`}
-              type="date"
-              value={occurredOn}
-              max={today}
-              onChange={(event) => setOccurredOn(event.target.value)}
-              className="mt-1.5 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
-            />
+            {entry.countsAsContact ? "When did this happen?" : "When did you learn this?"}
           </label>
+          <input
+            id={`occurred-on-${entry.id}`}
+            type="date"
+            value={occurredOn}
+            max={today}
+            onChange={(event) => setOccurredOn(event.target.value)}
+            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+          />
 
           <label
-            className="mt-5 block text-sm font-semibold"
-            htmlFor={`note-${entry?.id ?? personId}`}
+            className="mt-5 block text-xs font-semibold text-ink-muted"
+            htmlFor={`note-${entry.id}`}
           >
-            Add a note{" "}
-            {editing ? null : (
-              <span className="font-normal text-ink-muted">(optional)</span>
-            )}
+            {entry.countsAsContact ? "Add a note" : "What you learned"}
           </label>
           <textarea
-            id={`note-${entry?.id ?? personId}`}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
+            id={`note-${entry.id}`}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
             rows={3}
             maxLength={1000}
             placeholder="What do you want to remember?"
-            className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            className="mt-1.5 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
 
           {error ? (
@@ -335,7 +312,7 @@ export function UpdateSheet({
             type="button"
             onClick={save}
             disabled={saving || saved}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-4 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-4 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
           >
             {saved ? (
               <>
@@ -344,49 +321,46 @@ export function UpdateSheet({
               </>
             ) : saving ? (
               "Saving…"
-            ) : editing ? (
-              "Save changes"
             ) : (
-              "Save update"
+              "Save changes"
             )}
           </button>
 
-          {editing ? (
-            confirmingDelete ? (
-              <div className="mt-4 rounded-2xl bg-porcelain p-4">
-                <p className="text-xs font-semibold leading-5">
-                  Delete this update? It will not be recoverable, and your
-                  reminders for {personName} will move back accordingly.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={remove}
-                    disabled={saving || saved}
-                    className="flex-1 rounded-xl bg-coral px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-coral-strong disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                  >
-                    Yes, delete it
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(false)}
-                    className="flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-                  >
-                    Keep it
-                  </button>
-                </div>
+          {confirmingDelete ? (
+            <div className="mt-4 rounded-2xl bg-porcelain p-4">
+              <p className="text-xs font-semibold leading-5">
+                {entry.countsAsContact
+                  ? `Delete this? It will not be recoverable, and your reminders for ${personName} will move back accordingly.`
+                  : "Delete this update? It will not be recoverable."}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={remove}
+                  disabled={saving || saved}
+                  className="flex-1 rounded-xl bg-coral px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-coral-strong disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                >
+                  Yes, delete it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  className="flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+                >
+                  Keep it
+                </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-xs font-semibold text-ink-muted transition-colors hover:bg-mist hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              >
-                <Trash size={15} aria-hidden="true" />
-                Delete this update
-              </button>
-            )
-          ) : null}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-xs font-semibold text-ink-muted transition-colors hover:bg-mist hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              <Trash size={15} aria-hidden="true" />
+              Delete this entry
+            </button>
+          )}
         </div>
       </dialog>
     </>

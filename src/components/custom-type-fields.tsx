@@ -8,75 +8,42 @@ import {
   type CustomTypeIconKey,
 } from "@/lib/custom-type-icons";
 
-type CustomTypeFieldsProps = {
-  idPrefix: string;
-  label: string;
-  icon: CustomTypeIconKey | "";
-  onLabelChange: (label: string) => void;
-  onIconChange: (icon: CustomTypeIconKey | "") => void;
-  recentLabels?: string[];
-};
+/**
+ * Only entries the user named themselves get an icon. The names they have used
+ * before are offered back to them so the same evening out does not end up
+ * spelled three different ways.
+ */
 
-export function CustomTypeFields({
-  idPrefix,
-  label,
-  icon,
-  onLabelChange,
-  onIconChange,
-  recentLabels,
-}: CustomTypeFieldsProps) {
-  const [suggested, setSuggested] = useState<string[]>(recentLabels ?? []);
+export function useRecentCustomLabels(enabled: boolean) {
+  const [labels, setLabels] = useState<string[]>([]);
 
-  // These fields only render once someone picks "Other", so the request costs
-  // nothing on the page loads that never get here.
   useEffect(() => {
-    if (recentLabels) return;
+    if (!enabled) return;
     let cancelled = false;
     fetch("/api/custom-labels")
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
-        if (!cancelled && Array.isArray(body?.labels)) setSuggested(body.labels);
+        if (!cancelled && Array.isArray(body?.labels)) setLabels(body.labels);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [recentLabels]);
+  }, [enabled]);
 
+  return labels;
+}
+
+export function CustomTypeIconPicker({
+  icon,
+  onIconChange,
+}: {
+  icon: CustomTypeIconKey | "";
+  onIconChange: (icon: CustomTypeIconKey | "") => void;
+}) {
   return (
-    <div className="mt-4 rounded-2xl bg-porcelain p-4">
-      <label
-        className="block text-xs font-semibold text-ink-muted"
-        htmlFor={`custom-label-${idPrefix}`}
-      >
-        What would you call it?
-        <input
-          id={`custom-label-${idPrefix}`}
-          type="text"
-          value={label}
-          maxLength={40}
-          placeholder="Went bouldering"
-          onChange={(event) => onLabelChange(event.target.value)}
-          className="mt-1.5 h-11 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
-        />
-      </label>
-
-      {suggested.length ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {suggested.map((recent) => (
-            <button
-              key={recent}
-              type="button"
-              onClick={() => onLabelChange(recent)}
-              className="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            >
-              {recent}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <p className="mt-4 text-xs font-semibold text-ink-muted">
+    <div className="mt-5">
+      <p className="text-xs font-semibold text-ink-muted">
         Pick an icon <span className="font-normal">(optional)</span>
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -91,8 +58,8 @@ export function CustomTypeFields({
               className={clsx(
                 "grid size-9 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
                 active
-                  ? "bg-sage text-sage-strong"
-                  : "bg-white text-ink-muted hover:bg-mist hover:text-ink",
+                  ? "bg-ink text-white"
+                  : "bg-porcelain text-ink-muted hover:text-ink",
               )}
               aria-pressed={active}
               aria-label={`Use the ${key} icon`}

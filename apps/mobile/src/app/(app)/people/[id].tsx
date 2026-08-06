@@ -17,6 +17,7 @@ import {
   PencilSimple,
   ShareNetwork,
   Phone,
+  UsersThree,
 } from "phosphor-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -443,7 +444,7 @@ export default function PersonDetailScreen() {
         <View style={styles.section}>
           <SectionHeading
             detail={`${timelineEntries.length}`}
-            title="Updates"
+            title="History"
           />
           {timelineEntries.length > 0 ? (
             <Card style={styles.timelineCard}>
@@ -463,18 +464,14 @@ export default function PersonDetailScreen() {
                     : NotePencil;
                   return (
                     <View key={entry.id} style={styles.timelineItem}>
-                      <View style={styles.interactionIcon}>
-                        <IconComponent
-                          color={colors.sageStrong}
-                          size={19}
-                          weight="duotone"
-                        />
+                      <View style={styles.timelineIcon}>
+                        <IconComponent color={colors.inkMuted} size={19} />
                       </View>
                       <View style={styles.timelineCopy}>
                         <AppText variant="label">
                           {entry.update.isInteraction
                             ? timelineTitle(editable)
-                            : "Note"}
+                            : "Update"}
                         </AppText>
                         <AppText variant="caption">
                           {dateLabel(entry.update.recordedAt)}
@@ -494,12 +491,8 @@ export default function PersonDetailScreen() {
                 const IconComponent = timelineIcon(interaction);
                 return (
                   <View key={entry.id} style={styles.timelineItem}>
-                    <View style={styles.interactionIcon}>
-                      <IconComponent
-                        color={colors.sageStrong}
-                        size={19}
-                        weight="duotone"
-                      />
+                    <View style={styles.timelineIcon}>
+                      <IconComponent color={colors.inkMuted} size={19} />
                     </View>
                     <View style={styles.timelineCopy}>
                       <AppText variant="label">
@@ -534,10 +527,19 @@ export default function PersonDetailScreen() {
         ]}
       >
         <Button
-          icon={NotePencil}
-          label="Add update"
-          onPress={() => quickCapture.addUpdate(person.id)}
+          icon={UsersThree}
+          label="Log interaction"
+          onPress={() => quickCapture.logInteraction(person.id)}
+          style={styles.footerPrimary}
         />
+        <Pressable
+          accessibilityLabel="Add update"
+          accessibilityRole="button"
+          onPress={() => quickCapture.addUpdate(person.id)}
+          style={styles.footerSecondary}
+        >
+          <NotePencil color={colors.sageStrong} size={22} weight="bold" />
+        </Pressable>
         <Pressable
           accessibilityLabel="Add follow-up"
           accessibilityRole="button"
@@ -756,13 +758,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
     width: 10,
   },
-  interactionIcon: {
+  timelineIcon: {
     alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.round,
-    height: 36,
+    height: 24,
     justifyContent: "center",
-    width: 36,
+    paddingTop: 2,
+    width: 24,
   },
   timelineCopy: {
     flex: 1,
@@ -796,6 +797,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     position: "absolute",
     right: 0,
+  },
+  footerPrimary: {
+    flex: 1,
   },
   footerSecondary: {
     alignItems: "center",

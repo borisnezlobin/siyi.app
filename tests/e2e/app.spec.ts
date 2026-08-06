@@ -33,7 +33,7 @@ test("Today prioritizes actionable reminders", async ({ page }) => {
   ).toBe(true);
 });
 
-test("the mobile add button opens an animated quick-action tray", async ({
+test("the mobile add button opens a tray that separates the two verbs", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -43,41 +43,125 @@ test("the mobile add button opens an animated quick-action tray", async ({
   await page.goto("/today");
   await page.getByRole("button", { name: "Open quick actions" }).click();
 
-  await expect(page.getByRole("link", { name: "Person" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Add a person/ })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Follow-up", exact: true }),
+    page.getByRole("button", { name: /Add a follow-up/ }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Update", exact: true }).click();
-  await page.getByLabel("Person").fill("luis");
-  await page.getByRole("option", { name: /Luis/ }).first().click();
-  await page.getByRole("button", { name: "Coffee" }).click();
-  await page.getByRole("button", { name: "Save update" }).click();
+  await expect(
+    page.getByRole("button", { name: /Add an update/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Log an interaction/ }).click();
 
-  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
+  const sheet = page.locator("dialog[open]");
+  await expect(
+    sheet.getByRole("heading", { name: "Who did you see?" }),
+  ).toBeVisible();
+  await sheet.getByRole("button", { name: /Amelia/ }).click();
+  await sheet.getByRole("button", { name: "Coffee", exact: true }).click();
+  await sheet.getByRole("button", { name: "Log interaction" }).click();
+
+  await expect(sheet.getByRole("button", { name: "Saved" })).toBeVisible();
 });
 
-test("a follow-up can be added from quick actions", async ({
+test("several people can be logged as one evening out", async ({
   page,
 }, testInfo) => {
   await page.goto("/today");
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open quick actions" }).click();
-    await page
-      .getByRole("button", { name: "Follow-up", exact: true })
-      .click();
+    await page.getByRole("button", { name: /Log an interaction/ }).click();
   } else {
-    await page
-      .getByRole("button", { name: "Follow-up", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Log interaction" }).click();
   }
 
-  await page.getByLabel("Person").fill("ame");
-  await page.getByRole("option", { name: /Amelia/ }).first().click();
-  await page.getByLabel("Follow-up").fill("Send the studio address");
-  await page.getByRole("button", { name: "Tomorrow" }).click();
-  await page.getByRole("button", { name: "Save follow-up" }).click();
+  const sheet = page.locator("dialog[open]");
+  const amelia = sheet.getByRole("button", { name: /Amelia/ });
+  const luis = sheet.getByRole("button", { name: /Luis/ });
+  await amelia.click();
+  await luis.click();
+  await expect(amelia).toHaveAttribute("aria-pressed", "true");
+  await expect(luis).toHaveAttribute("aria-pressed", "true");
 
-  await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
+  // Who you saw is the whole entry: nothing else has to be filled in.
+  await sheet.getByRole("button", { name: "Log interaction" }).click();
+  await expect(sheet.getByRole("button", { name: "Saved" })).toBeVisible();
+});
+
+test("an update is written without claiming you saw them", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/today");
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "Open quick actions" }).click();
+    await page.getByRole("button", { name: /Add an update/ }).click();
+  } else {
+    await page.getByRole("button", { name: "Add update" }).click();
+  }
+
+  const sheet = page.locator("dialog[open]");
+  await expect(
+    sheet.getByRole("heading", { name: "What did you find out?" }),
+  ).toBeVisible();
+  await expect(sheet.getByText(/does not count as seeing them/i)).toBeVisible();
+
+  await sheet.getByLabel("Who is this about?").fill("luis");
+  await sheet.getByRole("option", { name: /Luis/ }).first().click();
+  await sheet.getByLabel("What did you learn?").fill("Is interested in photography");
+  await sheet.getByRole("button", { name: "Save update" }).click();
+
+  await expect(sheet.getByRole("button", { name: "Saved" })).toBeVisible();
+});
+
+test("the capture sheet does not shift while the picker is used", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/today");
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "Open quick actions" }).click();
+    await page.getByRole("button", { name: /Add a follow-up/ }).click();
+  } else {
+    await page.getByRole("button", { name: "Follow-up", exact: true }).click();
+  }
+
+  const sheet = page.locator("dialog[open]");
+  const picker = sheet.getByTestId("person-picker");
+  const below = sheet.getByLabel("Follow-up");
+  const search = sheet.getByLabel("Person");
+
+  // The sheet scales as it opens, so measuring has to wait for it to settle.
+  await sheet.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+
+  // Measured relative to the picker so that focusing a field, which can scroll
+  // the sheet, is not mistaken for the layout moving.
+  async function layout() {
+    const pickerBox = (await picker.boundingBox())!;
+    const belowBox = (await below.boundingBox())!;
+    return {
+      height: Math.round(pickerBox.height),
+      gap: Math.round(belowBox.y - pickerBox.y),
+    };
+  }
+
+  const closed = await layout();
+
+  // Opening the suggestions must float them over what follows, not shove it
+  // down the page.
+  await search.click();
+  await expect(sheet.getByRole("listbox")).toBeVisible();
+  expect(await layout()).toEqual(closed);
+
+  await search.fill("ame");
+  await expect(sheet.getByRole("option", { name: /Amelia/ })).toBeVisible();
+  expect(await layout()).toEqual(closed);
+
+  // And the chosen person has to occupy exactly the space the search box did.
+  await sheet.getByRole("option", { name: /Amelia/ }).first().click();
+  await expect(
+    sheet.getByRole("button", { name: /Choose someone other than/ }),
+  ).toBeVisible();
+  expect(await layout()).toEqual(closed);
 });
 
 test("follow-ups are shaped by when they land, not one flat list", async ({
@@ -254,13 +338,13 @@ test("an update can be corrected after it was saved", async ({ page }) => {
   await page.goto("/people/amelia-chen-4hkq");
 
   await page
-    .getByRole("button", { name: /Edit this update about/ })
+    .getByRole("button", { name: /Edit this entry about/ })
     .first()
     .click();
 
   // Every timeline row carries its own sheet, so assertions scope to the open one.
   const sheet = page.locator("dialog[open]");
-  await expect(sheet.getByText("Edit update")).toBeVisible();
+  await expect(sheet.getByText(/^Edit (update|interaction)$/)).toBeVisible();
   const note = sheet.getByLabel("Add a note");
   await expect(note).not.toHaveValue("");
   await note.fill("Corrected what we actually talked about");
@@ -272,29 +356,33 @@ test("an update can be corrected after it was saved", async ({ page }) => {
 test("deleting an update asks first", async ({ page }) => {
   await page.goto("/people/amelia-chen-4hkq");
   await page
-    .getByRole("button", { name: /Edit this update about/ })
+    .getByRole("button", { name: /Edit this entry about/ })
     .first()
     .click();
 
   const sheet = page.locator("dialog[open]");
-  await sheet.getByRole("button", { name: "Delete this update" }).click();
+  await sheet.getByRole("button", { name: "Delete this entry" }).click();
 
   // Real data, so it must never go on a single tap.
-  await expect(sheet.getByText(/Delete this update\?/)).toBeVisible();
+  await expect(sheet.getByText(/It will not be recoverable/)).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Yes, delete it" })).toBeVisible();
   await sheet.getByRole("button", { name: "Keep it" }).click();
   await expect(sheet.getByRole("button", { name: "Yes, delete it" })).toHaveCount(0);
 });
 
-test("naming an Other update offers icons rather than emoji", async ({ page }) => {
+test("naming an entry yourself offers icons rather than emoji", async ({
+  page,
+}) => {
   await page.goto("/people/amelia-chen-4hkq");
-  await page.getByRole("button", { name: "Add update" }).first().click();
+  await page
+    .getByRole("button", { name: /Edit this entry about/ })
+    .first()
+    .click();
 
   const sheet = page.locator("dialog[open]");
-  await expect(sheet.getByLabel("What would you call it?")).toHaveCount(0);
-  await sheet.getByRole("button", { name: "Other", exact: true }).click();
+  await expect(sheet.getByRole("button", { name: /Use the climb icon/ })).toHaveCount(0);
 
-  await sheet.getByLabel("What would you call it?").fill("Went bouldering");
+  await sheet.getByLabel("What was it?").fill("Went bouldering");
   const icon = sheet.getByRole("button", { name: "Use the climb icon" });
   await expect(icon).toBeVisible();
   await icon.click();
@@ -308,7 +396,11 @@ test("the person picker finds someone by typing rather than scrolling", async ({
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open quick actions" }).click();
   }
-  await page.getByRole("button", { name: "Follow-up", exact: true }).click();
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: /Add a follow-up/ }).click();
+  } else {
+    await page.getByRole("button", { name: "Follow-up", exact: true }).click();
+  }
 
   const search = page.getByLabel("Person");
   await search.fill("luis");
