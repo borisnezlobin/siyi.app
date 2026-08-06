@@ -5,7 +5,7 @@ import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { getFollowUps, getPeople } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "Follow-ups",
+  title: "Reminders",
 };
 
 export const dynamic = "force-dynamic";
@@ -25,12 +25,12 @@ export default async function FollowUpsPage({
     <div className="mx-auto max-w-[760px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
         eyebrow="Keep your word"
-        title="Follow-ups"
+        title="Reminders"
         description="A practical list of the things you said you’d send, ask, or do."
         action={
           <QuickCaptureTrigger
-            mode="follow-up"
-            label="Add follow-up"
+            mode="reminder"
+            label="Add reminder"
             compact
           />
         }

@@ -164,7 +164,7 @@ export default function SettingsScreen() {
       );
       setPendingImport(null);
       setMessage(
-        `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.followUps} follow-ups.`,
+        `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.followUps} reminders.`,
       );
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (importError) {
@@ -181,7 +181,7 @@ export default function SettingsScreen() {
   function requestAccountDeletion() {
     Alert.alert(
       "Delete your account?",
-      "This permanently removes your account, people, updates, interactions, follow-ups, photos, and notification records. This cannot be undone.",
+      "This permanently removes your account, people, updates, interactions, reminders, photos, and notification records. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -405,7 +405,7 @@ export default function SettingsScreen() {
               {pendingImport.preview.people} people ·{" "}
               {pendingImport.preview.updates} updates ·{" "}
               {pendingImport.preview.interactions} legacy interactions ·{" "}
-              {pendingImport.preview.followUps} follow-ups ·{" "}
+              {pendingImport.preview.followUps} reminders ·{" "}
               {pendingImport.preview.tags} tags
             </AppText>
             <View style={styles.previewActions}>
@@ -440,7 +440,7 @@ export default function SettingsScreen() {
       <Section title="Delete account">
         <AppText style={styles.sectionNote} variant="caption">
           Permanently removes every person, note, photo, update, interaction,
-          follow-up, subscription, and your sign-in identity.
+          reminder, subscription, and your sign-in identity.
         </AppText>
         <View style={styles.sectionAction}>
           <Button

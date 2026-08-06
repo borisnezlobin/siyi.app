@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return apiError(
-        validation.error.issues[0]?.message ?? "Invalid follow-up.",
+        validation.error.issues[0]?.message ?? "Invalid reminder.",
       );
     }
 

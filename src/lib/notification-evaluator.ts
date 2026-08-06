@@ -219,11 +219,11 @@ export function evaluateUserNotifications(
           type: "follow_up",
           relatedEntityId: followUp.id,
           scheduledFor: now.toISOString(),
-          deduplicationKey: `follow-up:${input.userId}:${followUp.id}:${dueDate.dateKey}`,
-          title: `A follow-up with ${followUp.personName}`,
+          deduplicationKey: `reminder:${input.userId}:${followUp.id}:${dueDate.dateKey}`,
+          title: `A reminder with ${followUp.personName}`,
           body: followUp.text,
           url: `/follow-ups?person=${followUp.personId}`,
-          tag: `follow-up-${followUp.id}`,
+          tag: `reminder-${followUp.id}`,
         });
       }
     }

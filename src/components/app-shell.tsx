@@ -121,8 +121,8 @@ export function AppShell({
             surface="sidebar"
           />
           <QuickCaptureTrigger
-            mode="follow-up"
-            label="Follow-up"
+            mode="reminder"
+            label="Reminder"
             surface="sidebar"
           />
         </div>

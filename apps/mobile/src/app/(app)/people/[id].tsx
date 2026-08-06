@@ -422,7 +422,7 @@ export default function PersonDetailScreen() {
         <View style={styles.section}>
           <SectionHeading
             detail={`${openFollowUps.length} open`}
-            title="Follow-ups"
+            title="Reminders"
           />
           {openFollowUps.length > 0 ? (
             <Card style={styles.timelineCard}>
@@ -554,7 +554,7 @@ export default function PersonDetailScreen() {
           <NotePencil color={colors.sageStrong} size={22} weight="bold" />
         </Pressable>
         <Pressable
-          accessibilityLabel="Add follow-up"
+          accessibilityLabel="Add reminder"
           accessibilityRole="button"
           onPress={() => quickCapture.addFollowUp(person.id)}
           style={styles.footerSecondary}

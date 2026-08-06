@@ -24,7 +24,7 @@ export const followUpBucketEmptyLabels: Record<FollowUpBucket, string> = {
 };
 
 /**
- * "This week" is the six days after today, so a follow-up seven days out reads
+ * "This week" is the six days after today, so a reminder seven days out reads
  * as "later" rather than crowding the week you are actually looking at.
  */
 export function followUpBucket(

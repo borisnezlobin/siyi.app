@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 type TimeSensitiveItem = {
   key: string;
-  kind: "follow-up" | "birthday" | "check-in";
+  kind: "reminder" | "birthday" | "check-in";
   status: "overdue" | "today" | "upcoming";
   dueAt: Date;
   href: string;
@@ -82,8 +82,8 @@ export default async function TodayPage() {
           : "upcoming";
 
     timeSensitiveItems.push({
-      key: `follow-up-${followUp.id}`,
-      kind: "follow-up",
+      key: `reminder-${followUp.id}`,
+      kind: "reminder",
       status,
       dueAt,
       href: `/follow-ups?person=${followUp.personId}`,
@@ -91,7 +91,7 @@ export default async function TodayPage() {
       personName:
         followUp.person?.preferredName ??
         followUp.person?.fullName ??
-        "Follow-up",
+        "Reminder",
       dueLabel:
         status === "overdue"
           ? `${Math.abs(daysFromToday)} ${
@@ -210,7 +210,7 @@ export default async function TodayPage() {
             href="/follow-ups"
             className="text-xs font-semibold text-coral-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
-            All follow-ups
+            All reminders
           </Link>
         </div>
 
@@ -234,7 +234,7 @@ export default async function TodayPage() {
                     }
                   `}
                 >
-                  {item.kind === "follow-up" ? (
+                  {item.kind === "reminder" ? (
                     <ClockCountdown size={19} weight="fill" aria-hidden="true" />
                   ) : item.kind === "birthday" ? (
                     <Cake size={19} weight="fill" aria-hidden="true" />
@@ -279,7 +279,7 @@ export default async function TodayPage() {
               </span>
               <p className="mt-3 text-sm font-semibold">Nothing has a deadline.</p>
               <p className="mt-1 text-xs text-ink-muted">
-                Follow-ups and birthdays will appear here.
+                Reminders and birthdays will appear here.
               </p>
             </div>
           )}

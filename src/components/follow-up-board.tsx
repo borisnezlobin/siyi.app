@@ -31,7 +31,7 @@ export function FollowUpBoard({
   const [showCompleted, setShowCompleted] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
 
-  // A follow-up completed in this session keeps its place in the list so the
+  // A reminder completed in this session keeps its place in the list so the
   // page never jumps out from under the tap that completed it.
   const settledIds = useRef(new Set<string>());
 
@@ -84,7 +84,7 @@ export function FollowUpBoard({
     settledIds.current.add(followUp.id);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const response = await fetch(`/api/follow-ups/${followUp.id}`, {
+      const response = await fetch(`/api/reminders/${followUp.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completedAt }),
@@ -110,13 +110,13 @@ export function FollowUpBoard({
   return (
     <div>
       <section
-        aria-label="How your follow-ups are spread out"
+        aria-label="How your reminders are spread out"
         className="mt-7 grid grid-cols-4 border-y border-ink/[0.08]"
       >
         {followUpBucketOrder.map((bucket) => (
           <a
             key={bucket}
-            href={`#follow-ups-${bucket}`}
+            href={`#reminders-${bucket}`}
             className={clsx(
               "flex min-h-[5.25rem] flex-col justify-center gap-1 py-4 pr-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
               bucket !== "overdue" && "border-l border-ink/[0.08] pl-3",
@@ -180,7 +180,7 @@ export function FollowUpBoard({
           />
           <p className="mt-4 font-display text-2xl">Nothing is waiting.</p>
           <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-ink-muted">
-            Follow-ups land here when you add something you want to remember.
+            Reminders land here when you add something you want to remember.
           </p>
         </div>
       ) : (
@@ -188,13 +188,13 @@ export function FollowUpBoard({
           {followUpBucketOrder.map((bucket) => (
             <section
               key={bucket}
-              id={`follow-ups-${bucket}`}
+              id={`reminders-${bucket}`}
               className="scroll-mt-6 pt-6"
-              aria-labelledby={`follow-ups-${bucket}-heading`}
+              aria-labelledby={`reminders-${bucket}-heading`}
             >
               <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
                 <h2
-                  id={`follow-ups-${bucket}-heading`}
+                  id={`reminders-${bucket}-heading`}
                   className={clsx(
                     "text-sm font-bold",
                     bucket === "overdue" &&
@@ -228,9 +228,9 @@ export function FollowUpBoard({
           ))}
 
           {showCompleted ? (
-            <section className="pt-6" aria-labelledby="follow-ups-done-heading">
+            <section className="pt-6" aria-labelledby="reminders-done-heading">
               <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
-                <h2 id="follow-ups-done-heading" className="text-sm font-bold">
+                <h2 id="reminders-done-heading" className="text-sm font-bold">
                   Done
                 </h2>
                 <span className="text-[11px] font-semibold tabular-nums text-ink-muted">

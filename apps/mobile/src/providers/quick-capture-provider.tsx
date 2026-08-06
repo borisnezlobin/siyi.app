@@ -128,7 +128,7 @@ import { useAuth } from "@/providers/auth-provider";
 
 type CapturePhase =
   | "menu"
-  | "follow-up"
+  | "reminder"
   | "interaction"
   | "update"
   | "catch-up"
@@ -606,7 +606,7 @@ export function QuickCaptureProvider({
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "That follow-up could not be saved.",
+          : "That reminder could not be saved.",
       );
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -863,7 +863,7 @@ export function QuickCaptureProvider({
       revision,
       open: () => present("menu"),
       addPerson,
-      addFollowUp: (personId) => present("follow-up", personId),
+      addFollowUp: (personId) => present("reminder", personId),
       logInteraction: (personId) => present("interaction", personId),
       addUpdate: (personId) => present("update", personId),
       editEntry,
@@ -990,8 +990,8 @@ export function QuickCaptureProvider({
               <CaptureAction
                 body="Something to do before you forget"
                 icon={ClockCountdown}
-                onPress={() => present("follow-up")}
-                title="Add a follow-up"
+                onPress={() => present("reminder")}
+                title="Add a reminder"
               />
             </View>
           </BottomSheetView>
@@ -1251,8 +1251,8 @@ export function QuickCaptureProvider({
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
                 <AppText variant="title">
-                  {phase === "follow-up"
-                    ? "Add a follow-up"
+                  {phase === "reminder"
+                    ? "Add a reminder"
                     : editingEntry
                       ? "Edit this entry"
                       : phase === "interaction"
@@ -1260,7 +1260,7 @@ export function QuickCaptureProvider({
                         : "What did you find out?"}
                 </AppText>
                 <AppText style={styles.muted}>
-                  {phase === "follow-up"
+                  {phase === "reminder"
                     ? "A small promise to your future self."
                     : editingEntry
                       ? "Change what you wrote, or take it off the timeline."
@@ -1279,7 +1279,7 @@ export function QuickCaptureProvider({
               </Pressable>
             </View>
 
-            {phase === "follow-up" ? (
+            {phase === "reminder" ? (
               <>
                 {loadingPeople ? (
                   <ActivityIndicator
@@ -1288,7 +1288,7 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
-                    label="Follow-up for"
+                    label="Reminder for"
                     locked={personSelectionLocked}
                     onToggle={(personId) => togglePerson(personId, false)}
                     people={people}
@@ -1298,7 +1298,7 @@ export function QuickCaptureProvider({
                   <View style={styles.noPeople}>
                     <AppText variant="heading">Add someone first</AppText>
                     <AppText style={styles.muted}>
-                      Follow-ups stay attached to a person.
+                      Reminders stay attached to a person.
                     </AppText>
                     <Button
                       compact
@@ -1402,7 +1402,7 @@ export function QuickCaptureProvider({
                 </View>
                 <Button
                   disabled={!selectedPersonIds[0] || !followUpText.trim()}
-                  label="Save follow-up"
+                  label="Save reminder"
                   loading={saving}
                   onPress={() => void saveFollowUp()}
                 />

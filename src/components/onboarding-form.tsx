@@ -158,7 +158,7 @@ export function OnboardingForm() {
           <SwitchControl
             checked={followUpEnabled}
             onChange={setFollowUpEnabled}
-            label="Open follow-ups"
+            label="Open reminders"
           />
         </div>
       </section>

@@ -108,7 +108,7 @@ describe("mobile validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects an invalid follow-up date", () => {
+  it("rejects an invalid reminder date", () => {
     const result = followUpInputSchema.safeParse({
       personId: "11111111-1111-4111-8111-111111111111",
       text: "Send the notes",

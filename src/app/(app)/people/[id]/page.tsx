@@ -411,18 +411,18 @@ export default async function PersonDetailPage({
 
           <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold">Open follow-ups</h2>
+              <h2 className="text-sm font-bold">Open reminders</h2>
               <div className="flex items-center gap-2">
                 <QuickCaptureTrigger
-                  mode="follow-up"
+                  mode="reminder"
                   personId={person.id}
-                  label={`Add a follow-up for ${displayName}`}
+                  label={`Add a reminder for ${displayName}`}
                   compact
                 />
                 <Link
                   href={`/follow-ups?person=${person.id}`}
                   className="grid size-9 place-items-center rounded-full bg-porcelain text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                  aria-label="Open all follow-ups"
+                  aria-label="Open all reminders"
                 >
                   <ArrowSquareOut size={14} aria-hidden="true" />
                 </Link>
@@ -443,7 +443,7 @@ export default async function PersonDetailPage({
                 ))
               ) : (
                 <p className="text-xs leading-5 text-ink-muted">
-                  Nothing open. Add a follow-up when something comes up.
+                  Nothing open. Add a reminder when something comes up.
                 </p>
               )}
             </div>

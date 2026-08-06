@@ -261,7 +261,7 @@ export default function TodayScreen() {
     .slice(0, 4);
   const reminderItems = [
     ...overdueFollowUps.map((followUp) => ({
-      kind: "follow-up" as const,
+      kind: "reminder" as const,
       id: followUp.id,
       at: new Date(followUp.dueAt).getTime(),
       followUp,
@@ -279,7 +279,7 @@ export default function TodayScreen() {
       person,
     })),
     ...upcomingFollowUps.map((followUp) => ({
-      kind: "follow-up" as const,
+      kind: "reminder" as const,
       id: followUp.id,
       at: new Date(followUp.dueAt).getTime(),
       followUp,
@@ -361,11 +361,11 @@ export default function TodayScreen() {
         {hasTimeSensitive ? (
           <View style={styles.list}>
             {reminderItems.map((item) => {
-              if (item.kind === "follow-up") {
+              if (item.kind === "reminder") {
                 return (
                   <FollowUpItem
                     followUp={item.followUp}
-                    key={`follow-up-${item.id}`}
+                    key={`reminder-${item.id}`}
                     onComplete={() => void complete(item.followUp.id)}
                     onOpen={() =>
                       router.push(`/people/${item.followUp.personId}`)
@@ -404,7 +404,7 @@ export default function TodayScreen() {
           </View>
         ) : (
           <EmptyState
-            body="Nothing is overdue and there are no birthdays or follow-ups in the next two weeks."
+            body="Nothing is overdue and there are no birthdays or reminders in the next two weeks."
             icon={CheckCircle}
             title="You are comfortably caught up"
           />

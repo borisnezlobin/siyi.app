@@ -22,7 +22,7 @@ export function followUpDaysAway(day: Date, now: Date = new Date()) {
 }
 
 /**
- * A follow-up for today is due this evening so it still has a useful window
+ * A reminder for today is due this evening so it still has a useful window
  * left; any other day lands late afternoon, when there is time to act on it.
  */
 export function followUpDueAt(day: Date, now: Date = new Date()) {

@@ -56,7 +56,7 @@ export default function FollowUpsScreen() {
   }, [query, screenData.data]);
 
   if (screenData.loading && !screenData.data) {
-    return <LoadingState label="Gathering your follow-ups…" />;
+    return <LoadingState label="Gathering your reminders…" />;
   }
   if (screenData.error && !screenData.data) {
     return (
@@ -89,7 +89,7 @@ export default function FollowUpsScreen() {
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="What is coming up, and when it lands."
-      title="Follow-ups"
+      title="Reminders"
     >
       <View style={styles.distribution}>
         {followUpBucketOrder.map((bucket, index) => {
@@ -133,10 +133,10 @@ export default function FollowUpsScreen() {
       <View style={styles.search}>
         <MagnifyingGlass color={colors.inkMuted} size={18} />
         <TextInput
-          accessibilityLabel="Filter follow-ups"
+          accessibilityLabel="Filter reminders"
           onChangeText={setQuery}
           onSubmitEditing={() => Keyboard.dismiss()}
-          placeholder="Person or follow-up"
+          placeholder="Person or reminder"
           placeholderTextColor={colors.inkMuted}
           returnKeyType="search"
           selectionColor={colors.coral}
@@ -150,7 +150,7 @@ export default function FollowUpsScreen() {
           <ClockCountdown color={colors.inkMuted} size={28} />
           <AppText variant="heading">
             {(screenData.data || []).length === 0
-              ? "No follow-ups yet"
+              ? "No reminders yet"
               : "Nothing is waiting"}
           </AppText>
           <AppText style={styles.emptyBody}>
@@ -228,7 +228,7 @@ export default function FollowUpsScreen() {
 
       <Button
         icon={ClockCountdown}
-        label="Add a follow-up"
+        label="Add a reminder"
         onPress={() => quickCapture.addFollowUp()}
       />
     </Screen>
