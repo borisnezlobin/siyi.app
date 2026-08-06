@@ -6,6 +6,7 @@ import { FormField } from "@/components/form-field";
 import {
   KeyboardAwareForm,
   useFieldChain,
+  useKeyboardHeight,
 } from "@/components/keyboard-aware-form";
 import { mockKeyboardEvents } from "@/test-support/keyboard";
 
@@ -93,5 +94,33 @@ describe("a keyboard-aware form", () => {
     await fireEvent.press(screen.getByText("Somewhere quiet"));
 
     expect(dismiss).toHaveBeenCalled();
+  });
+});
+
+describe("tracking how much the keyboard covers", () => {
+  function HeightProbe() {
+    return <Text>{`covering ${useKeyboardHeight()}`}</Text>;
+  }
+
+  it("reports the height while the keyboard is open and zero once it closes", async () => {
+    const keyboard = mockKeyboardEvents();
+    await render(<HeightProbe />);
+
+    expect(screen.getByText("covering 0")).toBeTruthy();
+
+    await keyboard.resize(336);
+    expect(screen.getByText("covering 336")).toBeTruthy();
+
+    await keyboard.hide();
+    expect(screen.getByText("covering 0")).toBeTruthy();
+  });
+
+  it("survives a keyboard event that carries no measurements", async () => {
+    const keyboard = mockKeyboardEvents();
+    await render(<HeightProbe />);
+
+    await keyboard.resizeWithoutMeasurements();
+
+    expect(screen.getByText("covering 0")).toBeTruthy();
   });
 });

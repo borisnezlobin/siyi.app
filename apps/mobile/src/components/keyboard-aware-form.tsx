@@ -38,6 +38,32 @@ export function useKeyboardVisible() {
   return visible;
 }
 
+/**
+ * How much of the screen the keyboard is covering, in points. Zero when it is
+ * closed. Useful for padding scrollable content so its last control can still
+ * be scrolled into view.
+ */
+export function useKeyboardHeight() {
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const shown = Keyboard.addListener(showEvent, (event) => {
+      setHeight(event?.endCoordinates?.height ?? 0);
+    });
+    const hidden = Keyboard.addListener(hideEvent, () => setHeight(0));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  return height;
+}
+
 type FieldChainProps = {
   ref: (input: TextInput | null | undefined) => void;
   returnKeyType: "next" | "done";
