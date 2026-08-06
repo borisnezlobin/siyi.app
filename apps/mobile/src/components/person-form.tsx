@@ -11,23 +11,17 @@ import {
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Switch,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { ContactMethodField } from "@/components/contact-method-field";
 import { FormField } from "@/components/form-field";
+import {
+  KeyboardAwareForm,
+  useFieldChain,
+} from "@/components/keyboard-aware-form";
 import { PersonNoteSections } from "@/components/person-note-sections";
-import { Screen } from "@/components/screen";
-import { colors, floatShadow, radii } from "@/constants/theme";
+import { colors, radii } from "@/constants/theme";
 import {
   contactFormValues,
   emptyContactDrafts,
@@ -70,7 +64,6 @@ export function PersonForm({
   noteSections?: PersonNoteSectionsData;
 }) {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
   const [fullName, setFullName] = useState(person?.fullName || "");
@@ -320,18 +313,36 @@ export function PersonForm({
   }
 
   const photoUri = photo?.uri || person?.profilePhotoUrl;
+  const detailField = useFieldChain([
+    "birthday",
+    "hometown",
+    "dormOrResidence",
+    "major",
+    "graduationYear",
+  ]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.fill}
+    <KeyboardAwareForm
+      contentStyle={styles.content}
+      footer={
+        <View style={styles.footerRow}>
+          <Button
+            label="Cancel"
+            onPress={goBack}
+            style={styles.flex}
+            variant="secondary"
+          />
+          <Button
+            disabled={!fullName.trim()}
+            label={person ? "Save changes" : "Save person"}
+            loading={saving}
+            onPress={() => void save()}
+            style={styles.flex}
+          />
+        </View>
+      }
     >
-      <Screen
-        bottomInset={116 + insets.bottom}
-        contentContainerStyle={styles.content}
-        keyboardAvoiding={false}
-      >
-        <View style={styles.topBar}>
+      <View style={styles.topBar}>
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
@@ -474,24 +485,28 @@ export function PersonForm({
               onChangeText={setBirthday}
               placeholder="2007-04-18"
               value={birthday}
+              {...detailField("birthday")}
             />
             <FormField
               autoCapitalize="words"
               label="Hometown"
               onChangeText={setHometown}
               value={hometown}
+              {...detailField("hometown")}
             />
             <FormField
               autoCapitalize="words"
               label="Dorm or residence"
               onChangeText={setDormOrResidence}
               value={dormOrResidence}
+              {...detailField("dormOrResidence")}
             />
             <FormField
               autoCapitalize="words"
               label="Major"
               onChangeText={setMajor}
               value={major}
+              {...detailField("major")}
             />
             <FormField
               keyboardType="number-pad"
@@ -499,6 +514,7 @@ export function PersonForm({
               maxLength={4}
               onChangeText={setGraduationYear}
               value={graduationYear}
+              {...detailField("graduationYear")}
             />
             <View style={styles.strengthGroup}>
               <AppText variant="label">What are they to you?</AppText>
@@ -638,32 +654,17 @@ export function PersonForm({
             </AppText>
           </View>
         ) : null}
-      </Screen>
-
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: Math.max(insets.bottom, 12) },
-        ]}
-      >
-        <Button
-          disabled={!fullName.trim()}
-          label={person ? "Save changes" : "Save person"}
-          loading={saving}
-          onPress={() => void save()}
-        />
-      </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareForm>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    backgroundColor: colors.porcelain,
-    flex: 1,
-  },
   content: {
     gap: 18,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 10,
   },
   topBar: {
     alignItems: "center",
@@ -783,15 +784,5 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.coralStrong,
-  },
-  footer: {
-    ...floatShadow,
-    backgroundColor: colors.paper,
-    bottom: 0,
-    left: 0,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    position: "absolute",
-    right: 0,
   },
 });
