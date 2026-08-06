@@ -441,3 +441,25 @@ test("the map places what it can and admits what it cannot", async ({ page }) =>
   await expect(page.getByRole("heading", { name: /where/i }).first()).toBeVisible();
   await expect(page.getByText("GeoNames")).toBeVisible();
 });
+
+test("adding a person leads the quick actions sheet", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile-chromium",
+    "The action tray is the mobile navigation pattern.",
+  );
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Open quick actions" }).click();
+
+  const addPerson = page.getByRole("link", { name: /Add a person/ });
+  await expect(addPerson).toBeVisible();
+
+  // It creates something rather than recording something, so it leads and
+  // carries the accent rather than sitting last among the log actions.
+  const addPersonBox = await addPerson.boundingBox();
+  const logInteraction = await page
+    .getByRole("button", { name: /Log an interaction/ })
+    .boundingBox();
+  expect(addPersonBox!.y).toBeLessThan(logInteraction!.y);
+});

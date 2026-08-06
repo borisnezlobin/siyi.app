@@ -153,12 +153,14 @@ function CaptureAction({
   title,
   body,
   divided = true,
+  primary = false,
   onPress,
 }: {
   icon: typeof UserPlus;
   title: string;
   body: string;
   divided?: boolean;
+  primary?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -168,13 +170,21 @@ function CaptureAction({
       style={({ pressed }) => [
         styles.captureAction,
         divided && styles.captureActionDivided,
+        primary && styles.captureActionPrimary,
         pressed && styles.pressed,
       ]}
     >
-      <IconComponent color={colors.ink} size={21} />
+      <IconComponent color={primary ? colors.paper : colors.ink} size={21} />
       <View style={styles.captureCopy}>
-        <AppText variant="label">{title}</AppText>
-        <AppText variant="caption">{body}</AppText>
+        <AppText style={primary ? styles.lightText : undefined} variant="label">
+          {title}
+        </AppText>
+        <AppText
+          style={primary ? styles.lightMuted : undefined}
+          variant="caption"
+        >
+          {body}
+        </AppText>
       </View>
     </Pressable>
   );
@@ -947,6 +957,14 @@ export function QuickCaptureProvider({
             </View>
             <View style={styles.actionStack}>
               <CaptureAction
+                body="Someone new to remember"
+                divided={false}
+                icon={UserPlus}
+                onPress={addPerson}
+                primary
+                title="Add a person"
+              />
+              <CaptureAction
                 body="Who you saw or spoke to"
                 divided={false}
                 icon={UsersThree}
@@ -964,12 +982,6 @@ export function QuickCaptureProvider({
                 icon={ClockCountdown}
                 onPress={() => present("follow-up")}
                 title="Add a follow-up"
-              />
-              <CaptureAction
-                body="Someone new to remember"
-                icon={UserPlus}
-                onPress={addPerson}
-                title="Add a person"
               />
             </View>
           </BottomSheetView>
@@ -1707,6 +1719,12 @@ const styles = StyleSheet.create({
     gap: 14,
     minHeight: 64,
     paddingVertical: 14,
+  },
+  captureActionPrimary: {
+    backgroundColor: colors.coral,
+    borderRadius: radii.medium,
+    marginBottom: 4,
+    paddingHorizontal: 16,
   },
   captureActionDivided: {
     borderTopColor: colors.mist,

@@ -315,6 +315,21 @@ export function QuickCaptureHub({
         )}
         aria-hidden={!menuOpen}
       >
+        {/* Adding a person is the one action here that creates something rather
+            than recording something, so it leads and carries the accent. */}
+        <Link
+          href="/people/new"
+          onClick={() => onMenuOpenChange(false)}
+          className="m-2 flex items-center gap-3 rounded-2xl bg-coral px-4 py-4 text-left text-white transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+        >
+          <UserPlus size={20} weight="fill" className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">Add a person</span>
+            <span className="block text-[11px] text-white/75">
+              Someone new to remember
+            </span>
+          </span>
+        </Link>
         <button
           type="button"
           onClick={() => {
@@ -369,20 +384,6 @@ export function QuickCaptureHub({
             </span>
           </span>
         </button>
-        <span className="mx-4 block h-px bg-ink/[0.07]" aria-hidden="true" />
-        <Link
-          href="/people/new"
-          onClick={() => onMenuOpenChange(false)}
-          className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-        >
-          <UserPlus size={19} className="shrink-0 text-ink" aria-hidden="true" />
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold">Add a person</span>
-            <span className="block text-[11px] text-ink-muted">
-              Someone new to remember
-            </span>
-          </span>
-        </Link>
       </div>
 
       <dialog
