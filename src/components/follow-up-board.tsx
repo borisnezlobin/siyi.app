@@ -84,7 +84,7 @@ export function FollowUpBoard({
     settledIds.current.add(followUp.id);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const response = await fetch(`/api/reminders/${followUp.id}`, {
+      const response = await fetch(`/api/follow-ups/${followUp.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completedAt }),

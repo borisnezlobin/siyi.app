@@ -231,7 +231,7 @@ export function QuickCaptureHub({
       return;
     }
 
-    const response = await fetch("/api/reminders", {
+    const response = await fetch("/api/follow-ups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
