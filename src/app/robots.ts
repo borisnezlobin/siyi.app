@@ -18,6 +18,9 @@ export default function robots(): MetadataRoute.Robots {
         "/notifications",
         "/settings",
         "/onboarding",
+        // Shared contact cards. They are noindex on the page too; this keeps a
+        // crawler from ever requesting one.
+        "/s/",
       ],
     },
     sitemap: "https://www.siyi.app/sitemap.xml",

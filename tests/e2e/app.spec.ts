@@ -476,3 +476,34 @@ test("adding a person leads the quick actions sheet", async ({
     .boundingBox();
   expect(addPersonBox!.y).toBeLessThan(logInteraction!.y);
 });
+
+test("an unknown share link fails gently and stays out of search results", async ({
+  page,
+}) => {
+  const response = await page.goto(`/s/${"a".repeat(32)}`);
+
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "This link isn't available." }),
+  ).toBeVisible();
+  // Expired, revoked and never-existed all read the same, so a guessed token
+  // is never confirmed to have once been real.
+  await expect(page.getByText(/Shared cards expire/)).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  );
+});
+
+test("a malformed share token gets exactly the same page", async ({ page }) => {
+  await page.goto("/s/not-a-real-token");
+
+  await expect(
+    page.getByRole("heading", { name: "This link isn't available." }),
+  ).toBeVisible();
+});
+
+test("robots.txt keeps crawlers away from shared cards", async ({ request }) => {
+  const body = await (await request.get("/robots.txt")).text();
+  expect(body).toContain("Disallow: /s/");
+});
