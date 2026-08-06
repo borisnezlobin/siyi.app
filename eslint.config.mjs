@@ -14,6 +14,7 @@ const eslintConfig = [
   {
     ignores: [
       "node_modules/**",
+      ".claude/worktrees/**",
       ".next/**",
       ".next-dev/**",
       ".next-e2e/**",

@@ -237,26 +237,6 @@ export default async function PersonDetailPage({
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-            <div className="flex items-start justify-between gap-5">
-              <div>
-                <p className="text-xs font-semibold text-coral-strong">Next reminder</p>
-                <p className="mt-1 font-display text-3xl tracking-[-0.025em]">
-                  {reminder ? format(reminder.dueAt, "MMMM d") : "Paused"}
-                </p>
-              </div>
-              <QuickInteractionSheet
-                personId={person.id}
-                personName={displayName}
-              />
-            </div>
-            <p className="mt-4 text-xs leading-5 text-ink-muted">
-              {reminder
-                ? `This uses a ${reminder.intervalDays}-day reminder interval. Adding an update resets the date.`
-                : "Muted and archived people do not appear in contact reminders."}
-            </p>
-          </section>
-
           {person.generalNotes ? (
             <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
               <div className="flex items-center gap-2">
@@ -277,7 +257,10 @@ export default async function PersonDetailPage({
                   Most recent first
                 </p>
               </div>
-              <ChatCircleDots size={21} className="text-sage-strong" aria-hidden="true" />
+              <QuickInteractionSheet
+                personId={person.id}
+                personName={displayName}
+              />
             </div>
             <ol className="mt-5 space-y-5">
               {timeline.length ? (
@@ -320,6 +303,18 @@ export default async function PersonDetailPage({
         </div>
 
         <aside className="space-y-5">
+          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
+            <p className="text-xs font-semibold text-coral-strong">Next reminder</p>
+            <p className="mt-1 font-display text-2xl tracking-[-0.025em]">
+              {reminder ? format(reminder.dueAt, "MMMM d") : "Paused"}
+            </p>
+            <p className="mt-2 text-[11px] leading-5 text-ink-muted">
+              {reminder
+                ? `Every ${reminder.intervalDays} days. Adding an update resets it.`
+                : "Muted and archived people do not appear in reminders."}
+            </p>
+          </section>
+
           <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
             <h2 className="text-sm font-bold">Quick facts</h2>
             <dl className="mt-4 space-y-4">
