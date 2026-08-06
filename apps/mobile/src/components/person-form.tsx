@@ -1,3 +1,4 @@
+import { CollegeField } from "@/components/college-field";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -510,10 +511,7 @@ export function PersonForm({
               value={dormOrResidence}
               {...detailField("dormOrResidence")}
             />
-            <FormField
-              autoCapitalize="words"
-              label="University"
-              maxLength={120}
+            <CollegeField
               onChangeText={setUniversity}
               value={university}
               {...detailField("university")}

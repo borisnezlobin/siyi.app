@@ -1,5 +1,7 @@
 "use client";
 
+import { CollegeInput } from "@/components/college-input";
+import { timestampFromDateInput, todayDateInputValue } from "@/lib/date-input";
 import {
   Camera,
   CaretDown,
@@ -113,7 +115,9 @@ export function AddPersonForm() {
         reminderIntervalDays: formData.get("reminderIntervalDays") || null,
         status: "active",
         profilePhotoUrl,
-        firstMetAt: new Date().toISOString(),
+        firstMetAt:
+          timestampFromDateInput(String(formData.get("firstMetAt") ?? "")) ??
+          new Date().toISOString(),
       };
 
       if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -234,6 +238,17 @@ export function AddPersonForm() {
           </label>
 
           <label className={labelClassName}>
+            When did you meet?
+            <input
+              type="date"
+              name="firstMetAt"
+              max={todayDateInputValue()}
+              defaultValue={todayDateInputValue()}
+              className={inputClassName}
+            />
+          </label>
+
+          <label className={labelClassName}>
             Short note
             <textarea
               name="generalNotes"
@@ -279,7 +294,7 @@ export function AddPersonForm() {
           </label>
           <label className={labelClassName}>
             University
-            <input name="university" maxLength={120} className={inputClassName} />
+            <CollegeInput className={inputClassName} />
           </label>
           <label className={labelClassName}>
             Major

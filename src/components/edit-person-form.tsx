@@ -1,5 +1,6 @@
 "use client";
 
+import { CollegeInput } from "@/components/college-input";
 import { Camera, Check, ImageSquare, SpinnerGap, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -401,9 +402,7 @@ export function EditPersonForm({
           </label>
           <label className={labelClassName}>
             University
-            <input
-              name="university"
-              maxLength={120}
+            <CollegeInput
               defaultValue={person.university ?? ""}
               className={inputClassName}
             />
