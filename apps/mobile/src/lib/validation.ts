@@ -13,6 +13,17 @@ const optionalText = z
   .nullable()
   .transform((value) => value || null);
 
+// A little slack absorbs a device clock that runs slightly fast.
+const clockSkewToleranceMs = 5 * 60 * 1000;
+
+const pastTimestamp = z
+  .string()
+  .datetime()
+  .refine(
+    (value) => Date.parse(value) <= Date.now() + clockSkewToleranceMs,
+    "Pick a date that has already happened.",
+  );
+
 export const personInputSchema = z.object({
   fullName: z.string().trim().min(1, "Add their name.").max(120),
   preferredName: z
@@ -82,6 +93,7 @@ export const personInputSchema = z.object({
     .max(3650)
     .optional()
     .nullable(),
+  firstMetAt: pastTimestamp.optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,
 });
@@ -95,14 +107,14 @@ export const followUpInputSchema = z.object({
 export const interactionInputSchema = z.object({
   personId: z.string().uuid(),
   type: z.enum(interactionTypes),
-  occurredAt: z.string().datetime(),
+  occurredAt: pastTimestamp,
   note: optionalText,
 });
 
 export const personUpdateInputSchema = z.object({
   personIds: z.array(z.string().uuid()).min(1).max(50),
   text: z.string().trim().min(1, "Add what you learned.").max(2000),
-  recordedAt: z.string().datetime(),
+  recordedAt: pastTimestamp,
   isInteraction: z.boolean(),
   interactionLabel: z.string().trim().min(1).max(60).nullable(),
 });

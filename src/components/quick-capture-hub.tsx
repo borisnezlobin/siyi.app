@@ -15,6 +15,10 @@ import { addDays, format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  timestampFromDateInput,
+  todayDateInputValue,
+} from "@/lib/date-input";
 import { getApiResponseError } from "@/lib/http";
 import { interactionOptions } from "@/lib/interaction-options";
 import type { InteractionType, Person } from "@/lib/types";
@@ -90,6 +94,7 @@ export function QuickCaptureHub({
   const [dueDate, setDueDate] = useState("");
   const [interactionType, setInteractionType] =
     useState<InteractionType>("texted");
+  const [occurredOn, setOccurredOn] = useState(todayDateInputValue());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -100,6 +105,7 @@ export function QuickCaptureHub({
       onMenuOpenChange(false);
       setPersonId(nextPersonId ?? "");
       setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+      setOccurredOn(todayDateInputValue());
       setMode(nextMode);
       setError("");
       setSaved(false);
@@ -128,6 +134,7 @@ export function QuickCaptureHub({
     setPersonId("");
     setFollowUpText("");
     setInteractionType("texted");
+    setOccurredOn(todayDateInputValue());
     setNote("");
     setSaving(false);
     setSaved(false);
@@ -202,7 +209,7 @@ export function QuickCaptureHub({
         body: JSON.stringify({
           personId,
           type: interactionType,
-          occurredAt: new Date().toISOString(),
+          occurredAt: timestampFromDateInput(occurredOn),
           note,
         }),
       });
@@ -435,6 +442,23 @@ export function QuickCaptureHub({
                       )}
                     </div>
                   </fieldset>
+                  <label className="mt-4 block text-xs font-semibold text-ink-muted">
+                    When did this happen?
+                    <span className="relative mt-1.5 block">
+                      <CalendarBlank
+                        size={17}
+                        className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-ink-muted"
+                        aria-hidden="true"
+                      />
+                      <input
+                        type="date"
+                        value={occurredOn}
+                        max={todayDateInputValue()}
+                        onChange={(event) => setOccurredOn(event.target.value)}
+                        className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+                      />
+                    </span>
+                  </label>
                   <label className="mt-4 block text-xs font-semibold text-ink-muted">
                     Note <span className="font-normal">(optional)</span>
                     <textarea
