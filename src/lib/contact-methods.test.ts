@@ -265,6 +265,7 @@ describe("what the form starts with and hands back", () => {
       "phone",
       "email",
       "instagram",
+      "discord",
     ]);
     expect(drafts.every((row) => row.value === "")).toBe(true);
   });
