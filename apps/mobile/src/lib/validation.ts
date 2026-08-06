@@ -6,6 +6,9 @@ import {
   relationshipStrengths,
 } from "@/lib/types";
 
+/** Matches the column check added in migration 0016. */
+export const maxUniversityLength = 120;
+
 const optionalText = z
   .string()
   .trim()
@@ -74,6 +77,16 @@ export const personInputSchema = z.object({
     .transform((value) => value || null),
   hometown: optionalText,
   dormOrResidence: optionalText,
+  university: z
+    .string()
+    .trim()
+    .max(
+      maxUniversityLength,
+      `Keep the university under ${maxUniversityLength} characters.`,
+    )
+    .optional()
+    .nullable()
+    .transform((value) => value || null),
   major: optionalText,
   graduationYear: z
     .number()

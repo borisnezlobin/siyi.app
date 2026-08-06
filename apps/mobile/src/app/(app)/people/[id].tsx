@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Archive,
   At,
+  Bank,
   Buildings,
   Cake,
   CalendarCheck,
@@ -37,6 +38,7 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card, SectionHeading } from "@/components/surface";
 import { colors, floatShadow, radii } from "@/constants/theme";
+import { ageOnDate } from "@/lib/birthday-age";
 import { archivePerson, getPersonDetails, noteSectionsOf } from "@/lib/data";
 import {
   contactDraftsOf,
@@ -147,6 +149,7 @@ export default function PersonDetailScreen() {
       new Date(left.occurredAt).getTime(),
   );
   const reminder = nextReminderDate(person);
+  const age = ageOnDate(person.birthday);
   const facts = [
     {
       icon: At,
@@ -161,6 +164,11 @@ export default function PersonDetailScreen() {
       label: "Residence",
       value: person.dormOrResidence,
     },
+    {
+      icon: Bank,
+      label: "University",
+      value: person.university,
+    },
     { icon: GraduationCap, label: "Major", value: person.major },
     {
       icon: CalendarCheck,
@@ -173,10 +181,15 @@ export default function PersonDetailScreen() {
       icon: Cake,
       label: "Birthday",
       value: person.birthday
-        ? new Date(`${person.birthday}T12:00:00`).toLocaleDateString(
-            undefined,
-            { month: "long", day: "numeric" },
-          )
+        ? [
+            new Date(`${person.birthday}T12:00:00`).toLocaleDateString(
+              undefined,
+              { month: "long", day: "numeric" },
+            ),
+            age === null ? null : String(age),
+          ]
+            .filter(Boolean)
+            .join(" · ")
         : null,
     },
     {

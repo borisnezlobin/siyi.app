@@ -15,6 +15,8 @@ const columnsAwaitingMigration = [
   "custom_icon",
   // 0012_person_slugs.sql
   "slug",
+  // 0016_person_university.sql
+  "university",
 ];
 
 type WriteError = { code?: string; message: string };

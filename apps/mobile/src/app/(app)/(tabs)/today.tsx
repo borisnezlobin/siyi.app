@@ -26,6 +26,7 @@ import {
 } from "@/components/surface";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
+import { ageAtNextBirthday } from "@/lib/birthday-age";
 import {
   getAccountSettings,
   getFollowUps,
@@ -131,6 +132,7 @@ function BirthdayItem({
 }) {
   const days = daysUntilBirthday(person.birthday);
   const birthday = nextBirthday(person.birthday);
+  const turning = ageAtNextBirthday(person.birthday);
   return (
     <PressableCard onPress={onOpen} style={styles.actionRow}>
       <View style={[styles.actionIcon, styles.birthdayIcon]}>
@@ -155,6 +157,7 @@ function BirthdayItem({
                 day: "numeric",
               })}`
             : ""}
+          {turning === null ? "" : ` · turns ${turning}`}
         </AppText>
       </View>
     </PressableCard>

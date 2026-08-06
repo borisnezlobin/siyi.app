@@ -71,6 +71,8 @@ const netInfoFetch = NetInfo.fetch as jest.Mock;
 class FakeDatabase {
   tables: Record<string, Row[]> = {};
   missingTables = new Set<string>();
+  // Columns a migration would add that the database does not have yet.
+  missingColumns = new Set<string>();
 
   seed(table: string, rows: Row[]) {
     this.tables[table] = rows.map((row) => ({ ...row }));
@@ -87,6 +89,10 @@ class FakeDatabase {
 
 type Filter = { column: string; values: unknown[] };
 
+function missingColumnError(column: string) {
+  return { code: "42703", message: `column people.${column} does not exist` };
+}
+
 class FakeQuery {
   private filters: Filter[] = [];
   private operation: (() => { data: Row[] | null; error: Row | null }) | null =
@@ -97,6 +103,12 @@ class FakeQuery {
     private database: FakeDatabase,
     private table: string,
   ) {}
+
+  private namedMissingColumn(row: Row) {
+    return Object.keys(row).find((column) =>
+      this.database.missingColumns.has(column),
+    );
+  }
 
   private matching() {
     return this.database
@@ -126,6 +138,10 @@ class FakeQuery {
     this.operation = () => {
       const rows = Array.isArray(payload) ? payload : [payload];
       for (const row of rows) {
+        const missing = this.namedMissingColumn(row);
+        if (missing) return { data: null, error: missingColumnError(missing) };
+      }
+      for (const row of rows) {
         const existing = this.database
           .rows(this.table)
           .find((candidate) => candidate.id === row.id);
@@ -139,6 +155,8 @@ class FakeQuery {
 
   update(values: Row) {
     this.operation = () => {
+      const missing = this.namedMissingColumn(values);
+      if (missing) return { data: null, error: missingColumnError(missing) };
       for (const row of this.matching()) Object.assign(row, values);
       return { data: null, error: null };
     };
@@ -220,6 +238,7 @@ function person(overrides: Partial<Person> = {}): Person {
     birthday: null,
     hometown: null,
     dormOrResidence: null,
+    university: null,
     major: null,
     graduationYear: null,
     relationshipStrength: 2,
@@ -417,6 +436,7 @@ describe("edits made offline reaching the server", () => {
         birthday: null,
         hometown: null,
         dormOrResidence: null,
+        university: null,
         major: null,
         graduationYear: null,
         relationshipStrength: 2,
@@ -483,6 +503,7 @@ describe("edits made offline reaching the server", () => {
         birthday: null,
         hometown: null,
         dormOrResidence: null,
+        university: null,
         major: null,
         graduationYear: null,
         relationshipStrength: 2,
@@ -542,6 +563,7 @@ describe("before the migrations have been applied", () => {
         birthday: null,
         hometown: null,
         dormOrResidence: null,
+        university: null,
         major: null,
         graduationYear: null,
         relationshipStrength: 2,
@@ -565,6 +587,46 @@ describe("before the migrations have been applied", () => {
     expect(await getOfflineQueue(userId)).toHaveLength(0);
     expect(database.rows("people")[0].phone_number).toBe("(555) 555-0123");
     expect(database.rows("person_contact_methods")).toEqual([]);
+  });
+
+  it("still saves a person when migration 0016 has not added the university", async () => {
+    database.missingColumns.add("university");
+    database.seed("people", [{ id: personId, user_id: userId }]);
+    await seedSnapshot();
+
+    await updatePerson(
+      userId,
+      personId,
+      {
+        fullName: "Jordan Lee",
+        preferredName: null,
+        instagramUsername: null,
+        phoneNumber: null,
+        email: null,
+        birthday: null,
+        hometown: "Seattle",
+        dormOrResidence: null,
+        university: "Westmont University",
+        major: null,
+        graduationYear: null,
+        relationshipStrength: 2,
+        relationshipLabel: null,
+        remindersEnabled: true,
+        reminderIntervalDays: null,
+        firstMetLocation: null,
+        generalNotes: null,
+      },
+      undefined,
+      null,
+      [],
+      [],
+    );
+
+    await goOnline();
+    await expect(flushOfflineMutations(userId)).resolves.toBe(true);
+    expect(await getOfflineQueue(userId)).toHaveLength(0);
+    expect(database.rows("people")[0].hometown).toBe("Seattle");
+    expect(database.rows("people")[0].university).toBeUndefined();
   });
 
   it("does not get stuck on a queued note edit", async () => {

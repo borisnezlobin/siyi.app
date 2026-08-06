@@ -58,6 +58,7 @@ export function PeopleDirectory({
           ]),
           person.email,
           person.generalNotes,
+          person.university,
           person.major,
           person.dormOrResidence,
           ...(person.tags?.map(({ name }) => name) ?? []),

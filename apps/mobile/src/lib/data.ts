@@ -103,6 +103,8 @@ type PersonRow = {
   birthday: string | null;
   hometown: string | null;
   dorm_or_residence: string | null;
+  // Absent from every read until migration 0016 has run.
+  university?: string | null;
   major: string | null;
   graduation_year: number | null;
   relationship_strength: number;
@@ -442,6 +444,7 @@ function mapPerson(
     birthday: row.birthday,
     hometown: row.hometown,
     dormOrResidence: row.dorm_or_residence,
+    university: row.university ?? null,
     major: row.major,
     graduationYear: row.graduation_year,
     relationshipStrength:
@@ -859,6 +862,7 @@ function optimisticPerson(
     birthday: input.birthday,
     hometown: input.hometown,
     dormOrResidence: input.dormOrResidence,
+    university: input.university ?? null,
     major: input.major,
     graduationYear: input.graduationYear ?? null,
     relationshipStrength: input.relationshipStrength,
@@ -1955,6 +1959,7 @@ function personRecord(
     birthday: person.birthday,
     hometown: person.hometown,
     dorm_or_residence: person.dormOrResidence,
+    university: person.university,
     major: person.major,
     graduation_year: person.graduationYear,
     relationship_strength: person.relationshipStrength,
@@ -2358,7 +2363,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
           mutation.personId,
         )
       : null;
-    const { error: personError } = await supabase.from("people").upsert(
+    const { error: personError } = await writeTolerantOfPendingColumns(
       personRecord(
         mutation.userId,
         mutation.personId,
@@ -2366,7 +2371,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         mutation.createdAt,
         profilePhotoPath,
       ),
-      { onConflict: "id" },
+      (row) => supabase.from("people").upsert(row, { onConflict: "id" }),
     );
     if (personError) throw personError;
 
@@ -2397,9 +2402,8 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
           `${mutation.personId}-${mutation.id}`,
         )
       : undefined;
-    const { error } = await supabase
-      .from("people")
-      .update({
+    const { error } = await writeTolerantOfPendingColumns(
+      {
         full_name: mutation.input.fullName,
         preferred_name: mutation.input.preferredName,
         profile_photo_url:
@@ -2410,6 +2414,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         birthday: mutation.input.birthday,
         hometown: mutation.input.hometown,
         dorm_or_residence: mutation.input.dormOrResidence,
+        university: mutation.input.university,
         major: mutation.input.major,
         graduation_year: mutation.input.graduationYear,
         relationship_strength: mutation.input.relationshipStrength,
@@ -2421,8 +2426,10 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
           : {}),
         first_met_location: mutation.input.firstMetLocation,
         general_notes: mutation.input.generalNotes,
-      })
-      .eq("id", mutation.personId);
+      },
+      (row) =>
+        supabase.from("people").update(row).eq("id", mutation.personId),
+    );
     if (error) throw error;
     await writeQueuedContactMethods(mutation);
     if (newPhotoPath && mutation.currentPhotoPath) {

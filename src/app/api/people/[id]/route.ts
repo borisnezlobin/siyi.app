@@ -33,6 +33,7 @@ function toDatabaseUpdate(data: z.infer<typeof updatePersonSchema>) {
     ...(data.dormOrResidence !== undefined && {
       dorm_or_residence: data.dormOrResidence,
     }),
+    ...(data.university !== undefined && { university: data.university }),
     ...(data.major !== undefined && { major: data.major }),
     ...(data.graduationYear !== undefined && {
       graduation_year: data.graduationYear,

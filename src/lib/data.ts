@@ -37,6 +37,8 @@ type PersonRow = {
   birthday: string | null;
   hometown: string | null;
   dorm_or_residence: string | null;
+  // Absent from every read until migration 0016 has run.
+  university?: string | null;
   major: string | null;
   graduation_year: number | null;
   relationship_strength: number;
@@ -168,6 +170,7 @@ function mapPerson(
     birthday: row.birthday,
     hometown: row.hometown,
     dormOrResidence: row.dorm_or_residence,
+    university: row.university ?? null,
     major: row.major,
     graduationYear: row.graduation_year,
     relationshipStrength: row.relationship_strength as RelationshipStrength,

@@ -17,6 +17,7 @@ import { Avatar } from "@/components/avatar";
 import { PageHeader } from "@/components/page-header";
 import { LogInteractionPanel } from "@/components/log-interaction-panel";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
+import { ageAtNextBirthday } from "@/lib/birthday-age";
 import { getFollowUps, getPeople, getQuickPeople } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
@@ -127,6 +128,7 @@ export default async function TodayPage() {
     const nextBirthday = getNextBirthday(person.birthday, now);
     const daysAway = differenceInCalendarDays(nextBirthday, today);
     if (daysAway > 14) continue;
+    const turning = ageAtNextBirthday(person.birthday, now);
 
     timeSensitiveItems.push({
       key: `birthday-${person.id}`,
@@ -135,7 +137,7 @@ export default async function TodayPage() {
       dueAt: nextBirthday,
       href: `/people/${person.id}`,
       title: `${getDisplayName(person)}’s birthday`,
-      personName: "Birthday",
+      personName: turning === null ? "Birthday" : `Turning ${turning}`,
       dueLabel:
         daysAway === 0
           ? "Today"

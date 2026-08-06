@@ -56,6 +56,24 @@ describe("evaluateUserNotifications", () => {
     expect(candidates[2].url).toContain("/follow-ups?person=");
   });
 
+  it("says the age they are turning, and nothing when the year is a placeholder", () => {
+    const [birthday] = evaluateUserNotifications(baseInput, evaluationTime)
+      .filter(({ type }) => type === "birthday");
+    expect(birthday.body).toContain("They turn 22.");
+
+    const [withoutYear] = evaluateUserNotifications(
+      {
+        ...baseInput,
+        people: baseInput.people.map((person) => ({
+          ...person,
+          birthday: "1900-08-10",
+        })),
+      },
+      evaluationTime,
+    ).filter(({ type }) => type === "birthday");
+    expect(withoutYear.body).not.toContain("They turn");
+  });
+
   it("skips the overdue nudge when a person turned reminders off", () => {
     const candidates = evaluateUserNotifications(
       {

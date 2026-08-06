@@ -236,6 +236,7 @@ test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await expect(page.getByLabel("Where did you meet?", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Short note", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Major", { exact: true })).not.toBeVisible();
+  await expect(page.getByLabel("University", { exact: true })).not.toBeVisible();
 
   await page.getByLabel("Name", { exact: true }).fill("Jordan Lee");
   await page.getByLabel("Instagram", { exact: true }).fill("instagram.com/Jordan.Lee/");
@@ -332,6 +333,17 @@ test("switching tabs paints immediately instead of waiting on the server", async
     page.locator('[aria-busy="true"]').or(page.getByRole("searchbox", { name: "Search people" })),
   ).toBeVisible({ timeout: 2000 });
   await expect(page.getByRole("searchbox", { name: "Search people" })).toBeVisible();
+});
+
+test("the quick facts name the university and the age", async ({ page }) => {
+  await page.goto("/people/amelia-chen-4hkq");
+
+  const facts = page.locator("dl");
+  await expect(facts.getByText("University", { exact: true })).toBeVisible();
+  await expect(facts.getByText("Westmont University")).toBeVisible();
+  // The demo birthday is three days out, so the age shown is the one they are
+  // still living, not the one they are about to turn.
+  await expect(facts.getByText(/^\w+ \d{1,2} · 20$/)).toBeVisible();
 });
 
 test("an update can be corrected after it was saved", async ({ page }) => {
@@ -433,6 +445,7 @@ test("the edit person page is grouped rather than one long wall", async ({
   // drops whatever the user could not see.
   await page.getByText("About them", { exact: true }).click();
   await expect(page.getByLabel("Major", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("University", { exact: true })).toBeVisible();
 });
 
 test("the map places what it can and admits what it cannot", async ({ page }) => {

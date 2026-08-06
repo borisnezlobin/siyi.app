@@ -51,6 +51,7 @@ export type Person = {
   birthday: string | null;
   hometown: string | null;
   dormOrResidence: string | null;
+  university: string | null;
   major: string | null;
   graduationYear: number | null;
   relationshipStrength: RelationshipStrength;

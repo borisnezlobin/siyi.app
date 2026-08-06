@@ -87,6 +87,7 @@ export default function PeopleScreen() {
         person.instagramUsername,
         person.phoneNumber,
         person.generalNotes,
+        person.university,
         person.major,
         person.dormOrResidence,
         ...person.tags.map((tag) => tag.name),

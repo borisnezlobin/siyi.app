@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
 import { isOwnedAvatarReference } from "@/lib/avatar-urls";
+import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
 import { importPayloadSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
@@ -28,34 +29,38 @@ export async function POST(request: NextRequest) {
       const targetId = person.id ?? crypto.randomUUID();
       if (person.id) personIdMap.set(person.id, targetId);
 
-      const { error } = await supabase.from("people").upsert({
-        id: targetId,
-        user_id: user.id,
-        full_name: person.fullName,
-        preferred_name: person.preferredName,
-        profile_photo_url: isOwnedAvatarReference(
-          person.profilePhotoUrl,
-          user.id,
-        )
-          ? person.profilePhotoUrl
-          : null,
-        instagram_username: person.instagramUsername,
-        phone_number: person.phoneNumber,
-        email: person.email,
-        birthday: person.birthday,
-        hometown: person.hometown,
-        dorm_or_residence: person.dormOrResidence,
-        major: person.major,
-        graduation_year: person.graduationYear,
-        relationship_strength: person.relationshipStrength,
-        relationship_label: person.relationshipLabel,
-        reminders_enabled: person.remindersEnabled,
-        reminder_interval_days: person.reminderIntervalDays,
-        status: person.status,
-        first_met_at: person.firstMetAt ?? new Date().toISOString(),
-        first_met_location: person.firstMetLocation,
-        general_notes: person.generalNotes,
-      });
+      const { error } = await writeTolerantOfPendingColumns(
+        {
+          id: targetId,
+          user_id: user.id,
+          full_name: person.fullName,
+          preferred_name: person.preferredName,
+          profile_photo_url: isOwnedAvatarReference(
+            person.profilePhotoUrl,
+            user.id,
+          )
+            ? person.profilePhotoUrl
+            : null,
+          instagram_username: person.instagramUsername,
+          phone_number: person.phoneNumber,
+          email: person.email,
+          birthday: person.birthday,
+          hometown: person.hometown,
+          dorm_or_residence: person.dormOrResidence,
+          university: person.university,
+          major: person.major,
+          graduation_year: person.graduationYear,
+          relationship_strength: person.relationshipStrength,
+          relationship_label: person.relationshipLabel,
+          reminders_enabled: person.remindersEnabled,
+          reminder_interval_days: person.reminderIntervalDays,
+          status: person.status,
+          first_met_at: person.firstMetAt ?? new Date().toISOString(),
+          first_met_location: person.firstMetLocation,
+          general_notes: person.generalNotes,
+        },
+        (row) => supabase.from("people").upsert(row),
+      );
       if (error) return apiError(error.message, 400);
     }
 

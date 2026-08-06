@@ -1,5 +1,6 @@
 import {
   followUpInputSchema,
+  maxUniversityLength,
   importPreviewSchema,
   interactionEditSchema,
   personInputSchema,
@@ -16,6 +17,37 @@ describe("mobile validation", () => {
     });
 
     expect(person.instagramUsername).toBe("jordan.lee");
+  });
+
+  it("trims a university and rejects one past the length limit", () => {
+    expect(
+      personInputSchema.parse({
+        fullName: "Jordan Lee",
+        relationshipStrength: 2,
+        university: "  Westmont University  ",
+      }).university,
+    ).toBe("Westmont University");
+    expect(
+      personInputSchema.parse({
+        fullName: "Jordan Lee",
+        relationshipStrength: 2,
+        university: "",
+      }).university,
+    ).toBeNull();
+    expect(
+      personInputSchema.safeParse({
+        fullName: "Jordan Lee",
+        relationshipStrength: 2,
+        university: "u".repeat(maxUniversityLength),
+      }).success,
+    ).toBe(true);
+    expect(
+      personInputSchema.safeParse({
+        fullName: "Jordan Lee",
+        relationshipStrength: 2,
+        university: "u".repeat(maxUniversityLength + 1),
+      }).success,
+    ).toBe(false);
   });
 
   it("keeps a backdated first met date and rejects a future one", () => {

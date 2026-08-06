@@ -37,6 +37,7 @@ function initialFormValues(person: Person): FormValues {
     birthday: person.birthday ?? "",
     hometown: person.hometown ?? "",
     dormOrResidence: person.dormOrResidence ?? "",
+    university: person.university ?? "",
     major: person.major ?? "",
     graduationYear: person.graduationYear ? String(person.graduationYear) : "",
     relationshipStrength: String(person.relationshipStrength),
@@ -231,6 +232,7 @@ export function EditPersonForm({
       birthday: formData.get("birthday"),
       hometown: formData.get("hometown"),
       dormOrResidence: formData.get("dormOrResidence"),
+      university: formData.get("university"),
       major: formData.get("major"),
       graduationYear: formData.get("graduationYear") || null,
       relationshipStrength: Number(formData.get("relationshipStrength")),
@@ -379,6 +381,7 @@ export function EditPersonForm({
         summary={listFilled(
           [
             ["Hometown", values.hometown],
+            ["University", values.university],
             ["Major", values.major],
             ["Class year", values.graduationYear],
             ["Residence", values.dormOrResidence],
@@ -393,6 +396,15 @@ export function EditPersonForm({
             <input
               name="hometown"
               defaultValue={person.hometown ?? ""}
+              className={inputClassName}
+            />
+          </label>
+          <label className={labelClassName}>
+            University
+            <input
+              name="university"
+              maxLength={120}
+              defaultValue={person.university ?? ""}
               className={inputClassName}
             />
           </label>
