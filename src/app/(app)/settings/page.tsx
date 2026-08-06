@@ -26,6 +26,7 @@ export default async function SettingsPage() {
     ? providers.map((provider) => (provider === "email" ? "Email" : "Google"))
     : ["Preview mode"];
   let initialTimezone = "America/Los_Angeles";
+  let initialMarketingOptIn = false;
   let initialIntervals: Record<RelationshipStrength, number> = {
     ...DEFAULT_REMINDER_INTERVALS,
   };
@@ -35,7 +36,7 @@ export default async function SettingsPage() {
     const [{ data: profile }, { data: settings }] = await Promise.all([
       supabase
         .from("user_profiles")
-        .select("timezone")
+        .select("timezone,marketing_opt_in")
         .eq("auth_user_id", user.id)
         .maybeSingle(),
       supabase
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
         .maybeSingle(),
     ]);
     initialTimezone = profile?.timezone ?? "UTC";
+    initialMarketingOptIn = profile?.marketing_opt_in ?? false;
     if (settings) {
       initialIntervals = {
         1: settings.strength_1_days,
@@ -72,6 +74,7 @@ export default async function SettingsPage() {
         accountEmail={user?.email ?? ""}
         initialTimezone={initialTimezone}
         initialIntervals={initialIntervals}
+        initialMarketingOptIn={initialMarketingOptIn}
       />
     </div>
   );

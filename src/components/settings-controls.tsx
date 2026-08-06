@@ -6,6 +6,7 @@ import {
   CheckCircle,
   CloudArrowDown,
   DownloadSimple,
+  EnvelopeSimple,
   FileCsv,
   FileJs,
   LockKey,
@@ -64,6 +65,7 @@ export function SettingsControls({
   accountEmail,
   initialTimezone,
   initialIntervals,
+  initialMarketingOptIn,
 }: {
   people: Person[];
   interactions: Interaction[];
@@ -72,13 +74,16 @@ export function SettingsControls({
   accountEmail: string;
   initialTimezone: string;
   initialIntervals: Record<RelationshipStrength, number>;
+  initialMarketingOptIn: boolean;
 }) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [intervals, setIntervals] = useState(initialIntervals);
+  const [marketingOptIn, setMarketingOptIn] = useState(initialMarketingOptIn);
+  const [marketingError, setMarketingError] = useState("");
   const [message, setMessage] = useState("");
   const [working, setWorking] = useState<
-    "save" | "password" | "import" | "delete" | null
+    "save" | "password" | "import" | "delete" | "marketing" | null
   >(null);
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -154,6 +159,37 @@ export function SettingsControls({
     setPassword("");
     setPasswordConfirmation("");
     setMessage("Password saved. You can use it the next time you sign in.");
+    setWorking(null);
+  }
+
+  async function saveMarketingOptIn(nextOptIn: boolean) {
+    const previousOptIn = marketingOptIn;
+    setMarketingOptIn(nextOptIn);
+    setMarketingError("");
+    setWorking("marketing");
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const response = await fetch("/api/marketing", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ marketingOptIn: nextOptIn }),
+      });
+
+      if (!response.ok) {
+        setMarketingOptIn(previousOptIn);
+        setMarketingError(
+          await getApiResponseError(
+            response,
+            "That preference could not be saved.",
+          ),
+        );
+        setWorking(null);
+        return;
+      }
+    } else {
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+    }
+
     setWorking(null);
   }
 
@@ -480,6 +516,52 @@ export function SettingsControls({
             Sign out
           </button>
         </form>
+      </section>
+
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
+            <EnvelopeSimple size={19} weight="fill" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-sm font-bold">Emails from us</h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Occasional notes about what&apos;s new. Nothing else.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex items-start justify-between gap-4 rounded-2xl bg-porcelain px-4 py-3.5">
+          <label htmlFor="marketing-opt-in" className="text-xs leading-5">
+            <span className="font-semibold">Send me product updates</span>
+            <span className="mt-0.5 block text-ink-muted">
+              A few times a year at most, and you can turn this off here or from
+              any email. Your reminders are separate and keep working either
+              way.
+            </span>
+          </label>
+          <button
+            type="button"
+            id="marketing-opt-in"
+            role="switch"
+            aria-checked={marketingOptIn}
+            disabled={working === "marketing"}
+            onClick={() => void saveMarketingOptIn(!marketingOptIn)}
+            className={`mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
+              marketingOptIn ? "bg-coral" : "bg-black/15"
+            }`}
+          >
+            <span
+              className={`size-5 rounded-full bg-white shadow-card transition-transform ${
+                marketingOptIn ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        {marketingError ? (
+          <p role="alert" className="mt-3 text-[11px] font-semibold text-coral-strong">
+            {marketingError}
+          </p>
+        ) : null}
       </section>
 
       {message ? (
