@@ -28,6 +28,7 @@ import {
   getPerson,
   getPersonUpdates,
 } from "@/lib/data";
+import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { getContactReminderState } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
@@ -181,7 +182,7 @@ export default async function PersonDetailPage({
                 </span>
               ))}
               <span className="rounded-full bg-coral px-3 py-1.5 text-[11px] font-semibold text-white">
-                Strength {person.relationshipStrength}
+                {relationshipLabelFor(person)}
               </span>
             </div>
           </div>
@@ -311,7 +312,9 @@ export default async function PersonDetailPage({
             <p className="mt-2 text-[11px] leading-5 text-ink-muted">
               {reminder
                 ? `Every ${reminder.intervalDays} days. Adding an update resets it.`
-                : "Muted and archived people do not appear in reminders."}
+                : person.remindersEnabled === false
+                  ? "Reminders are off for them. Turn them back on when you edit."
+                  : "Muted and archived people do not appear in reminders."}
             </p>
           </section>
 

@@ -23,6 +23,8 @@ function person(overrides: Partial<Person> = {}): Person {
     major: null,
     graduationYear: null,
     relationshipStrength: 2,
+    relationshipLabel: null,
+    remindersEnabled: true,
     reminderIntervalDays: null,
     status: "active",
     firstMetAt: "2026-01-01",

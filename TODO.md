@@ -9,6 +9,7 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 - [x] Editable "first met" date; backdateable updates
 - [x] Updates card owns the add action; compact reminder box moved right
 - [x] www.siyi.app canonical in code
+- [x] Relationship labels in your own words; reminders opt-out (migration 0008)
 
 - [x] Signup crash: `notification_preferences_user_id_key` duplicate key
 - [x] Test notification collapsed every failure into an opaque 500
@@ -37,9 +38,6 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 - [ ] **Person picker does not scale.** A plain dropdown breaks past ~100
       contacts. Needs a search/typeahead.
-- [~] **Relationship rework + reminder opt-out** — IN PROGRESS. Free-text
-      labels seeded with the four current tiers; reminders opt-out, on by
-      default. Migration 0008.
 - [ ] **Custom "Other" update type** with a user-supplied label and emoji.
 
 ## P2 — features requested
@@ -93,4 +91,5 @@ against production; both are additive and touch no existing data:
 
 - `0007_marketing_consent.sql` — NOT YET APPLIED. The settings toggle errors
   until it is.
-- `0008_relationship_labels.sql` — pending the in-progress rework.
+- `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
+  and reminders_enabled, and replaces the create-person RPC.

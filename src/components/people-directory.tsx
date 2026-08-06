@@ -202,7 +202,7 @@ export function PeopleDirectory({
                   }
                   className="h-11 w-full appearance-none rounded-xl border border-black/10 bg-white px-3 pr-9 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
                 >
-                  <option value="all">Any strength</option>
+                  <option value="all">Any pace</option>
                   <option value="4">Very close</option>
                   <option value="3">Close</option>
                   <option value="2">Getting to know</option>

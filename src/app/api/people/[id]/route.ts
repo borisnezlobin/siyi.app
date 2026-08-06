@@ -34,6 +34,12 @@ function toDatabaseUpdate(data: z.infer<typeof updatePersonSchema>) {
     ...(data.relationshipStrength !== undefined && {
       relationship_strength: data.relationshipStrength,
     }),
+    ...(data.relationshipLabel !== undefined && {
+      relationship_label: data.relationshipLabel,
+    }),
+    ...(data.remindersEnabled !== undefined && {
+      reminders_enabled: data.remindersEnabled,
+    }),
     ...(data.reminderIntervalDays !== undefined && {
       reminder_interval_days: data.reminderIntervalDays,
     }),

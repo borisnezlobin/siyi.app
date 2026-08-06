@@ -21,6 +21,7 @@ export function getContactReminderState(
     Person,
     | "relationshipStrength"
     | "reminderIntervalDays"
+    | "remindersEnabled"
     | "status"
     | "firstMetAt"
     | "lastInteractionAt"
@@ -28,7 +29,7 @@ export function getContactReminderState(
   now: Date = new Date(),
   defaults: ReminderDefaults = DEFAULT_REMINDER_INTERVALS,
 ): ContactReminderState | null {
-  if (person.status !== "active") {
+  if (person.status !== "active" || person.remindersEnabled === false) {
     return null;
   }
 

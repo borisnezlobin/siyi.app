@@ -50,18 +50,12 @@ import {
   requestContactsPermission,
   setContactSyncEnabled,
 } from "@/lib/device-contacts";
+import { relationshipTierLabels } from "@/lib/relationship-labels";
 import type { ReminderDefaults } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 
 type PendingImport = Awaited<ReturnType<typeof chooseImportFile>>;
-
-const strengthDescriptions: Record<keyof ReminderDefaults, string> = {
-  1: "Loose connection",
-  2: "Friendly",
-  3: "Close",
-  4: "Inner circle",
-};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -369,7 +363,7 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.flex}>
                 <AppText variant="label">
-                  {strengthDescriptions[strength]}
+                  {relationshipTierLabels[strength]}
                 </AppText>
                 <AppText variant="caption">Remind after</AppText>
               </View>

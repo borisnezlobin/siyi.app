@@ -32,6 +32,7 @@ export type NotificationEvaluationInput = {
     birthday: string | null;
     relationshipStrength: RelationshipStrength;
     reminderIntervalDays: number | null;
+    remindersEnabled?: boolean;
     firstMetAt: string;
     lastInteractionAt: string | null;
   }[];
@@ -134,6 +135,7 @@ export function evaluateUserNotifications(
 
   if (preferences.overdueContactEnabled) {
     for (const person of input.people) {
+      if (person.remindersEnabled === false) continue;
       const intervalDays =
         person.reminderIntervalDays ?? defaults[person.relationshipStrength];
       const lastContact = localDateParts(

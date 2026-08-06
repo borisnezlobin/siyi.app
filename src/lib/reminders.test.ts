@@ -9,6 +9,7 @@ describe("contact reminders", () => {
   const activePerson = {
     relationshipStrength: 3 as const,
     reminderIntervalDays: null,
+    remindersEnabled: true,
     status: "active" as const,
     firstMetAt: "2026-01-01T12:00:00.000Z",
     lastInteractionAt: "2026-06-01T12:00:00.000Z",
@@ -51,6 +52,15 @@ describe("contact reminders", () => {
     expect(
       getContactReminderState(
         { ...activePerson, status: "archived" },
+        new Date("2027-01-01T00:00:00.000Z"),
+      ),
+    ).toBeNull();
+  });
+
+  it("pauses reminders for a person who switched them off", () => {
+    expect(
+      getContactReminderState(
+        { ...activePerson, remindersEnabled: false },
         new Date("2027-01-01T00:00:00.000Z"),
       ),
     ).toBeNull();

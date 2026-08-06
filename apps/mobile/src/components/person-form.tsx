@@ -17,6 +17,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,6 +37,11 @@ import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { createPerson, updatePerson } from "@/lib/data";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import {
+  isDefaultRelationshipLabel,
+  maxRelationshipLabelLength,
+  relationshipTierLabels,
+} from "@/lib/relationship-labels";
 import type { Person, RelationshipStrength } from "@/lib/types";
 import type { PersonInput } from "@/lib/validation";
 import { useAuth } from "@/providers/auth-provider";
@@ -74,6 +80,15 @@ export function PersonForm({ person }: { person?: Person }) {
   );
   const [relationshipStrength, setRelationshipStrength] =
     useState<RelationshipStrength>(person?.relationshipStrength || 2);
+  const [relationshipLabel, setRelationshipLabel] = useState(
+    person?.relationshipLabel &&
+      !isDefaultRelationshipLabel(person.relationshipLabel)
+      ? person.relationshipLabel
+      : "",
+  );
+  const [remindersEnabled, setRemindersEnabled] = useState(
+    person?.remindersEnabled ?? true,
+  );
   const [reminderIntervalDays, setReminderIntervalDays] = useState(
     person?.reminderIntervalDays ? String(person.reminderIntervalDays) : "",
   );
@@ -116,6 +131,8 @@ export function PersonForm({ person }: { person?: Person }) {
     major,
     graduationYear,
     relationshipStrength: String(relationshipStrength),
+    relationshipLabel,
+    remindersEnabled: remindersEnabled ? "on" : "off",
     reminderIntervalDays,
     firstMetOn,
     photoUri: photo?.uri ?? "",
@@ -137,6 +154,12 @@ export function PersonForm({ person }: { person?: Person }) {
         ? String(person.graduationYear)
         : "",
       relationshipStrength: String(person?.relationshipStrength || 2),
+      relationshipLabel:
+        person?.relationshipLabel &&
+        !isDefaultRelationshipLabel(person.relationshipLabel)
+          ? person.relationshipLabel
+          : "",
+      remindersEnabled: (person?.remindersEnabled ?? true) ? "on" : "off",
       reminderIntervalDays: person?.reminderIntervalDays
         ? String(person.reminderIntervalDays)
         : "",
@@ -146,6 +169,7 @@ export function PersonForm({ person }: { person?: Person }) {
     [person],
   );
   const dirty = hasUnsavedChanges(initialValues, currentValues);
+  const usingCustomLabel = relationshipLabel.trim().length > 0;
 
   function goBack() {
     if (!dirty) {
@@ -188,6 +212,9 @@ export function PersonForm({ person }: { person?: Person }) {
         ? null
         : parsedGraduationYear,
       relationshipStrength,
+      relationshipLabel:
+        relationshipLabel.trim() || relationshipTierLabels[relationshipStrength],
+      remindersEnabled,
       reminderIntervalDays: Number.isNaN(parsedReminderDays)
         ? null
         : parsedReminderDays,
@@ -375,7 +402,7 @@ export function PersonForm({ person }: { person?: Person }) {
           <View>
             <AppText variant="heading">More details</AppText>
             <AppText variant="caption">
-              Birthday, school context, and reminder strength
+              Birthday, school context, and reminders
             </AppText>
           </View>
           {advancedOpen ? (
@@ -436,45 +463,121 @@ export function PersonForm({ person }: { person?: Person }) {
               value={graduationYear}
             />
             <View style={styles.strengthGroup}>
-              <AppText variant="label">Relationship strength</AppText>
+              <AppText variant="label">What are they to you?</AppText>
               <View style={styles.strengthRow}>
-                {([1, 2, 3, 4] as const).map((strength) => (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{
-                      checked: relationshipStrength === strength,
-                    }}
-                    key={strength}
-                    onPress={() => {
-                      setRelationshipStrength(strength);
-                      void Haptics.selectionAsync();
-                    }}
-                    style={[
-                      styles.strength,
-                      relationshipStrength === strength &&
-                        styles.strengthSelected,
-                    ]}
-                  >
-                    {relationshipStrength === strength ? (
-                      <Check color={colors.paper} size={15} weight="bold" />
-                    ) : null}
-                    <AppText
-                      style={
-                        relationshipStrength === strength
-                          ? styles.lightText
-                          : undefined
-                      }
-                      variant="label"
+                {([1, 2, 3, 4] as const).map((strength) => {
+                  const selected =
+                    !usingCustomLabel && relationshipStrength === strength;
+                  return (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      key={strength}
+                      onPress={() => {
+                        setRelationshipStrength(strength);
+                        setRelationshipLabel("");
+                        void Haptics.selectionAsync();
+                      }}
+                      style={[
+                        styles.strength,
+                        selected && styles.strengthSelected,
+                      ]}
                     >
-                      {strength}
-                    </AppText>
-                  </Pressable>
-                ))}
+                      {selected ? (
+                        <Check color={colors.paper} size={14} weight="bold" />
+                      ) : null}
+                      <AppText
+                        style={selected ? styles.lightText : undefined}
+                        variant="caption"
+                      >
+                        {relationshipTierLabels[strength]}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
               </View>
-              <AppText variant="caption">
-                1 is an occasional connection; 4 is someone you want to stay
-                especially close to.
-              </AppText>
+            </View>
+            <FormField
+              hint="Anything you like, up to 40 characters."
+              label="Or call it something of your own"
+              maxLength={maxRelationshipLabelLength}
+              onChangeText={setRelationshipLabel}
+              placeholder="more than very close brochacho"
+              value={relationshipLabel}
+            />
+            <View style={styles.reminderPanel}>
+              <View style={styles.reminderHeader}>
+                <View style={styles.flex}>
+                  <AppText variant="label">Remind me to keep in touch</AppText>
+                  <AppText variant="caption">
+                    {remindersEnabled
+                      ? "We nudge you when it has been a while."
+                      : "No nudges about them. Birthdays and follow-ups still come through."}
+                  </AppText>
+                </View>
+                <Switch
+                  accessibilityLabel="Remind me to keep in touch"
+                  ios_backgroundColor={colors.mist}
+                  onValueChange={(value) => {
+                    setRemindersEnabled(value);
+                    void Haptics.selectionAsync();
+                  }}
+                  thumbColor={colors.paper}
+                  trackColor={{ false: colors.mist, true: colors.sageStrong }}
+                  value={remindersEnabled}
+                />
+              </View>
+
+              {remindersEnabled ? (
+                <View style={styles.reminderBody}>
+                  <AppText variant="caption">
+                    {usingCustomLabel
+                      ? `“${relationshipLabel.trim()}” is your name for them. The pace below is what sets the timing.`
+                      : `Reminders follow your ${relationshipTierLabels[relationshipStrength]} pace, which you can change in settings.`}
+                  </AppText>
+                  {usingCustomLabel ? (
+                    <View style={styles.strengthRow}>
+                      {([1, 2, 3, 4] as const).map((strength) => (
+                        <Pressable
+                          accessibilityRole="radio"
+                          accessibilityState={{
+                            checked: relationshipStrength === strength,
+                          }}
+                          key={strength}
+                          onPress={() => {
+                            setRelationshipStrength(strength);
+                            void Haptics.selectionAsync();
+                          }}
+                          style={[
+                            styles.strength,
+                            relationshipStrength === strength &&
+                              styles.strengthSelected,
+                          ]}
+                        >
+                          <AppText
+                            style={
+                              relationshipStrength === strength
+                                ? styles.lightText
+                                : undefined
+                            }
+                            variant="caption"
+                          >
+                            {relationshipTierLabels[strength]}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
+                  <FormField
+                    hint="Leave blank to use your default for that pace."
+                    keyboardType="number-pad"
+                    label="Custom reminder interval"
+                    onChangeText={setReminderIntervalDays}
+                    placeholder="Days"
+                    value={reminderIntervalDays}
+                  />
+                </View>
+              ) : null}
             </View>
             {person ? (
               <FormField
@@ -487,14 +590,6 @@ export function PersonForm({ person }: { person?: Person }) {
                 value={firstMetOn}
               />
             ) : null}
-            <FormField
-              hint="Leave blank to use your default for this strength."
-              keyboardType="number-pad"
-              label="Custom reminder interval"
-              onChangeText={setReminderIntervalDays}
-              placeholder="Days"
-              value={reminderIntervalDays}
-            />
           </View>
         ) : null}
 
@@ -605,19 +700,37 @@ const styles = StyleSheet.create({
   strengthGroup: {
     gap: 9,
   },
+  flex: {
+    flex: 1,
+  },
+  reminderPanel: {
+    backgroundColor: colors.porcelain,
+    borderRadius: radii.medium,
+    gap: 14,
+    padding: 15,
+  },
+  reminderHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+  },
+  reminderBody: {
+    gap: 12,
+  },
   strengthRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   strength: {
     alignItems: "center",
     backgroundColor: colors.mist,
-    borderRadius: radii.small,
-    flex: 1,
+    borderRadius: radii.round,
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
     justifyContent: "center",
-    minHeight: 46,
+    minHeight: 38,
+    paddingHorizontal: 13,
   },
   strengthSelected: {
     backgroundColor: colors.sageStrong,

@@ -38,6 +38,7 @@ type PersonRow = {
   preferred_name: string | null;
   birthday: string | null;
   relationship_strength: number;
+  reminders_enabled: boolean | null;
   reminder_interval_days: number | null;
   first_met_at: string;
 };
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
       admin
         .from("people")
         .select(
-          "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminder_interval_days,first_met_at",
+          "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminders_enabled,reminder_interval_days,first_met_at",
         )
         .eq("status", "active")
         .in("user_id", eligibleUserIds),
@@ -210,6 +211,7 @@ export async function GET(request: NextRequest) {
             relationshipStrength:
               person.relationship_strength as RelationshipStrength,
             reminderIntervalDays: person.reminder_interval_days,
+            remindersEnabled: person.reminders_enabled ?? true,
             firstMetAt: person.first_met_at,
             lastInteractionAt:
               latestInteractionByPerson.get(person.id) ?? null,

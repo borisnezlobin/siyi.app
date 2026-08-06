@@ -77,6 +77,13 @@ export const personInputSchema = z.object({
       ),
     "Choose a relationship strength",
   ),
+  relationshipLabel: z
+    .string()
+    .trim()
+    .max(40, "Keep the relationship name under 40 characters")
+    .nullish()
+    .transform((value) => value || null),
+  remindersEnabled: z.boolean().nullish().transform((value) => value ?? true),
   reminderIntervalDays: z.preprocess(
     (value) => (value === "" || value === null || value === undefined ? null : value),
     z.coerce.number().int().min(1).max(3650).nullable(),

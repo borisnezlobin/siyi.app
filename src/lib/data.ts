@@ -28,6 +28,8 @@ type PersonRow = {
   major: string | null;
   graduation_year: number | null;
   relationship_strength: number;
+  relationship_label: string | null;
+  reminders_enabled: boolean | null;
   reminder_interval_days: number | null;
   status: "active" | "muted" | "archived";
   first_met_at: string;
@@ -76,6 +78,8 @@ function mapPerson(row: PersonRow, profilePhotoUrl = row.profile_photo_url): Per
     major: row.major,
     graduationYear: row.graduation_year,
     relationshipStrength: row.relationship_strength as RelationshipStrength,
+    relationshipLabel: row.relationship_label ?? null,
+    remindersEnabled: row.reminders_enabled ?? true,
     reminderIntervalDays: row.reminder_interval_days,
     status: row.status,
     firstMetAt: row.first_met_at,

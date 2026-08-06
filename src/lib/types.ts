@@ -45,6 +45,8 @@ export type Person = {
   major: string | null;
   graduationYear: number | null;
   relationshipStrength: RelationshipStrength;
+  relationshipLabel: string | null;
+  remindersEnabled: boolean;
   reminderIntervalDays: number | null;
   status: PersonStatus;
   firstMetAt: string;
