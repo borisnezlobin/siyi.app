@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ContactSyncOverlay } from "@/components/contact-sync-overlay";
 import { colors } from "@/constants/theme";
 import { AuthProvider } from "@/providers/auth-provider";
 import { useAuth } from "@/providers/auth-provider";
@@ -66,6 +67,7 @@ function AppRuntime() {
           headerShown: false,
         }}
       />
+      <ContactSyncOverlay />
     </>
   );
 }

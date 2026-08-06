@@ -122,7 +122,11 @@ export type ContactSyncPlan =
       fields: ContactWriteFields;
       skipped: ContactConflict[];
     }
-  | { action: "none"; reason: "no-changes" | "ambiguous-name" };
+  | {
+      action: "none";
+      reason: "no-changes" | "ambiguous-name";
+      skipped: ContactConflict[];
+    };
 
 export type ContactWriteFields = {
   name: string;
@@ -234,7 +238,9 @@ export function planContactSync(
   }
 
   if (!fields.phoneNumber && !fields.email) {
-    return { action: "none", reason: "no-changes" };
+    // Nothing gets written, but a clash the user should hear about is still a
+    // clash — it travels with the plan rather than being dropped here.
+    return { action: "none", reason: "no-changes", skipped };
   }
 
   return { action: "update", contactId: match.contact.id, fields, skipped };
