@@ -3,6 +3,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
 import * as Localization from "expo-localization";
 import {
+  AddressBook,
   ArrowRight,
   BellRinging,
   DownloadSimple,
@@ -16,12 +17,13 @@ import {
   UploadSimple,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   View,
 } from "react-native";
 import { AppText } from "@/components/app-text";
@@ -42,6 +44,12 @@ import {
   shareAccountExport,
   type ExportFormat,
 } from "@/lib/data";
+import {
+  hasContactsPermission,
+  isContactSyncEnabled,
+  requestContactsPermission,
+  setContactSyncEnabled,
+} from "@/lib/device-contacts";
 import type { ReminderDefaults } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
@@ -58,6 +66,30 @@ const strengthDescriptions: Record<keyof ReminderDefaults, string> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const [contactSyncEnabled, setContactSyncState] = useState(false);
+
+  useEffect(() => {
+    void isContactSyncEnabled().then(setContactSyncState);
+  }, []);
+
+  async function toggleContactSync(enabled: boolean) {
+    if (!enabled) {
+      await setContactSyncEnabled(false);
+      setContactSyncState(false);
+      return;
+    }
+    const granted =
+      (await hasContactsPermission()) || (await requestContactsPermission());
+    if (!granted) {
+      Alert.alert(
+        "Contacts access is off",
+        "Turn on contacts access for Siyi in your device settings to use this.",
+      );
+      return;
+    }
+    await setContactSyncEnabled(true);
+    setContactSyncState(true);
+  }
   const accountData = useRefreshableData(() =>
     getAccountSettings(auth.session!.user.id),
   );
@@ -295,6 +327,31 @@ export default function SettingsScreen() {
           </View>
           <ArrowRight color={colors.inkMuted} size={19} />
         </PressableCard>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeading
+          detail="Only ever fills in blanks, never overwrites"
+          title="Device contacts"
+        />
+        <Card style={styles.navigationRow}>
+          <View style={styles.rowIcon}>
+            <AddressBook color={colors.sageStrong} size={23} weight="duotone" />
+          </View>
+          <View style={styles.flex}>
+            <AppText variant="label">Add saved people to contacts</AppText>
+            <AppText variant="caption">
+              {contactSyncEnabled
+                ? "New and edited people are added to your phone"
+                : "Off — nothing is written to your contacts"}
+            </AppText>
+          </View>
+          <Switch
+            onValueChange={(value) => void toggleContactSync(value)}
+            trackColor={{ true: colors.sageStrong, false: colors.mist }}
+            value={contactSyncEnabled}
+          />
+        </Card>
       </View>
 
       <View style={styles.section}>

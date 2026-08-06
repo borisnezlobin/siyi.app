@@ -63,8 +63,21 @@ export type Interaction = {
   type: InteractionType;
   occurredAt: string;
   note: string | null;
+  sourceUpdateId: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PersonUpdate = {
+  id: string;
+  userId: string;
+  text: string;
+  recordedAt: string;
+  isInteraction: boolean;
+  interactionLabel: string | null;
+  createdAt: string;
+  updatedAt: string;
+  personIds: string[];
 };
 
 export type Tag = {

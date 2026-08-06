@@ -9,6 +9,10 @@ class ContextIntelligenceModule extends NativeModule<Record<never, never>> {
   async conversationStarters(): Promise<string[]> {
     return [];
   }
+
+  async shortBio(): Promise<string> {
+    return "";
+  }
 }
 
 export default registerWebModule(

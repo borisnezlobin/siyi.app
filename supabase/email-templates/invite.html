@@ -12,23 +12,23 @@
                     <td style="vertical-align:middle;padding-right:10px;">
                       <img src="https://siyi.app/apple-touch-icon.png" width="36" height="36" alt="" style="display:block;border-radius:50%;" />
                     </td>
-                    <td style="vertical-align:middle;font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#17201c;">siyi.app</td>
+                    <td style="vertical-align:middle;font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#17201c;">Siyi.app</td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
               <td style="background-color:#ffffff;border-radius:24px;padding:36px 32px;">
-                <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;color:#17201c;font-weight:normal;">You&rsquo;re invited to siyi</h1>
+                <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;color:#17201c;font-weight:normal;">You&rsquo;re invited to Siyi</h1>
                 <p style="margin:16px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#617069;">Someone invited you to siyi &mdash; a private place to remember the people who matter.</p>
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;">
                   <tr>
                     <td style="background-color:#e66b56;border-radius:14px;">
-                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Accept the invite</a>
+                      <a href="https://siyi.app/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/onboarding" style="display:inline-block;padding:14px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Accept the invite</a>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:26px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#8b9992;">If the button doesn&rsquo;t work, copy this link into your browser:<br /><a href="{{ .ConfirmationURL }}" style="color:#2f6249;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+                <p style="margin:26px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#8b9992;">If the button doesn&rsquo;t work, copy this link into your browser:<br /><a href="https://siyi.app/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/onboarding" style="color:#2f6249;word-break:break-all;">https://siyi.app/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/onboarding</a></p>
               </td>
             </tr>
             <tr>

@@ -18,10 +18,16 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArchivePersonButton } from "@/components/archive-person-button";
+import { SharePersonButton } from "@/components/share-person-button";
 import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
-import { getFollowUps, getInteractions, getPerson } from "@/lib/data";
+import {
+  getFollowUps,
+  getInteractions,
+  getPerson,
+  getPersonUpdates,
+} from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
@@ -58,11 +64,32 @@ export default async function PersonDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [person, interactions, allFollowUps] = await Promise.all([
+  const [person, interactions, personUpdates, allFollowUps] = await Promise.all([
     getPerson(id),
     getInteractions(id),
+    getPersonUpdates(id),
     getFollowUps(),
   ]);
+
+  // Updates written on the phone and interactions logged here share one
+  // timeline. An interaction created by an update would otherwise show twice.
+  const updateEntries = personUpdates.map((update) => ({
+    id: `update-${update.id}`,
+    at: update.recordedAt,
+    title: update.interactionLabel || "Update",
+    body: update.text,
+  }));
+  const interactionEntries = interactions
+    .filter((interaction) => !interaction.sourceUpdateId)
+    .map((interaction) => ({
+      id: `interaction-${interaction.id}`,
+      at: interaction.occurredAt,
+      title: interactionLabel(interaction.type),
+      body: interaction.note,
+    }));
+  const timeline = [...updateEntries, ...interactionEntries].sort(
+    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
+  );
   const openFollowUps = allFollowUps.filter(
     (followUp) => followUp.personId === id && !followUp.completedAt,
   );
@@ -72,7 +99,7 @@ export default async function PersonDetailPage({
     ? formatDistanceToNowStrict(new Date(person.lastInteractionAt), {
         addSuffix: true,
       })
-    : "No interactions yet";
+    : "No updates yet";
 
   const facts = [
     person.major
@@ -117,6 +144,7 @@ export default async function PersonDetailPage({
             <PencilSimple size={16} aria-hidden="true" />
             Edit
           </Link>
+          <SharePersonButton person={person} />
           <ArchivePersonButton personId={person.id} personName={displayName} />
         </div>
       </div>
@@ -224,7 +252,7 @@ export default async function PersonDetailPage({
             </div>
             <p className="mt-4 text-xs leading-5 text-ink-muted">
               {reminder
-                ? `This uses a ${reminder.intervalDays}-day reminder interval. Logging an interaction resets the date.`
+                ? `This uses a ${reminder.intervalDays}-day reminder interval. Adding an update resets the date.`
                 : "Muted and archived people do not appear in contact reminders."}
             </p>
           </section>
@@ -244,7 +272,7 @@ export default async function PersonDetailPage({
           <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-sm font-bold">Interaction timeline</h2>
+                <h2 className="text-sm font-bold">Updates</h2>
                 <p className="mt-1 text-[11px] text-ink-muted">
                   Most recent first
                 </p>
@@ -252,10 +280,10 @@ export default async function PersonDetailPage({
               <ChatCircleDots size={21} className="text-sage-strong" aria-hidden="true" />
             </div>
             <ol className="mt-5 space-y-5">
-              {interactions.length ? (
-                interactions.map((interaction, index) => (
-                  <li key={interaction.id} className="relative flex gap-3">
-                    {index < interactions.length - 1 ? (
+              {timeline.length ? (
+                timeline.map((entry, index) => (
+                  <li key={entry.id} className="relative flex gap-3">
+                    {index < timeline.length - 1 ? (
                       <span
                         className="absolute bottom-[-1.25rem] left-[15px] top-8 w-px bg-ink/10"
                         aria-hidden="true"
@@ -266,19 +294,17 @@ export default async function PersonDetailPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="text-xs font-bold">
-                          {interactionLabel(interaction.type)}
-                        </p>
+                        <p className="text-xs font-bold">{entry.title}</p>
                         <time
-                          dateTime={interaction.occurredAt}
+                          dateTime={entry.at}
                           className="shrink-0 text-[10px] text-ink-muted"
                         >
-                          {format(new Date(interaction.occurredAt), "MMM d, yyyy")}
+                          {format(new Date(entry.at), "MMM d, yyyy")}
                         </time>
                       </div>
-                      {interaction.note ? (
+                      {entry.body ? (
                         <p className="mt-1 text-xs leading-5 text-ink-muted">
-                          {interaction.note}
+                          {entry.body}
                         </p>
                       ) : null}
                     </div>
@@ -286,7 +312,7 @@ export default async function PersonDetailPage({
                 ))
               ) : (
                 <li className="text-sm text-ink-muted">
-                  Log your first interaction to start the timeline.
+                  Add your first update to start the timeline.
                 </li>
               )}
             </ol>

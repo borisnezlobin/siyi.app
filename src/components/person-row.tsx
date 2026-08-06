@@ -17,7 +17,7 @@ export function PersonRow({ person, showOverdue = false }: PersonRowProps) {
     ? formatDistanceToNowStrict(new Date(person.lastInteractionAt), {
         addSuffix: true,
       })
-    : "No interaction yet";
+    : "No updates yet";
 
   return (
     <article className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[1.35rem] bg-white p-3 shadow-card ring-1 ring-black/[0.035] transition-transform hover:-translate-y-0.5 sm:p-4">

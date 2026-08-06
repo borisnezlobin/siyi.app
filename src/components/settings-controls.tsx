@@ -424,7 +424,7 @@ export function SettingsControls({
             className="flex items-center gap-2 rounded-xl bg-porcelain px-3 py-3 text-xs font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             <DownloadSimple size={17} aria-hidden="true" />
-            Interactions CSV
+            Updates CSV
           </button>
         </div>
       </section>

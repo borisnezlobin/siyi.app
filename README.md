@@ -1,4 +1,4 @@
-# siyi.app
+# Siyi.app
 
 A private, mobile-first place to remember people, context, updates, and
 follow-ups. The repository contains the Next.js web app/API and the Expo iPhone

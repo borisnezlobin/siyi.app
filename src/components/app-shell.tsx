@@ -120,7 +120,7 @@ export function AppShell({
           />
           <QuickCaptureTrigger
             mode="interaction"
-            label="Interaction"
+            label="Update"
             surface="sidebar"
           />
         </div>
