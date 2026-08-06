@@ -2000,6 +2000,9 @@ async function mirrorPrimaryContactMethods(
     phone: input.phoneNumber,
     email: input.email,
     instagram: input.instagramUsername,
+    // Discord has no legacy column of its own; it only ever lives in
+    // person_contact_methods, so there is nothing to mirror back.
+    discord: null,
   };
 
   for (const kind of contactMethodKinds) {
