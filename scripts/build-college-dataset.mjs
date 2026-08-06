@@ -170,8 +170,8 @@ const table = sorted
       college.region,
       [...college.aliases].join(","),
       college.place,
-      college.latitude == null ? "" : String(college.latitude),
-      college.longitude == null ? "" : String(college.longitude),
+      college.latitude === null ? "" : String(college.latitude),
+      college.longitude === null ? "" : String(college.longitude),
     ]
       .join("\t")
       .replace(/\t+$/, "")
@@ -191,7 +191,7 @@ for (const target of ["src/lib/colleges-data.ts", "apps/mobile/src/lib/colleges-
   console.log(`wrote ${target}`);
 }
 
-const withCoordinates = sorted.filter((college) => college.latitude != null).length;
+const withCoordinates = sorted.filter((college) => college.latitude !== null).length;
 const withAliases = sorted.filter((college) => college.aliases.size > 0).length;
 console.log(
   `${sorted.length} schools, ${withAliases} with aliases, ${withCoordinates} with coordinates, ${(body.length / 1024).toFixed(0)}KB per copy`

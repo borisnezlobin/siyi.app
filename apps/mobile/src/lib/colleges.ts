@@ -124,7 +124,7 @@ export function collegeCoordinates(
   university: string | null
 ): { latitude: number; longitude: number; label: string } | null {
   const college = university ? findCollege(university) : null;
-  if (!college || college.latitude == null || college.longitude == null) return null;
+  if (!college || college.latitude === null || college.longitude === null) return null;
   return {
     latitude: college.latitude,
     longitude: college.longitude,
