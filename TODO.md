@@ -125,7 +125,31 @@ against production; both are additive and touch no existing data:
   and reminders_enabled, and replaces the create-person RPC. Until it runs,
   relationship labels silently do not persist and every person gets reminders.
 
-## In flight (four agents, isolated worktrees)
+## Merged, awaiting migrations
+
+- [x] **/admin** — allowlisted, anonymised stats, segment announcements + push.
+      Hardened after review: signup is open, so an email allowlist only held
+      while Supabase was confirming addresses. `ADMIN_USER_IDS` now wins when
+      set; the email path additionally requires a confirmed address.
+      Known caveat, judged acceptable: the `announcements` select policy lets
+      any signed-in user read any live announcement. Segment targeting is
+      enforced in the API, not in SQL. Broadcast copy, no personal data.
+- [x] **Named note sections** + Edit Person grouped into six collapsibles.
+      Mobile deliberately untouched — its form is offline-first with a sync
+      queue, so sections there need new sync entities. Separate task.
+      Rough edge: a section left dirty is lost on Cancel without a warning.
+- [x] **Cleaner person URLs** — always-suffixed slugs, uuid resolves forever.
+      A rename does NOT regenerate the slug; the suffix carries the
+      disambiguation and a stale name portion costs nothing.
+      Not done: push notification URLs still carry the uuid, because the cron
+      selects an explicit column list and adding `slug` would fail the whole
+      nightly run until 0012 is applied. The uuid redirects, so the result is
+      already correct for users.
+      UNVERIFIED: the SQL in 0012 has never run. `normalize(…, nfkd)`, the
+      `U&'[\0300-\036F]'` escape and `person_slug_suffix` are worth an eyeball
+      before applying.
+
+## In flight
 
 Migration numbers are reserved per agent so they cannot collide:
 
