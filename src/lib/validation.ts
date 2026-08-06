@@ -112,6 +112,16 @@ export const interactionInputSchema = z.object({
     .transform((value) => value || null),
 });
 
+export const interactionEditSchema = interactionInputSchema.omit({
+  personId: true,
+});
+
+export const personUpdateEditSchema = z.object({
+  text: z.string().trim().min(1).max(2000),
+  recordedAt: pastTimestamp,
+  type: z.enum(interactionTypes),
+});
+
 export const followUpInputSchema = z.object({
   personId: z.string().uuid(),
   text: z.string().trim().min(1).max(500),

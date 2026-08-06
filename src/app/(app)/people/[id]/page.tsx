@@ -22,6 +22,8 @@ import { SharePersonButton } from "@/components/share-person-button";
 import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
+import { UpdateSheet } from "@/components/update-sheet";
+import { interactionTypeFromLabel } from "@/lib/interaction-labels";
 import {
   getFollowUps,
   getInteractions,
@@ -79,6 +81,13 @@ export default async function PersonDetailPage({
     at: update.recordedAt,
     title: update.interactionLabel || "Update",
     body: update.text,
+    editable: {
+      kind: "update" as const,
+      id: update.id,
+      type: interactionTypeFromLabel(update.interactionLabel),
+      body: update.text,
+      at: update.recordedAt,
+    },
   }));
   const interactionEntries = interactions
     .filter((interaction) => !interaction.sourceUpdateId)
@@ -87,6 +96,13 @@ export default async function PersonDetailPage({
       at: interaction.occurredAt,
       title: interactionLabel(interaction.type),
       body: interaction.note,
+      editable: {
+        kind: "interaction" as const,
+        id: interaction.id,
+        type: interaction.type,
+        body: interaction.note ?? "",
+        at: interaction.occurredAt,
+      },
     }));
   const timeline = [...updateEntries, ...interactionEntries].sort(
     (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
@@ -279,12 +295,20 @@ export default async function PersonDetailPage({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="text-xs font-bold">{entry.title}</p>
-                        <time
-                          dateTime={entry.at}
-                          className="shrink-0 text-[10px] text-ink-muted"
-                        >
-                          {format(new Date(entry.at), "MMM d, yyyy")}
-                        </time>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <time
+                            dateTime={entry.at}
+                            className="text-[10px] text-ink-muted"
+                          >
+                            {format(new Date(entry.at), "MMM d, yyyy")}
+                          </time>
+                          <UpdateSheet
+                            personId={person.id}
+                            personName={displayName}
+                            variant="edit"
+                            entry={entry.editable}
+                          />
+                        </div>
                       </div>
                       {entry.body ? (
                         <p className="mt-1 text-xs leading-5 text-ink-muted">

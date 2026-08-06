@@ -42,7 +42,14 @@ Working file. Delete entries as they ship. Ordered by launch risk.
       missing table was also breaking data export for every user. Both now
       tolerate it. Applying 0004 is still worth doing before the phone app
       ships, but nothing is blocked on it.
-- [ ] **Edit an update after saving it** (currently write-once). NOT STARTED.
+- [x] **Edit an update after saving it.** Edit and delete for both timeline
+      sources, no migration needed. Two ordering rules matter:
+      editing writes the linked `interactions` rows first, because they carry
+      the date reminders measure from, so a half-failed save leaves stale text
+      rather than a reminder pointing at an invisible date; deleting removes
+      those rows first, because the foreign key only nulls `source_update_id`
+      and the interaction would otherwise reappear as its own entry. Both
+      orders are safe to retry.
 
 ## P1 — UX that users tripped on
 
