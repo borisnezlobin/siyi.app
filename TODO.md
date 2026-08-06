@@ -97,6 +97,28 @@ Working file. Delete entries as they ship. Ordered by launch risk.
       leaks whether another user already has a person by that name. Keep the
       uuid resolving forever.
 
+## Mobile parity — the rule going forward
+
+The phone app ships everything the web ships, in the same change. Skipping it
+because the offline queue is awkward is how it fell behind in the first place.
+
+- [x] Note sections, multiple contact methods, edit/delete updates, custom
+      "Other" type, and the person typeahead all now exist on the phone, with
+      offline queueing and conflict rules for each.
+- Conflict rules chosen, worth knowing: a queued edit that lands on a row
+      somebody already changed KEEPS BOTH rather than picking a winner. A
+      queued delete is honoured unconditionally — the one accepted data-loss
+      path, because the user confirmed deleting that specific entry and an
+      offline phone has no way to ask again.
+- Visible change for existing phone users: the composer's free-text "What
+      kind?" box is replaced by the web's nine-type grid plus Other-with-a-name.
+      Labels already typed still read back, mapped to Other.
+- Known gap: no simulator or device run. Mobile UI is covered by
+      @testing-library/react-native, not by a real device.
+- Running mobile jest from an agent worktree needs
+      `apps/mobile/node_modules` symlinked from the main checkout — Node
+      resolution walks up to the root but never reaches the workspace folder.
+
 ## Ops / not code
 
 - [ ] Re-paste the five email templates into Supabase (they changed to
