@@ -56,6 +56,7 @@ import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
+import { useKeyboardHeight } from "@/components/keyboard-aware-form";
 import { brand } from "@/config/brand";
 import {
   colors,
@@ -409,6 +410,7 @@ export function QuickCaptureProvider({
   children: ReactNode;
 }) {
   const modalRef = useRef<BottomSheetModal>(null);
+  const keyboardHeight = useKeyboardHeight();
   const contextRequestRef = useRef(0);
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -926,7 +928,11 @@ export function QuickCaptureProvider({
         backgroundStyle={styles.sheetBackground}
         enableDynamicSizing
         handleIndicatorStyle={styles.handle}
-        keyboardBehavior="extend"
+        // "extend" grew the sheet to full height behind the keyboard, which put
+        // the field being typed in and the save button underneath it.
+        // "interactive" lifts the sheet by the keyboard instead.
+        android_keyboardInputMode="adjustResize"
+        keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         maxDynamicContentSize={windowHeight - insets.top - 12}
         ref={modalRef}
@@ -991,7 +997,7 @@ export function QuickCaptureProvider({
           <BottomSheetScrollView
             contentContainerStyle={[
               styles.sheetContent,
-              { paddingBottom: Math.max(insets.bottom + 24, 36) },
+              { paddingBottom: Math.max(insets.bottom + 24, 36) + keyboardHeight },
             ]}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
@@ -1233,7 +1239,7 @@ export function QuickCaptureProvider({
           <BottomSheetScrollView
             contentContainerStyle={[
               styles.sheetContent,
-              { paddingBottom: Math.max(insets.bottom + 24, 36) },
+              { paddingBottom: Math.max(insets.bottom + 24, 36) + keyboardHeight },
             ]}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
