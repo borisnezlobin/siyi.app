@@ -2,7 +2,6 @@
 
 import {
   CalendarBlank,
-  CaretDown,
   ChatCircleDots,
   Check,
   CheckSquareOffset,
@@ -20,12 +19,15 @@ import {
   todayDateInputValue,
 } from "@/lib/date-input";
 import { getApiResponseError } from "@/lib/http";
+import { CustomTypeFields } from "@/components/custom-type-fields";
+import type { CustomTypeIconKey } from "@/lib/custom-type-icons";
+import { PersonPicker } from "@/components/person-picker";
 import { interactionOptions } from "@/lib/interaction-options";
 import type { InteractionType, Person } from "@/lib/types";
 
 type QuickPerson = Pick<
   Person,
-  "id" | "fullName" | "preferredName" | "profilePhotoUrl"
+  "id" | "fullName" | "preferredName" | "profilePhotoUrl" | "lastInteractionAt"
 >;
 type CaptureMode = "follow-up" | "interaction";
 
@@ -81,10 +83,12 @@ export function QuickCaptureHub({
   people,
   menuOpen,
   onMenuOpenChange,
+  recentCustomLabels = [],
 }: {
   people: QuickPerson[];
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
+  recentCustomLabels?: string[];
 }) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -95,6 +99,8 @@ export function QuickCaptureHub({
   const [interactionType, setInteractionType] =
     useState<InteractionType>("texted");
   const [occurredOn, setOccurredOn] = useState(todayDateInputValue());
+  const [customLabel, setCustomLabel] = useState("");
+  const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -135,6 +141,8 @@ export function QuickCaptureHub({
     setFollowUpText("");
     setInteractionType("texted");
     setOccurredOn(todayDateInputValue());
+    setCustomLabel("");
+    setCustomIcon("");
     setNote("");
     setSaving(false);
     setSaved(false);
@@ -211,6 +219,8 @@ export function QuickCaptureHub({
           type: interactionType,
           occurredAt: timestampFromDateInput(occurredOn),
           note,
+          customLabel: interactionType === "other" ? customLabel : null,
+          customIcon: interactionType === "other" ? customIcon : null,
         }),
       });
 
@@ -322,28 +332,11 @@ export function QuickCaptureHub({
 
           {people.length ? (
             <>
-              <label className="mt-6 block text-xs font-semibold text-ink-muted">
-                Person
-                <span className="relative mt-1.5 block">
-                  <select
-                    value={personId}
-                    onChange={(event) => setPersonId(event.target.value)}
-                    className="h-12 w-full appearance-none rounded-2xl border border-black/10 bg-white px-4 pr-10 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-                  >
-                    <option value="">Choose someone</option>
-                    {people.map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.preferredName ?? person.fullName}
-                      </option>
-                    ))}
-                  </select>
-                  <CaretDown
-                    size={14}
-                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2"
-                    aria-hidden="true"
-                  />
-                </span>
-              </label>
+              <PersonPicker
+                people={people}
+                value={personId}
+                onChange={setPersonId}
+              />
 
               {mode === "follow-up" ? (
                 <>
@@ -442,6 +435,16 @@ export function QuickCaptureHub({
                       )}
                     </div>
                   </fieldset>
+                  {interactionType === "other" ? (
+                    <CustomTypeFields
+                      idPrefix="quick-capture"
+                      label={customLabel}
+                      icon={customIcon}
+                      onLabelChange={setCustomLabel}
+                      onIconChange={setCustomIcon}
+                      recentLabels={recentCustomLabels}
+                    />
+                  ) : null}
                   <label className="mt-4 block text-xs font-semibold text-ink-muted">
                     When did this happen?
                     <span className="relative mt-1.5 block">

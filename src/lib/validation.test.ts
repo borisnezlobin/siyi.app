@@ -184,3 +184,60 @@ describe("editing an update that already exists", () => {
     if (result.success) expect(result.data.note).toBeNull();
   });
 });
+
+describe("naming an update in your own words", () => {
+  it("keeps the label and icon when the type is Other", () => {
+    const result = interactionInputSchema.safeParse({
+      personId,
+      type: "other",
+      occurredAt: "2026-01-02T03:04:05.678Z",
+      customLabel: "Went bouldering",
+      customIcon: "climb",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.customLabel).toBe("Went bouldering");
+      expect(result.data.customIcon).toBe("climb");
+    }
+  });
+
+  it("drops a leftover label when the type is not Other", () => {
+    const result = interactionInputSchema.safeParse({
+      personId,
+      type: "coffee",
+      occurredAt: "2026-01-02T03:04:05.678Z",
+      customLabel: "Went bouldering",
+      customIcon: "climb",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.customLabel).toBeNull();
+      expect(result.data.customIcon).toBeNull();
+    }
+  });
+
+  it("treats a blank label as no label", () => {
+    const result = interactionInputSchema.safeParse({
+      personId,
+      type: "other",
+      occurredAt: "2026-01-02T03:04:05.678Z",
+      customLabel: "   ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.customLabel).toBeNull();
+  });
+
+  it("refuses a label too long to read in a timeline", () => {
+    expect(
+      interactionInputSchema.safeParse({
+        personId,
+        type: "other",
+        occurredAt: "2026-01-02T03:04:05.678Z",
+        customLabel: "a".repeat(41),
+      }).success,
+    ).toBe(false);
+  });
+});

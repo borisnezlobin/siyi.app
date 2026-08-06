@@ -4,7 +4,6 @@ import {
   At,
   Cake,
   CalendarBlank,
-  ChatCircleDots,
   EnvelopeSimple,
   GraduationCap,
   HouseLine,
@@ -21,14 +20,16 @@ import { ArchivePersonButton } from "@/components/archive-person-button";
 import { SharePersonButton } from "@/components/share-person-button";
 import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
-import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
+import { CustomTypeIcon } from "@/components/custom-type-icon";
 import { UpdateSheet } from "@/components/update-sheet";
+import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import { interactionTypeFromLabel } from "@/lib/interaction-labels";
 import {
   getFollowUps,
   getInteractions,
   getPerson,
   getPersonUpdates,
+  getRecentCustomLabels,
 } from "@/lib/data";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { getContactReminderState } from "@/lib/reminders";
@@ -67,12 +68,14 @@ export default async function PersonDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [person, interactions, personUpdates, allFollowUps] = await Promise.all([
-    getPerson(id),
-    getInteractions(id),
-    getPersonUpdates(id),
-    getFollowUps(),
-  ]);
+  const [person, interactions, personUpdates, allFollowUps, recentCustomLabels] =
+    await Promise.all([
+      getPerson(id),
+      getInteractions(id),
+      getPersonUpdates(id),
+      getFollowUps(),
+      getRecentCustomLabels(),
+    ]);
 
   // Updates written on the phone and interactions logged here share one
   // timeline. An interaction created by an update would otherwise show twice.
@@ -80,6 +83,7 @@ export default async function PersonDetailPage({
     id: `update-${update.id}`,
     at: update.recordedAt,
     title: update.interactionLabel || "Update",
+    icon: null as string | null,
     body: update.text,
     editable: {
       kind: "update" as const,
@@ -94,7 +98,8 @@ export default async function PersonDetailPage({
     .map((interaction) => ({
       id: `interaction-${interaction.id}`,
       at: interaction.occurredAt,
-      title: interactionLabel(interaction.type),
+      title: interaction.customLabel || interactionLabel(interaction.type),
+      icon: interaction.customIcon,
       body: interaction.note,
       editable: {
         kind: "interaction" as const,
@@ -102,6 +107,8 @@ export default async function PersonDetailPage({
         type: interaction.type,
         body: interaction.note ?? "",
         at: interaction.occurredAt,
+        customLabel: interaction.customLabel,
+        customIcon: interaction.customIcon,
       },
     }));
   const timeline = [...updateEntries, ...interactionEntries].sort(
@@ -274,9 +281,10 @@ export default async function PersonDetailPage({
                   Most recent first
                 </p>
               </div>
-              <QuickInteractionSheet
+              <UpdateSheet
                 personId={person.id}
                 personName={displayName}
+                recentCustomLabels={recentCustomLabels}
               />
             </div>
             <ol className="mt-5 space-y-5">
@@ -290,7 +298,11 @@ export default async function PersonDetailPage({
                       />
                     ) : null}
                     <span className="relative z-10 grid size-8 shrink-0 place-items-center rounded-full bg-sage text-sage-strong">
-                      <ChatCircleDots size={15} weight="fill" aria-hidden="true" />
+                      <CustomTypeIcon
+                        iconKey={
+                          isCustomTypeIconKey(entry.icon) ? entry.icon : null
+                        }
+                      />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
@@ -307,6 +319,7 @@ export default async function PersonDetailPage({
                             personName={displayName}
                             variant="edit"
                             entry={entry.editable}
+                            recentCustomLabels={recentCustomLabels}
                           />
                         </div>
                       </div>

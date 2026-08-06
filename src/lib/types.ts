@@ -65,6 +65,8 @@ export type Interaction = {
   type: InteractionType;
   occurredAt: string;
   note: string | null;
+  customLabel: string | null;
+  customIcon: string | null;
   sourceUpdateId: string | null;
   createdAt: string;
   updatedAt: string;

@@ -53,9 +53,16 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## P1 — UX that users tripped on
 
-- [ ] **Person picker does not scale.** A plain dropdown breaks past ~100
-      contacts. Needs a search/typeahead.
-- [ ] **Custom "Other" update type** with a user-supplied label and emoji.
+- [x] **Person picker does not scale.** Replaced the dropdown with a ranked
+      typeahead: name-start beats word-start beats substring, ties broken by
+      who was seen most recently, capped at 8. Accent- and case-insensitive,
+      arrow-key navigable. Reusable as `PersonPicker`.
+- [x] **Custom "Other" update type** with a user-supplied label and a Phosphor
+      icon from a fixed set. NOT emoji — the owner ruled emoji out as icon
+      substitutes. Anything not in the set is dropped at validation rather
+      than stored and rendered as nothing. Labels the user has already written
+      are offered back as one-tap suggestions. Needs migration 0009; until it
+      runs the label is silently dropped and the type saves as plain "Other".
 
 ## P2 — features requested
 
@@ -111,6 +118,9 @@ against production; both are additive and touch no existing data:
   phone app cannot register for notifications until it runs.
 - `0007_marketing_consent.sql` — NOT YET APPLIED. The marketing toggle in
   settings does nothing until it is.
+- `0009_custom_interaction_labels.sql` — NOT YET APPLIED. Adds custom_label
+  and custom_icon to interactions. Until it runs, naming an "Other" update
+  silently does nothing.
 - `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
   and reminders_enabled, and replaces the create-person RPC. Until it runs,
   relationship labels silently do not persist and every person gets reminders.

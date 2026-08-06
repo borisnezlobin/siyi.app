@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { getPeople } from "@/lib/data";
+import { getPeople, getRecentCustomLabels } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,11 +33,13 @@ export default async function AuthenticatedLayout({
     email = profile?.email || email;
   }
 
+  const recentCustomLabels = await getRecentCustomLabels();
   const quickPeople = (await getPeople()).map((person) => ({
     id: person.id,
     fullName: person.fullName,
     preferredName: person.preferredName,
     profilePhotoUrl: person.profilePhotoUrl,
+    lastInteractionAt: person.lastInteractionAt ?? null,
   }));
 
   return (
@@ -45,6 +47,7 @@ export default async function AuthenticatedLayout({
       displayName={displayName}
       email={email}
       quickPeople={quickPeople}
+      recentCustomLabels={recentCustomLabels}
     >
       {children}
     </AppShell>

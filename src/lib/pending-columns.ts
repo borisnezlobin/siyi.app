@@ -10,6 +10,9 @@ const columnsAwaitingMigration = [
   // 0008_relationship_labels.sql
   "relationship_label",
   "reminders_enabled",
+  // 0009_custom_interaction_labels.sql
+  "custom_label",
+  "custom_icon",
 ];
 
 type WriteError = { code?: string; message: string };

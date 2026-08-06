@@ -42,14 +42,16 @@ export function AppShell({
   displayName = "Alex Vale",
   email = "alex@example.edu",
   quickPeople,
+  recentCustomLabels,
 }: {
   children: React.ReactNode;
   displayName?: string;
   email?: string;
   quickPeople: Pick<
     Person,
-    "id" | "fullName" | "preferredName" | "profilePhotoUrl"
+    "id" | "fullName" | "preferredName" | "profilePhotoUrl" | "lastInteractionAt"
   >[];
+  recentCustomLabels: string[];
 }) {
   const pathname = usePathname();
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
@@ -235,6 +237,7 @@ export function AppShell({
       </nav>
       <QuickCaptureHub
         people={quickPeople}
+        recentCustomLabels={recentCustomLabels}
         menuOpen={quickCaptureOpen}
         onMenuOpenChange={setQuickCaptureOpen}
       />
