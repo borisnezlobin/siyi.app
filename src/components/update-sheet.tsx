@@ -34,7 +34,6 @@ type UpdateSheetProps = {
   variant?: "primary" | "compact" | "edit";
   buttonLabel?: string;
   entry?: EditableEntry;
-  recentCustomLabels?: string[];
 };
 
 const isPreviewOnly = () => !process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,7 +44,6 @@ export function UpdateSheet({
   variant = "primary",
   buttonLabel = "Add update",
   entry,
-  recentCustomLabels = [],
 }: UpdateSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -287,7 +285,6 @@ export function UpdateSheet({
               icon={customIcon}
               onLabelChange={setCustomLabel}
               onIconChange={setCustomIcon}
-              recentLabels={recentCustomLabels}
             />
           ) : null}
 

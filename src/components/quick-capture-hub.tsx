@@ -80,16 +80,14 @@ export function QuickCaptureTrigger({
 }
 
 export function QuickCaptureHub({
-  people,
   menuOpen,
   onMenuOpenChange,
-  recentCustomLabels = [],
 }: {
-  people: QuickPerson[];
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
-  recentCustomLabels?: string[];
 }) {
+  const [people, setPeople] = useState<QuickPerson[]>([]);
+  const [peopleLoaded, setPeopleLoaded] = useState(false);
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<CaptureMode | null>(null);
@@ -134,6 +132,24 @@ export function QuickCaptureHub({
     const dialog = dialogRef.current;
     if (mode && dialog && !dialog.open) dialog.showModal();
   }, [mode]);
+
+  // Fetched the first time the sheet opens rather than with every page load,
+  // because most visits never capture anything.
+  useEffect(() => {
+    if (!mode || peopleLoaded) return;
+    let cancelled = false;
+    fetch("/api/quick-people")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (cancelled || !Array.isArray(body?.people)) return;
+        setPeople(body.people);
+        setPeopleLoaded(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, peopleLoaded]);
 
   function resetSheet() {
     setMode(null);
@@ -330,7 +346,7 @@ export function QuickCaptureHub({
             </button>
           </div>
 
-          {people.length ? (
+          {!peopleLoaded || people.length ? (
             <>
               <PersonPicker
                 people={people}
@@ -442,7 +458,6 @@ export function QuickCaptureHub({
                       icon={customIcon}
                       onLabelChange={setCustomLabel}
                       onIconChange={setCustomIcon}
-                      recentLabels={recentCustomLabels}
                     />
                   ) : null}
                   <label className="mt-4 block text-xs font-semibold text-ink-muted">

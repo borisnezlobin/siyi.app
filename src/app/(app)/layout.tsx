@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { getPeople, getRecentCustomLabels } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +18,9 @@ export default async function AuthenticatedLayout({
 
     email = user.email ?? "";
     const supabase = await createClient();
+    // This is the only query on the critical path of every page load, so
+    // nothing else belongs here. The person list the capture sheet needs is
+    // fetched when that sheet opens.
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("display_name,email")
@@ -33,21 +35,10 @@ export default async function AuthenticatedLayout({
     email = profile?.email || email;
   }
 
-  const recentCustomLabels = await getRecentCustomLabels();
-  const quickPeople = (await getPeople()).map((person) => ({
-    id: person.id,
-    fullName: person.fullName,
-    preferredName: person.preferredName,
-    profilePhotoUrl: person.profilePhotoUrl,
-    lastInteractionAt: person.lastInteractionAt ?? null,
-  }));
-
   return (
     <AppShell
       displayName={displayName}
       email={email}
-      quickPeople={quickPeople}
-      recentCustomLabels={recentCustomLabels}
     >
       {children}
     </AppShell>

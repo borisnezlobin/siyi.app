@@ -28,7 +28,7 @@
     "mobile:lint": "npm run lint --workspace=apps/mobile",
     "mobile:typecheck": "npm run typecheck --workspace=apps/mobile",
     "mobile:test": "npm run test --workspace=apps/mobile",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run mobile:lint && npm run mobile:typecheck && npm run mobile:test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run mobile:lint && npm run mobile:typecheck && npm run mobile:test && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
