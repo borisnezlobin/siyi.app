@@ -244,7 +244,7 @@ export function NotificationControls({
   }[permission];
 
   return (
-    <div className="mt-7 space-y-4">
+    <div className="mt-7 divide-y divide-ink/[0.08]">
       <section className="rounded-[1.75rem] bg-ink p-5 text-white shadow-float sm:p-6">
         <div className="flex items-start gap-4">
           <span
@@ -337,7 +337,7 @@ export function NotificationControls({
         </div>
       ) : null}
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <h2 className="text-sm font-bold">What should arrive?</h2>
         <div className="mt-2 divide-y divide-black/[0.055]">
           <SwitchControl
@@ -361,7 +361,7 @@ export function NotificationControls({
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <h2 className="text-sm font-bold">Choose a calm time</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           Reminders are evaluated in your saved timezone.

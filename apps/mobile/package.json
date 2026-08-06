@@ -71,7 +71,7 @@
     "start:tunnel": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false expo start --dev-client --tunnel",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "ios:device": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false expo run:ios --device",
+    "ios:device": "EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=false EXPO_PUBLIC_APP_DOMAIN= expo run:ios --device",
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",

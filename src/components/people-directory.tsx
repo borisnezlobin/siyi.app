@@ -140,8 +140,10 @@ export function PeopleDirectory({
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
           className={clsx(
-            "relative grid size-12 shrink-0 place-items-center rounded-2xl shadow-card ring-1 ring-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-            filtersOpen || activeFilterCount ? "bg-ink text-white" : "bg-white text-ink",
+            "relative grid size-12 shrink-0 place-items-center rounded-2xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+            filtersOpen || activeFilterCount
+              ? "bg-ink text-white"
+              : "bg-white text-ink-muted hover:text-ink",
           )}
           aria-expanded={filtersOpen}
           aria-controls="people-filters"
@@ -159,7 +161,7 @@ export function PeopleDirectory({
       {filtersOpen ? (
         <div
           id="people-filters"
-          className="mt-3 rounded-3xl bg-white p-4 shadow-card ring-1 ring-black/[0.035]"
+          className="mt-3 border-t border-ink/[0.08] pt-4"
         >
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-bold">Narrow the list</p>
@@ -266,7 +268,7 @@ export function PeopleDirectory({
         </label>
       </div>
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 divide-y divide-ink/[0.07]">
         {filteredPeople.length ? (
           filteredPeople.map((person) => (
             <PersonRow
@@ -276,7 +278,7 @@ export function PeopleDirectory({
             />
           ))
         ) : (
-          <div className="rounded-3xl bg-white px-6 py-10 text-center shadow-card ring-1 ring-black/[0.035]">
+          <div className="px-6 py-14 text-center">
             <p className="font-display text-2xl">No one matches that yet.</p>
             <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-ink-muted">
               Try a different filter, or add someone while the details are fresh.

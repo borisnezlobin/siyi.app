@@ -22,7 +22,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --port 3100",
+    // Built once and served, rather than `next dev`. Dev compiles each route on
+    // first request, which made assertions time out at random and taught us to
+    // distrust the suite.
+    command: "npm run build && npm run start -- --port 3100",
     url: "http://127.0.0.1:3100/today",
     env: {
       NEXT_PUBLIC_SUPABASE_URL: "",
@@ -33,6 +36,6 @@ export default defineConfig({
       NEXT_DIST_DIR: ".next-e2e",
     },
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 300_000,
   },
 });
