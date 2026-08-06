@@ -6,6 +6,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { interactionOptions } from "@/lib/interaction-options";
 import type { InteractionType } from "@/lib/types";
@@ -26,8 +27,10 @@ export function QuickInteractionSheet({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [selectedType, setSelectedType] = useState<InteractionType>("texted");
   const [note, setNote] = useState("");
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -44,6 +47,7 @@ export function QuickInteractionSheet({
 
   async function saveInteraction() {
     setSaving(true);
+    setError(null);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       const response = await fetch("/api/interactions", {
@@ -58,6 +62,11 @@ export function QuickInteractionSheet({
       });
 
       if (!response.ok) {
+        const detail = await response
+          .json()
+          .then((body) => body?.error as string | undefined)
+          .catch(() => undefined);
+        setError(detail || "That update could not be saved.");
         setSaving(false);
         return;
       }
@@ -67,6 +76,8 @@ export function QuickInteractionSheet({
 
     setSaving(false);
     setSaved(true);
+    // Without this the new update does not appear until a manual reload.
+    router.refresh();
     window.setTimeout(() => dialogRef.current?.close(), 650);
   }
 
@@ -152,6 +163,15 @@ export function QuickInteractionSheet({
             placeholder="What do you want to remember?"
             className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
+
+          {error ? (
+            <p
+              role="alert"
+              className="mt-3 rounded-2xl bg-[#fbe5e0] px-4 py-3 text-xs font-semibold leading-5 text-coral-strong"
+            >
+              {error}
+            </p>
+          ) : null}
 
           <button
             type="button"

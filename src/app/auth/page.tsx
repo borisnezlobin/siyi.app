@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 function AuthVisual() {
   const people = [
-    { initials: "MC", name: "Maya", note: "Ceramics studio hours", color: "bg-sage" },
+    { initials: "AC", name: "Amelia", note: "Ceramics studio hours", color: "bg-sage" },
     { initials: "LO", name: "Luis", note: "Spring radio lineup", color: "bg-[#dce6f2]" },
     { initials: "AO", name: "Amara", note: "Campus garden chat", color: "bg-[#f4dfc3]" },
   ];

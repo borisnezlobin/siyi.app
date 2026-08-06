@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 const previewPeople = [
   {
     initials: "MC",
-    name: "Maya Chen",
+    name: "Amelia Chen",
     context: "Design club · Coffee 19 days ago",
     note: "Ask how the campus thrift map is going.",
     color: "bg-sage text-sage-strong",

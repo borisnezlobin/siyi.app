@@ -177,11 +177,20 @@ export function NotificationControls({
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       const response = await fetch("/api/push/test", { method: "POST" });
-      setMessage(
-        response.ok
-          ? { text: "Test notification sent.", tone: "success" }
-          : { text: "The test notification could not be sent.", tone: "error" },
-      );
+      if (response.ok) {
+        setMessage({ text: "Test notification sent.", tone: "success" });
+      } else {
+        // Surface what the server actually said; a bare "could not be sent"
+        // leaves nobody able to act on it.
+        const detail = await response
+          .json()
+          .then((body) => body?.error as string | undefined)
+          .catch(() => undefined);
+        setMessage({
+          text: detail || "The test notification could not be sent.",
+          tone: "error",
+        });
+      }
     } else if (permission === "granted") {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification("A gentle hello", {
@@ -284,6 +293,36 @@ export function NotificationControls({
                 Send a test
               </button>
             </div>
+
+            {message ? (
+              <p
+                role="status"
+                aria-live="polite"
+                className={clsx(
+                  "mt-3 flex items-start gap-2 rounded-2xl px-4 py-3 text-xs font-semibold leading-5",
+                  message.tone === "success"
+                    ? "bg-sage text-sage-strong"
+                    : "bg-[#fbe5e0] text-coral-strong",
+                )}
+              >
+                {message.tone === "success" ? (
+                  <CheckCircle
+                    size={17}
+                    weight="fill"
+                    className="mt-px shrink-0"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <WarningCircle
+                    size={17}
+                    weight="fill"
+                    className="mt-px shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+                {message.text}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -380,25 +419,6 @@ export function NotificationControls({
           </p>
         </div>
       </div>
-
-      {message ? (
-        <p
-          role="status"
-          className={clsx(
-            "flex items-center gap-2 rounded-2xl px-4 py-3 text-xs font-semibold",
-            message.tone === "success"
-              ? "bg-sage text-sage-strong"
-              : "bg-[#fbe5e0] text-coral-strong",
-          )}
-        >
-          {message.tone === "success" ? (
-            <CheckCircle size={17} weight="fill" aria-hidden="true" />
-          ) : (
-            <WarningCircle size={17} weight="fill" aria-hidden="true" />
-          )}
-          {message.text}
-        </p>
-      ) : null}
 
       <button
         type="button"

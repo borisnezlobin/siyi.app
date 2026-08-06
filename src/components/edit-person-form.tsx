@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { Check, SpinnerGap } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -95,7 +96,15 @@ export function EditPersonForm({ person }: { person: Person }) {
           <input
             name="phoneNumber"
             type="tel"
-            defaultValue={person.phoneNumber ?? ""}
+            autoComplete="tel"
+            inputMode="tel"
+            placeholder="(555) 555-0123"
+            defaultValue={formatPhoneNumberInput(person.phoneNumber ?? "")}
+            onChange={(event) => {
+              event.currentTarget.value = formatPhoneNumberInput(
+                event.currentTarget.value,
+              );
+            }}
             className={inputClassName}
           />
         </label>

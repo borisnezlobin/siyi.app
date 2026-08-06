@@ -27,13 +27,16 @@ export async function PATCH(request: NextRequest) {
         .from("user_profiles")
         .update({ timezone })
         .eq("auth_user_id", user.id),
-      supabase.from("user_settings").upsert({
-        user_id: user.id,
-        strength_1_days: reminderIntervals[1],
-        strength_2_days: reminderIntervals[2],
-        strength_3_days: reminderIntervals[3],
-        strength_4_days: reminderIntervals[4],
-      }),
+      supabase.from("user_settings").upsert(
+        {
+          user_id: user.id,
+          strength_1_days: reminderIntervals[1],
+          strength_2_days: reminderIntervals[2],
+          strength_3_days: reminderIntervals[3],
+          strength_4_days: reminderIntervals[4],
+        },
+        { onConflict: "user_id" },
+      ),
     ]);
 
     if (profileError || settingsError) {
