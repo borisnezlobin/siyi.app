@@ -36,7 +36,7 @@ export default async function SettingsPage() {
     const [{ data: profile }, { data: settings }] = await Promise.all([
       supabase
         .from("user_profiles")
-        .select("timezone,marketing_opt_in")
+        .select("timezone")
         .eq("auth_user_id", user.id)
         .maybeSingle(),
       supabase
@@ -48,7 +48,15 @@ export default async function SettingsPage() {
         .maybeSingle(),
     ]);
     initialTimezone = profile?.timezone ?? "UTC";
-    initialMarketingOptIn = profile?.marketing_opt_in ?? false;
+
+    // Read consent on its own so a deployment that lands before migration
+    // 0007 cannot null out the whole profile row and reset the timezone.
+    const { data: consent } = await supabase
+      .from("user_profiles")
+      .select("marketing_opt_in")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    initialMarketingOptIn = consent?.marketing_opt_in ?? false;
     if (settings) {
       initialIntervals = {
         1: settings.strength_1_days,
