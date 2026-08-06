@@ -80,6 +80,69 @@ test("a follow-up can be added from quick actions", async ({
   await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
 });
 
+test("follow-ups are shaped by when they land, not one flat list", async ({
+  page,
+}) => {
+  await page.goto("/follow-ups");
+
+  const distribution = page.getByRole("region", {
+    name: "How your follow-ups are spread out",
+  });
+  await expect(distribution.getByRole("link", { name: /Overdue/ })).toBeVisible();
+  await expect(distribution.getByRole("link", { name: /This week/ })).toBeVisible();
+  await expect(distribution.getByRole("link", { name: /Later/ })).toBeVisible();
+
+  // Demo data: one overdue, one due today, one four days out, one done.
+  await expect(distribution.getByRole("link", { name: "1 Overdue" })).toBeVisible();
+  await expect(distribution.getByRole("link", { name: "1 Today" })).toBeVisible();
+  await expect(distribution.getByRole("link", { name: "1 This week" })).toBeVisible();
+  await expect(distribution.getByRole("link", { name: "0 Later" })).toBeVisible();
+
+  for (const heading of ["Overdue", "Today", "This week", "Later"]) {
+    await expect(page.getByRole("heading", { name: heading, level: 2 })).toBeVisible();
+  }
+  await expect(
+    page.getByText("Nothing scheduled further out."),
+  ).toBeVisible();
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
+test("completing a follow-up keeps the list from jumping", async ({ page }) => {
+  await page.goto("/follow-ups");
+
+  const row = page.getByRole("listitem").filter({
+    hasText: "Share the campus garden group chat",
+  });
+  const before = await row.boundingBox();
+
+  await page
+    .getByRole("button", { name: /Mark “Share the campus garden group chat” complete/ })
+    .click();
+
+  await expect(
+    page.getByRole("button", {
+      name: /Mark “Share the campus garden group chat” incomplete/,
+    }),
+  ).toBeVisible();
+
+  const after = await row.boundingBox();
+  expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
+});
+
+test("completed follow-ups stay one tap away", async ({ page }) => {
+  await page.goto("/follow-ups");
+
+  await expect(page.getByRole("heading", { name: "Done" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Done (1)" }).click();
+  await expect(page.getByRole("heading", { name: "Done", level: 2 })).toBeVisible();
+  await expect(page.getByText("Send ceramics studio hours")).toBeVisible();
+});
+
 test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await page.goto("/people/new");
 

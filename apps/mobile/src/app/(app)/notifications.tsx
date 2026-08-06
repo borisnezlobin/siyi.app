@@ -3,9 +3,9 @@ import {
   ArrowLeft,
   BellRinging,
   Cake,
-  CalendarCheck,
   ChatCircleDots,
   CheckCircle,
+  ClockCountdown,
   DeviceMobile,
   Gear,
   PaperPlaneTilt,
@@ -311,7 +311,7 @@ export default function NotificationsScreen() {
           />
           <PreferenceSwitch
             body="A follow-up is due or overdue."
-            icon={CalendarCheck}
+            icon={ClockCountdown}
             label="Follow-ups"
             onChange={(enabled) =>
               setDraft({ ...preferences, followUpEnabled: enabled })

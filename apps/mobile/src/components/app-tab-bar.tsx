@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import type { Tabs } from "expo-router";
 import {
-  CheckSquareOffset,
+  ClockCountdown,
   GearSix,
   House,
   Plus,
@@ -25,7 +25,7 @@ type AppTabBarProps = Parameters<TabBarRenderer>[0];
 const tabDetails: Record<string, { label: string; icon: Icon }> = {
   today: { label: "Today", icon: House },
   people: { label: "People", icon: UsersThree },
-  "follow-ups": { label: "Follow-ups", icon: CheckSquareOffset },
+  "follow-ups": { label: "Follow-ups", icon: ClockCountdown },
   settings: { label: "Settings", icon: GearSix },
 };
 
