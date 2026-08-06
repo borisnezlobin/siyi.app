@@ -357,7 +357,7 @@ export function QuickCaptureHub({
           }}
           className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
-          <CheckSquareOffset
+          <ClockCountdown
             size={19}
             className="shrink-0 text-ink"
             aria-hidden="true"
