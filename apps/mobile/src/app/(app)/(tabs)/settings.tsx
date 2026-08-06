@@ -2,22 +2,9 @@ import Constants from "expo-constants";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Haptics from "expo-haptics";
 import * as Localization from "expo-localization";
-import {
-  AddressBook,
-  ArrowRight,
-  BellRinging,
-  DownloadSimple,
-  FileCsv,
-  FileText,
-  Fingerprint,
-  Key,
-  Lock,
-  SignOut,
-  Trash,
-  UploadSimple,
-} from "phosphor-react-native";
+import { CaretRight } from "phosphor-react-native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   Alert,
   Platform,
@@ -25,13 +12,13 @@ import {
   StyleSheet,
   Switch,
   View,
+  type ViewStyle,
 } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
-import { Card, PressableCard, SectionHeading } from "@/components/surface";
 import { TimezonePicker } from "@/components/timezone-picker";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
@@ -45,9 +32,14 @@ import {
   type ExportFormat,
 } from "@/lib/data";
 import {
-  hasContactsPermission,
+  enableContactSyncWithExplainer,
+  runFullContactSync,
+} from "@/lib/contact-sync-flow";
+import {
+  getContactsPermissionState,
+  interruptedContactSyncCount,
   isContactSyncEnabled,
-  requestContactsPermission,
+  openDeviceSettings,
   setContactSyncEnabled,
 } from "@/lib/device-contacts";
 import { relationshipTierLabels } from "@/lib/relationship-labels";
@@ -60,36 +52,13 @@ type PendingImport = Awaited<ReturnType<typeof chooseImportFile>>;
 export default function SettingsScreen() {
   const router = useRouter();
   const auth = useAuth();
-  const [contactSyncEnabled, setContactSyncState] = useState(false);
-
-  useEffect(() => {
-    void isContactSyncEnabled().then(setContactSyncState);
-  }, []);
-
-  async function toggleContactSync(enabled: boolean) {
-    if (!enabled) {
-      await setContactSyncEnabled(false);
-      setContactSyncState(false);
-      return;
-    }
-    const granted =
-      (await hasContactsPermission()) || (await requestContactsPermission());
-    if (!granted) {
-      Alert.alert(
-        "Contacts access is off",
-        "Turn on contacts access for Siyi in your device settings to use this.",
-      );
-      return;
-    }
-    await setContactSyncEnabled(true);
-    setContactSyncState(true);
-  }
   const accountData = useRefreshableData(() =>
     getAccountSettings(auth.session!.user.id),
   );
   const [timezoneDraft, setTimezoneDraft] = useState<string | null>(null);
-  const [intervalDraft, setIntervalDraft] =
-    useState<ReminderDefaults | null>(null);
+  const [intervalDraft, setIntervalDraft] = useState<ReminderDefaults | null>(
+    null,
+  );
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -137,9 +106,7 @@ export default function SettingsScreen() {
       setIntervalDraft(null);
       await accountData.reload();
       setMessage("Your reminder defaults are saved.");
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -199,9 +166,7 @@ export default function SettingsScreen() {
       setMessage(
         `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.followUps} follow-ups.`,
       );
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -228,23 +193,18 @@ export default function SettingsScreen() {
             void (async () => {
               let appleAuthorizationCode: string | null = null;
               if (Platform.OS === "ios" && providers.includes("apple")) {
-                const credential =
-                  await AppleAuthentication.signInAsync();
+                const credential = await AppleAuthentication.signInAsync();
                 const appleIdentity = auth.session!.user.identities?.find(
                   ({ provider }) => provider === "apple",
                 );
                 const expectedAppleUser =
                   appleIdentity?.identity_data?.sub || appleIdentity?.id;
-                if (
-                  expectedAppleUser &&
-                  credential.user !== expectedAppleUser
-                ) {
+                if (expectedAppleUser && credential.user !== expectedAppleUser) {
                   throw new Error(
                     "Use the same Apple Account that is connected to this account.",
                   );
                 }
-                appleAuthorizationCode =
-                  credential.authorizationCode || null;
+                appleAuthorizationCode = credential.authorizationCode || null;
               }
 
               const result = await deleteAccount(
@@ -253,7 +213,7 @@ export default function SettingsScreen() {
                 appleAuthorizationCode,
               );
               await Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success,
+                Haptics.NotificationFeedbackType.Success,
               );
               if (!result.appleAuthorizationRevoked) {
                 Alert.alert(
@@ -284,109 +244,62 @@ export default function SettingsScreen() {
       subtitle="Adjust timing, notifications, account access, and your data."
       title="Settings"
     >
-      <Card style={styles.profileCard}>
-        <View style={styles.profileMark}>
-          <AppText style={styles.profileInitial} variant="title">
+      <View style={styles.identity}>
+        <View style={styles.identityMark}>
+          <AppText style={styles.identityInitial} variant="title">
             {(auth.profile?.displayName || auth.profile?.email || "Y")
               .slice(0, 1)
               .toUpperCase()}
           </AppText>
         </View>
-        <View style={styles.flex}>
+        <View style={styles.grow}>
           <AppText variant="heading">
             {auth.profile?.displayName || "Your account"}
           </AppText>
           <AppText variant="caption">{auth.profile?.email}</AppText>
         </View>
-      </Card>
+      </View>
 
-      <View style={styles.section}>
-        <SectionHeading title="Notifications" />
-        <PressableCard
+      <Section title="Notifications">
+        <NavigationRow
+          detail="Permission, categories, preferred hour, and a test"
+          label="Push and reminder timing"
           onPress={() => router.push("/notifications")}
-          style={styles.navigationRow}
-        >
-          <View style={styles.rowIcon}>
-            <BellRinging
-              color={colors.coralStrong}
-              size={23}
-              weight="duotone"
-            />
-          </View>
-          <View style={styles.flex}>
-            <AppText variant="label">Push and reminder timing</AppText>
-            <AppText variant="caption">
-              Permission, categories, preferred hour, and a test
-            </AppText>
-          </View>
-          <ArrowRight color={colors.inkMuted} size={19} />
-        </PressableCard>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading
-          detail="Only ever fills in blanks, never overwrites"
-          title="Device contacts"
         />
-        <Card style={styles.navigationRow}>
-          <View style={styles.rowIcon}>
-            <AddressBook color={colors.sageStrong} size={23} weight="duotone" />
-          </View>
-          <View style={styles.flex}>
-            <AppText variant="label">Add saved people to contacts</AppText>
-            <AppText variant="caption">
-              {contactSyncEnabled
-                ? "New and edited people are added to your phone"
-                : "Off — nothing is written to your contacts"}
-            </AppText>
-          </View>
-          <Switch
-            onValueChange={(value) => void toggleContactSync(value)}
-            trackColor={{ true: colors.sageStrong, false: colors.mist }}
-            value={contactSyncEnabled}
-          />
-        </Card>
-      </View>
+      </Section>
 
-      <View style={styles.section}>
-        <SectionHeading
-          detail="Used unless a person has their own interval"
-          title="Check-in defaults"
-        />
-        <Card style={styles.settingsCard}>
-          {([1, 2, 3, 4] as const).map((strength) => (
-            <View key={strength} style={styles.intervalRow}>
-              <View style={styles.strengthBadge}>
-                <AppText style={styles.strengthText} variant="label">
-                  {strength}
-                </AppText>
-              </View>
-              <View style={styles.flex}>
-                <AppText variant="label">
-                  {relationshipTierLabels[strength]}
-                </AppText>
-                <AppText variant="caption">Remind after</AppText>
-              </View>
-              <View style={styles.daysField}>
-                <FormField
-                  keyboardType="number-pad"
-                  label=""
-                  maxLength={4}
-                  onChangeText={(value) => {
-                    const days = Number.parseInt(value, 10);
-                    if (Number.isNaN(days)) return;
-                    setIntervalDraft({
-                      ...intervals,
-                      [strength]: Math.min(3650, Math.max(1, days)),
-                    });
-                  }}
-                  value={String(intervals[strength])}
-                />
-              </View>
-              <AppText variant="caption">days</AppText>
+      <DeviceContactsSection />
+
+      <Section title="Check-in defaults">
+        <AppText style={styles.sectionNote} variant="caption">
+          Used unless a person has their own interval.
+        </AppText>
+        {([1, 2, 3, 4] as const).map((strength) => (
+          <Row key={strength}>
+            <AppText style={styles.grow} variant="label">
+              {relationshipTierLabels[strength]}
+            </AppText>
+            <View style={styles.daysField}>
+              <FormField
+                keyboardType="number-pad"
+                label=""
+                maxLength={4}
+                onChangeText={(value) => {
+                  const days = Number.parseInt(value, 10);
+                  if (Number.isNaN(days)) return;
+                  setIntervalDraft({
+                    ...intervals,
+                    [strength]: Math.min(3650, Math.max(1, days)),
+                  });
+                }}
+                value={String(intervals[strength])}
+              />
             </View>
-          ))}
-          <View style={styles.timezoneCopy}>
+            <AppText variant="caption">days</AppText>
+          </Row>
+        ))}
+        <Row style={styles.columnRow}>
+          <View>
             <AppText variant="label">Your local time</AppText>
             <AppText variant="caption">
               Used for reminders and upcoming dates.
@@ -397,204 +310,321 @@ export default function SettingsScreen() {
             onChange={setTimezoneDraft}
             value={timezone}
           />
+        </Row>
+        <View style={styles.sectionAction}>
           <Button
             label="Save defaults"
             loading={busyAction === "save"}
             onPress={() => void savePreferences()}
           />
-        </Card>
-      </View>
+        </View>
+      </Section>
 
-      <View style={styles.section}>
-        <SectionHeading
-          detail="Portable formats you control"
-          title="Your data"
-        />
-        <Card style={styles.settingsCard}>
-          <Button
-            icon={FileText}
-            label="Export everything as JSON"
-            loading={busyAction === "export-json"}
-            onPress={() => void exportFormat("json")}
-            variant="secondary"
-          />
-          <Button
-            icon={FileCsv}
-            label="Export contacts as CSV"
-            loading={busyAction === "export-people-csv"}
-            onPress={() => void exportFormat("people-csv")}
-            variant="secondary"
-          />
-          <Button
-            icon={DownloadSimple}
-            label="Export updates as CSV"
-            loading={busyAction === "export-updates-csv"}
-            onPress={() => void exportFormat("updates-csv")}
-            variant="secondary"
-          />
-          <Button
-            icon={UploadSimple}
-            label="Choose JSON to import"
-            loading={busyAction === "choose-import"}
-            onPress={() => void chooseImport()}
-            variant="quiet"
-          />
-          {pendingImport ? (
-            <View style={styles.importPreview}>
-              <AppText variant="heading">Ready to preview</AppText>
-              <AppText style={styles.muted}>
-                {pendingImport.preview.people} people ·{" "}
-                {pendingImport.preview.updates} updates ·{" "}
-                {pendingImport.preview.interactions} legacy interactions ·{" "}
-                {pendingImport.preview.followUps} follow-ups ·{" "}
-                {pendingImport.preview.tags} tags
-              </AppText>
-              <AppText variant="caption">
-                Import merges records by ID. It does not delete what is already
-                here.
-              </AppText>
-              <View style={styles.previewActions}>
-                <Button
-                  compact
-                  label="Cancel"
-                  onPress={() => setPendingImport(null)}
-                  variant="quiet"
-                />
-                <Button
-                  compact
-                  label="Import"
-                  loading={busyAction === "import"}
-                  onPress={() => void confirmImport()}
-                />
-              </View>
-            </View>
-          ) : null}
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Account and access" />
-        <Card style={styles.settingsCard}>
-          <View style={styles.providerRow}>
-            <Fingerprint color={colors.sageStrong} size={22} weight="duotone" />
-            <View style={styles.flex}>
-              <AppText variant="label">Sign-in methods</AppText>
-              <AppText variant="caption">
-                {providers.length > 0
-                  ? providers
-                      .map((provider) =>
-                        provider === "email"
-                          ? "Email"
-                          : provider.charAt(0).toUpperCase() + provider.slice(1),
-                      )
-                      .join(", ")
-                  : "Email"}
-              </AppText>
-            </View>
+      <Section title="Account and access">
+        <Row>
+          <View style={styles.grow}>
+            <AppText variant="label">Sign-in methods</AppText>
+            <AppText variant="caption">
+              {providers.length > 0
+                ? providers
+                    .map((provider) =>
+                      provider === "email"
+                        ? "Email"
+                        : provider.charAt(0).toUpperCase() + provider.slice(1),
+                    )
+                    .join(", ")
+                : "Email"}
+            </AppText>
           </View>
-          <Button
-            icon={Key}
-            label="Set or change password"
-            onPress={() => router.push("/reset-password")}
-            variant="secondary"
-          />
-          <Button
-            icon={SignOut}
-            label="Sign out"
-            onPress={() => void auth.signOut()}
-            variant="quiet"
-          />
-        </Card>
-      </View>
+        </Row>
+        <NavigationRow
+          label="Set or change password"
+          onPress={() => router.push("/reset-password")}
+        />
+        <Row>
+          <TextAction label="Sign out" onPress={() => void auth.signOut()} />
+        </Row>
+      </Section>
 
-      <View style={styles.section}>
-        <SectionHeading title="About" />
-        <Card style={styles.linkCard}>
-          <SettingsLink
-            icon={Lock}
-            label="Privacy Policy"
-            onPress={() => router.push("/legal/privacy")}
-          />
-          <SettingsLink
-            icon={FileText}
-            label="Terms of Service"
-            onPress={() => router.push("/legal/terms")}
-          />
-          <AppText style={styles.version} variant="caption">
+      <Section title="About">
+        <NavigationRow
+          label="Privacy Policy"
+          onPress={() => router.push("/legal/privacy")}
+        />
+        <NavigationRow
+          label="Terms of Service"
+          onPress={() => router.push("/legal/terms")}
+        />
+        <Row>
+          <AppText variant="caption">
             {brand.name} {Constants.expoConfig?.version || "1.0.0"} · build{" "}
             {Constants.expoConfig?.ios?.buildNumber ||
               Constants.expoConfig?.android?.versionCode ||
               "development"}
           </AppText>
-        </Card>
-      </View>
+        </Row>
+      </Section>
+
+      <Section title="Your data">
+        <AppText style={styles.sectionNote} variant="caption">
+          Portable formats you control. Import merges by ID and never deletes
+          what is already here.
+        </AppText>
+        <Row>
+          <TextAction
+            label="Export everything as JSON"
+            loading={busyAction === "export-json"}
+            onPress={() => void exportFormat("json")}
+          />
+        </Row>
+        <Row>
+          <TextAction
+            label="Export contacts as CSV"
+            loading={busyAction === "export-people-csv"}
+            onPress={() => void exportFormat("people-csv")}
+          />
+        </Row>
+        <Row>
+          <TextAction
+            label="Export updates as CSV"
+            loading={busyAction === "export-updates-csv"}
+            onPress={() => void exportFormat("updates-csv")}
+          />
+        </Row>
+        <Row>
+          <TextAction
+            label="Choose JSON to import"
+            loading={busyAction === "choose-import"}
+            onPress={() => void chooseImport()}
+          />
+        </Row>
+        {pendingImport ? (
+          <View style={styles.importPreview}>
+            <AppText variant="label">Ready to import</AppText>
+            <AppText style={styles.muted} variant="caption">
+              {pendingImport.preview.people} people ·{" "}
+              {pendingImport.preview.updates} updates ·{" "}
+              {pendingImport.preview.interactions} legacy interactions ·{" "}
+              {pendingImport.preview.followUps} follow-ups ·{" "}
+              {pendingImport.preview.tags} tags
+            </AppText>
+            <View style={styles.previewActions}>
+              <Button
+                compact
+                label="Cancel"
+                onPress={() => setPendingImport(null)}
+                variant="quiet"
+              />
+              <Button
+                compact
+                label="Import"
+                loading={busyAction === "import"}
+                onPress={() => void confirmImport()}
+              />
+            </View>
+          </View>
+        ) : null}
+      </Section>
 
       {message ? (
-        <View style={styles.message}>
-          <AppText style={styles.messageText} variant="caption">
-            {message}
-          </AppText>
-        </View>
+        <AppText style={styles.messageText} variant="caption">
+          {message}
+        </AppText>
       ) : null}
       {error ? (
-        <View style={styles.error}>
-          <AppText style={styles.errorText} variant="caption">
-            {error}
-          </AppText>
-        </View>
+        <AppText style={styles.errorText} variant="caption">
+          {error}
+        </AppText>
       ) : null}
 
-      <View style={styles.dangerSection}>
-        <AppText style={styles.dangerHeading} variant="heading">
-          Delete account
-        </AppText>
-        <AppText style={styles.muted}>
+      <Section title="Delete account">
+        <AppText style={styles.sectionNote} variant="caption">
           Permanently removes every person, note, photo, update, interaction,
           follow-up, subscription, and your sign-in identity.
         </AppText>
-        <Button
-          icon={Trash}
-          label="Delete account and data"
-          loading={busyAction === "delete"}
-          onPress={requestAccountDeletion}
-          variant="danger"
-        />
-      </View>
+        <View style={styles.sectionAction}>
+          <Button
+            label="Delete account and data"
+            loading={busyAction === "delete"}
+            onPress={requestAccountDeletion}
+            variant="danger"
+          />
+        </View>
+      </Section>
     </Screen>
   );
 }
 
-function SettingsLink({
-  icon: IconComponent,
+function DeviceContactsSection() {
+  const [enabled, setEnabled] = useState(false);
+  const [canAskAgain, setCanAskAgain] = useState(true);
+  const [granted, setGranted] = useState(false);
+  const [leftOver, setLeftOver] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setEnabled(await isContactSyncEnabled());
+    const permission = await getContactsPermissionState();
+    setGranted(permission.granted);
+    setCanAskAgain(permission.canAskAgain);
+    setLeftOver(await interruptedContactSyncCount());
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function toggle(next: boolean) {
+    if (!next) {
+      await setContactSyncEnabled(false);
+      setEnabled(false);
+      return;
+    }
+    const outcome = await enableContactSyncWithExplainer();
+    setEnabled(outcome === "granted");
+    await refresh();
+  }
+
+  async function syncNow(restart: boolean) {
+    setSyncing(true);
+    try {
+      await runFullContactSync({ restart });
+    } finally {
+      setSyncing(false);
+      setLeftOver(await interruptedContactSyncCount());
+    }
+  }
+
+  const blocked = enabled && !granted && !canAskAgain;
+
+  return (
+    <Section title="Device contacts">
+      <Row>
+        <View style={styles.grow}>
+          <AppText variant="label">Add saved people to contacts</AppText>
+          <AppText variant="caption">
+            {enabled
+              ? "People you add or edit are saved to your phone's Contacts app."
+              : "Off. Nothing is read from or written to your contacts."}
+          </AppText>
+        </View>
+        <Switch
+          accessibilityLabel="Add saved people to contacts"
+          onValueChange={(value) => void toggle(value)}
+          trackColor={{ true: colors.ink, false: colors.mist }}
+          value={enabled}
+        />
+      </Row>
+      {blocked ? (
+        <Row style={styles.stackedRow}>
+          <AppText style={styles.grow} variant="caption">
+            Your phone is blocking contacts access, and it won&rsquo;t ask
+            again. Turn Contacts on for Siyi in your device settings.
+          </AppText>
+          <TextAction
+            label="Open Settings"
+            onPress={() => void openDeviceSettings()}
+          />
+        </Row>
+      ) : null}
+      {enabled && granted ? (
+        <Row>
+          <TextAction
+            label={
+              leftOver > 0
+                ? `Resume syncing (${leftOver} left)`
+                : "Sync everyone now"
+            }
+            loading={syncing}
+            onPress={() => void syncNow(leftOver === 0)}
+          />
+        </Row>
+      ) : null}
+    </Section>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.section}>
+      <AppText style={styles.sectionTitle} variant="label">
+        {title.toUpperCase()}
+      </AppText>
+      {children}
+    </View>
+  );
+}
+
+function Row({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: ViewStyle;
+}) {
+  return <View style={[styles.row, style]}>{children}</View>;
+}
+
+function NavigationRow({
   label,
+  detail,
   onPress,
 }: {
-  icon: typeof Lock;
   label: string;
+  detail?: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={styles.linkRow}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <IconComponent color={colors.inkMuted} size={20} weight="duotone" />
-      <AppText style={styles.flex} variant="label">
-        {label}
+      <View style={styles.grow}>
+        <AppText variant="label">{label}</AppText>
+        {detail ? <AppText variant="caption">{detail}</AppText> : null}
+      </View>
+      <CaretRight color={colors.inkMuted} size={17} />
+    </Pressable>
+  );
+}
+
+function TextAction({
+  label,
+  onPress,
+  loading = false,
+}: {
+  label: string;
+  onPress: () => void;
+  loading?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={loading}
+      onPress={onPress}
+      style={({ pressed }) => [pressed && styles.pressed]}
+    >
+      <AppText style={loading ? styles.actionBusy : styles.action} variant="label">
+        {loading ? "Working…" : label}
       </AppText>
-      <ArrowRight color={colors.inkMuted} size={18} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  profileCard: {
+  identity: {
     alignItems: "center",
     flexDirection: "row",
     gap: 13,
   },
-  profileMark: {
+  identityMark: {
     alignItems: "center",
     backgroundColor: colors.ink,
     borderRadius: radii.round,
@@ -602,61 +632,64 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 52,
   },
-  profileInitial: {
+  identityInitial: {
     color: colors.paper,
     fontSize: 28,
     lineHeight: 31,
   },
-  flex: {
+  grow: {
     flex: 1,
   },
   section: {
-    gap: 11,
+    gap: 0,
   },
-  navigationRow: {
+  sectionTitle: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    paddingBottom: 6,
+  },
+  sectionNote: {
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  sectionAction: {
+    paddingTop: 16,
+  },
+  row: {
     alignItems: "center",
+    borderTopColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: 12,
+    minHeight: 54,
+    paddingVertical: 12,
   },
-  rowIcon: {
-    alignItems: "center",
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.medium,
-    height: 46,
-    justifyContent: "center",
-    width: 46,
+  stackedRow: {
+    alignItems: "flex-start",
   },
-  settingsCard: {
-    gap: 13,
+  columnRow: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: 10,
   },
-  timezoneCopy: {
-    gap: 3,
-    marginTop: 4,
-  },
-  intervalRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 9,
-  },
-  strengthBadge: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.round,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  strengthText: {
-    color: colors.sageStrong,
+  pressed: {
+    opacity: 0.55,
   },
   daysField: {
     width: 72,
   },
+  action: {
+    color: colors.ink,
+  },
+  actionBusy: {
+    color: colors.inkMuted,
+  },
   importPreview: {
-    backgroundColor: colors.sage,
-    borderRadius: radii.large,
-    gap: 7,
-    padding: 15,
+    borderTopColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+    paddingVertical: 14,
   },
   muted: {
     color: colors.inkMuted,
@@ -664,50 +697,12 @@ const styles = StyleSheet.create({
   previewActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 5,
-  },
-  providerRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 11,
-  },
-  linkCard: {
-    paddingVertical: 6,
-  },
-  linkRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 11,
-    minHeight: 50,
-    paddingHorizontal: 8,
-  },
-  version: {
-    color: colors.inkMuted,
-    padding: 8,
-  },
-  message: {
-    backgroundColor: colors.sage,
-    borderRadius: radii.medium,
-    padding: 13,
+    paddingTop: 4,
   },
   messageText: {
     color: colors.sageStrong,
   },
-  error: {
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.medium,
-    padding: 13,
-  },
   errorText: {
-    color: colors.coralStrong,
-  },
-  dangerSection: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.large,
-    gap: 11,
-    padding: 18,
-  },
-  dangerHeading: {
     color: colors.coralStrong,
   },
 });

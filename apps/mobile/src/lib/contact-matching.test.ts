@@ -281,6 +281,24 @@ describe("planning a contact write", () => {
       contact: contact({ phoneNumbers: ["+1 415 555 0134"] }),
       matchedOn: "phone",
     });
-    expect(plan).toEqual({ action: "none", reason: "no-changes" });
+    expect(plan).toEqual({ action: "none", reason: "no-changes", skipped: [] });
+  });
+
+  it("still reports the clash when the clash is the only thing it found", () => {
+    const plan = planContactSync(person({ phoneNumber: "4155550134" }), {
+      contact: contact({ phoneNumbers: ["2125559999"], emails: [] }),
+      matchedOn: "name",
+    });
+    expect(plan).toEqual({
+      action: "none",
+      reason: "no-changes",
+      skipped: [
+        {
+          field: "phoneNumber",
+          existing: "2125559999",
+          incoming: "4155550134",
+        },
+      ],
+    });
   });
 });
