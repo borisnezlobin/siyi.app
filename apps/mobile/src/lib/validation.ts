@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import {
   interactionTypes,
@@ -119,12 +120,55 @@ export const followUpInputSchema = z.object({
   dueAt: z.string().datetime(),
 });
 
-export const interactionInputSchema = z.object({
-  personId: z.string().uuid(),
-  type: z.enum(interactionTypes),
-  occurredAt: pastTimestamp,
-  note: optionalText,
-});
+const customLabel = z
+  .string()
+  .trim()
+  .max(40, "Keep the name under 40 characters.")
+  .nullish()
+  .transform((value) => value || null);
+
+// An icon is one of the app's fixed choices, so anything else is dropped
+// rather than stored and rendered as nothing.
+const customIcon = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((value) => (isCustomTypeIconKey(value) ? value : null));
+
+// A label belongs to "Other". Clearing it on every other type means the
+// timeline never shows a stale name from a since-changed choice.
+function onlyKeepLabelOnOther<
+  T extends {
+    type: string;
+    customLabel: string | null;
+    customIcon: string | null;
+  },
+>(value: T) {
+  return value.type === "other"
+    ? value
+    : { ...value, customLabel: null, customIcon: null };
+}
+
+export const interactionInputSchema = z
+  .object({
+    personId: z.string().uuid(),
+    type: z.enum(interactionTypes),
+    occurredAt: pastTimestamp,
+    note: optionalText,
+    customLabel,
+    customIcon,
+  })
+  .transform(onlyKeepLabelOnOther);
+
+export const interactionEditSchema = z
+  .object({
+    type: z.enum(interactionTypes),
+    occurredAt: pastTimestamp,
+    note: optionalText,
+    customLabel,
+    customIcon,
+  })
+  .transform(onlyKeepLabelOnOther);
 
 export const personUpdateInputSchema = z.object({
   personIds: z.array(z.string().uuid()).min(1).max(50),
@@ -132,7 +176,22 @@ export const personUpdateInputSchema = z.object({
   recordedAt: pastTimestamp,
   isInteraction: z.boolean(),
   interactionLabel: z.string().trim().min(1).max(60).nullable(),
+  // Older queued mutations predate this field, so the interaction kind is
+  // still worked back from the label when it is missing.
+  type: z.enum(interactionTypes).nullish().transform((value) => value ?? null),
+  customLabel,
+  customIcon,
 });
+
+export const personUpdateEditSchema = z
+  .object({
+    text: z.string().trim().min(1, "Add what you learned.").max(2000),
+    recordedAt: pastTimestamp,
+    type: z.enum(interactionTypes),
+    customLabel,
+    customIcon,
+  })
+  .transform(onlyKeepLabelOnOther);
 
 export const importPreviewSchema = z
   .object({
@@ -158,4 +217,6 @@ export type PersonInput = z.infer<typeof personInputSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export type InteractionInput = z.infer<typeof interactionInputSchema>;
 export type PersonUpdateInput = z.infer<typeof personUpdateInputSchema>;
+export type InteractionEdit = z.infer<typeof interactionEditSchema>;
+export type PersonUpdateEdit = z.infer<typeof personUpdateEditSchema>;
 export type ImportPreview = z.infer<typeof importPreviewSchema>;

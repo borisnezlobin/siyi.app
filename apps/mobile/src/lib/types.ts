@@ -81,6 +81,11 @@ export type Interaction = {
   type: InteractionType;
   occurredAt: string;
   note: string | null;
+  /** The user's own words for an "Other" interaction. Null until migration
+   * 0009 has been applied on the server. */
+  customLabel: string | null;
+  /** A key from the app's fixed icon set, never arbitrary text. */
+  customIcon: string | null;
   createdAt: string;
   updatedAt: string;
   sourceUpdateId: string | null;

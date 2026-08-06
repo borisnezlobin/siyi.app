@@ -40,14 +40,26 @@ import {
 import {
   followUpInputSchema,
   importPreviewSchema,
+  interactionEditSchema,
   interactionInputSchema,
+  personUpdateEditSchema,
   personUpdateInputSchema,
   personInputSchema,
   type FollowUpInput,
+  type InteractionEdit,
   type InteractionInput,
+  type PersonUpdateEdit,
   type PersonUpdateInput,
   type PersonInput,
 } from "@/lib/validation";
+import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
+import { interactionLabels } from "@/lib/interaction-labels";
+import {
+  isQueuedUpdateMutation,
+  ownedByUpdateMessage,
+  replayQueuedUpdateMutation,
+  type UpdateWriteClient,
+} from "@/lib/update-writes";
 import { brand } from "@/config/brand";
 
 type TagRow = {
@@ -400,6 +412,8 @@ function mapInteraction(row: Record<string, unknown>): Interaction {
     type: row.type as Interaction["type"],
     occurredAt: row.occurred_at as string,
     note: (row.note as string | null) ?? null,
+    customLabel: (row.custom_label as string | null) ?? null,
+    customIcon: (row.custom_icon as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     sourceUpdateId: (row.source_update_id as string | null) ?? null,
@@ -792,6 +806,8 @@ export async function createPerson(
         type: "met",
         occurredAt: createdAt,
         note: person.firstMetLocation,
+        customLabel: null,
+        customIcon: null,
         createdAt,
         updatedAt: createdAt,
         sourceUpdateId: null,
@@ -956,6 +972,8 @@ export async function createInteraction(
     type: interaction.type,
     occurredAt: interaction.occurredAt,
     note: interaction.note,
+    customLabel: interaction.customLabel,
+    customIcon: interaction.customIcon,
     createdAt,
     updatedAt: createdAt,
     sourceUpdateId: null,
@@ -1065,9 +1083,11 @@ export async function createPersonUpdate(
             id: interactionIds[personId],
             personId,
             userId,
-            type: updateKind(update.interactionLabel),
+            type: update.type ?? updateKind(update.interactionLabel),
             occurredAt: update.recordedAt,
             note: update.text,
+            customLabel: update.customLabel,
+            customIcon: update.customIcon,
             createdAt,
             updatedAt: createdAt,
             sourceUpdateId: updateId,
@@ -1102,6 +1122,11 @@ export async function createPersonUpdate(
               ]),
             ).slice(0, 30)
           : snapshot.recentUpdateTypes,
+      recentCustomLabels: update.customLabel
+        ? Array.from(
+            new Set([update.customLabel, ...snapshot.recentCustomLabels]),
+          ).slice(0, 6)
+        : snapshot.recentCustomLabels,
     };
   });
   void flushOfflineMutations(userId);
@@ -1143,6 +1168,238 @@ export async function getRecentUpdateTypes() {
     recentUpdateTypes,
   }));
   return recentUpdateTypes;
+}
+
+/**
+ * The names the user has already given their own kinds of update, offered back
+ * as one-tap suggestions. Reports none at all rather than throwing until
+ * migration 0009 has been applied on the server.
+ */
+export async function getRecentCustomLabels(limit = 6): Promise<string[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+  const snapshot = await getOfflineSnapshot(userId);
+  if (!(await isOnline())) return snapshot.recentCustomLabels;
+
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("custom_label,occurred_at")
+    .not("custom_label", "is", null)
+    .order("occurred_at", { ascending: false })
+    .limit(60);
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    return snapshot.recentCustomLabels;
+  }
+
+  const seen: string[] = [];
+  for (const row of data ?? []) {
+    const label = (row.custom_label as string | null)?.trim();
+    if (label && !seen.includes(label)) seen.push(label);
+    if (seen.length === limit) break;
+  }
+  await updateOfflineSnapshot(userId, (current) => ({
+    ...current,
+    recentCustomLabels: seen,
+  }));
+  return seen;
+}
+
+function findCachedUpdate(
+  snapshot: Awaited<ReturnType<typeof getOfflineSnapshot>>,
+  updateId: string,
+) {
+  for (const details of Object.values(snapshot.personDetails)) {
+    const match = details.updates.find(({ id }) => id === updateId);
+    if (match) return match;
+  }
+  return null;
+}
+
+function findCachedInteraction(
+  snapshot: Awaited<ReturnType<typeof getOfflineSnapshot>>,
+  interactionId: string,
+) {
+  for (const details of Object.values(snapshot.personDetails)) {
+    const match = details.interactions.find(({ id }) => id === interactionId);
+    if (match) return match;
+  }
+  return null;
+}
+
+export async function editPersonUpdate(
+  userId: string,
+  updateId: string,
+  input: PersonUpdateEdit,
+) {
+  const edit = personUpdateEditSchema.parse(input);
+  const snapshot = await getOfflineSnapshot(userId);
+  const cached = findCachedUpdate(snapshot, updateId);
+  const editedAt = new Date().toISOString();
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "edit-person-update",
+    userId,
+    createdAt: editedAt,
+    updateId,
+    baseUpdatedAt: cached?.updatedAt ?? null,
+    input: edit,
+  });
+  await updateOfflineSnapshot(userId, (current) => ({
+    ...current,
+    personDetails: Object.fromEntries(
+      Object.entries(current.personDetails).map(([personId, details]) => [
+        personId,
+        {
+          ...details,
+          updates: details.updates.map((update) =>
+            update.id === updateId
+              ? {
+                  ...update,
+                  text: edit.text,
+                  recordedAt: edit.recordedAt,
+                  interactionLabel: update.isInteraction
+                    ? edit.customLabel || interactionLabels[edit.type]
+                    : update.interactionLabel,
+                  updatedAt: editedAt,
+                }
+              : update,
+          ),
+          interactions: details.interactions.map((interaction) =>
+            interaction.sourceUpdateId === updateId
+              ? {
+                  ...interaction,
+                  type: edit.type,
+                  occurredAt: edit.recordedAt,
+                  note: edit.text,
+                  customLabel: edit.customLabel,
+                  customIcon: edit.customIcon,
+                  updatedAt: editedAt,
+                }
+              : interaction,
+          ),
+        },
+      ]),
+    ),
+    recentCustomLabels: edit.customLabel
+      ? Array.from(
+          new Set([edit.customLabel, ...current.recentCustomLabels]),
+        ).slice(0, 6)
+      : current.recentCustomLabels,
+  }));
+  void flushOfflineMutations(userId);
+}
+
+export async function deletePersonUpdate(userId: string, updateId: string) {
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "delete-person-update",
+    userId,
+    createdAt: new Date().toISOString(),
+    updateId,
+  });
+  await updateOfflineSnapshot(userId, (current) => ({
+    ...current,
+    personDetails: Object.fromEntries(
+      Object.entries(current.personDetails).map(([personId, details]) => [
+        personId,
+        {
+          ...details,
+          updates: details.updates.filter(({ id }) => id !== updateId),
+          interactions: details.interactions.filter(
+            (interaction) => interaction.sourceUpdateId !== updateId,
+          ),
+        },
+      ]),
+    ),
+  }));
+  void flushOfflineMutations(userId);
+}
+
+export async function editInteraction(
+  userId: string,
+  interactionId: string,
+  input: InteractionEdit,
+) {
+  const edit = interactionEditSchema.parse(input);
+  const snapshot = await getOfflineSnapshot(userId);
+  const cached = findCachedInteraction(snapshot, interactionId);
+  if (cached?.sourceUpdateId) throw new Error(ownedByUpdateMessage);
+  const editedAt = new Date().toISOString();
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "edit-interaction",
+    userId,
+    createdAt: editedAt,
+    interactionId,
+    baseUpdatedAt: cached?.updatedAt ?? null,
+    input: edit,
+  });
+  await updateOfflineSnapshot(userId, (current) => ({
+    ...current,
+    personDetails: Object.fromEntries(
+      Object.entries(current.personDetails).map(([personId, details]) => [
+        personId,
+        {
+          ...details,
+          interactions: details.interactions.map((interaction) =>
+            interaction.id === interactionId
+              ? {
+                  ...interaction,
+                  type: edit.type,
+                  occurredAt: edit.occurredAt,
+                  note: edit.note,
+                  customLabel: edit.customLabel,
+                  customIcon: edit.customIcon,
+                  updatedAt: editedAt,
+                }
+              : interaction,
+          ),
+        },
+      ]),
+    ),
+    recentCustomLabels: edit.customLabel
+      ? Array.from(
+          new Set([edit.customLabel, ...current.recentCustomLabels]),
+        ).slice(0, 6)
+      : current.recentCustomLabels,
+  }));
+  void flushOfflineMutations(userId);
+}
+
+export async function deleteInteraction(
+  userId: string,
+  interactionId: string,
+) {
+  const snapshot = await getOfflineSnapshot(userId);
+  const cached = findCachedInteraction(snapshot, interactionId);
+  if (cached?.sourceUpdateId) throw new Error(ownedByUpdateMessage);
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "delete-interaction",
+    userId,
+    createdAt: new Date().toISOString(),
+    interactionId,
+  });
+  await updateOfflineSnapshot(userId, (current) => ({
+    ...current,
+    personDetails: Object.fromEntries(
+      Object.entries(current.personDetails).map(([personId, details]) => [
+        personId,
+        {
+          ...details,
+          interactions: details.interactions.filter(
+            ({ id }) => id !== interactionId,
+          ),
+        },
+      ]),
+    ),
+  }));
+  void flushOfflineMutations(userId);
 }
 
 export async function setFollowUpComplete(
@@ -1472,6 +1729,124 @@ async function mirrorPrimaryContactMethods(
   }
 }
 
+/**
+ * The rows these writes touch may not have custom_label or custom_icon yet, so
+ * every one of them goes through the pending-column retry. The feature stays
+ * dark until migration 0009 is applied; nothing else breaks.
+ */
+function supabaseUpdateWriteClient(userId: string): UpdateWriteClient {
+  return {
+    loadUpdate: async (updateId) => {
+      const { data, error } = await supabase
+        .from("person_updates")
+        .select("id,is_interaction,text,updated_at")
+        .eq("id", updateId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id as string,
+        isInteraction: Boolean(data.is_interaction),
+        text: (data.text as string) ?? "",
+        updatedAt: data.updated_at as string,
+      };
+    },
+    writeLinkedInteractions: async (updateId, fields) => {
+      const { error } = await writeTolerantOfPendingColumns(
+        {
+          type: fields.type,
+          occurred_at: fields.occurredAt,
+          note: fields.note,
+          custom_label: fields.customLabel,
+          custom_icon: fields.customIcon,
+        },
+        (row) =>
+          supabase
+            .from("interactions")
+            .update(row)
+            .eq("source_update_id", updateId)
+            .eq("user_id", userId)
+            .select("id"),
+      );
+      if (error) throw error;
+    },
+    writeUpdate: async (updateId, fields) => {
+      const { error } = await supabase
+        .from("person_updates")
+        .update({
+          text: fields.text,
+          recorded_at: fields.recordedAt,
+          ...(fields.interactionLabel !== undefined && {
+            interaction_label: fields.interactionLabel,
+          }),
+        })
+        .eq("id", updateId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    deleteLinkedInteractions: async (updateId) => {
+      const { error } = await supabase
+        .from("interactions")
+        .delete()
+        .eq("source_update_id", updateId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    deleteUpdate: async (updateId) => {
+      const { error } = await supabase
+        .from("person_updates")
+        .delete()
+        .eq("id", updateId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    loadInteraction: async (interactionId) => {
+      const { data, error } = await supabase
+        .from("interactions")
+        .select("id,source_update_id,note,updated_at")
+        .eq("id", interactionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id as string,
+        sourceUpdateId: (data.source_update_id as string | null) ?? null,
+        note: (data.note as string | null) ?? null,
+        updatedAt: data.updated_at as string,
+      };
+    },
+    writeInteraction: async (interactionId, fields) => {
+      const { error } = await writeTolerantOfPendingColumns(
+        {
+          type: fields.type,
+          occurred_at: fields.occurredAt,
+          note: fields.note,
+          custom_label: fields.customLabel,
+          custom_icon: fields.customIcon,
+        },
+        (row) =>
+          supabase
+            .from("interactions")
+            .update(row)
+            .eq("id", interactionId)
+            .eq("user_id", userId)
+            .select("id"),
+      );
+      if (error) throw error;
+    },
+    deleteInteraction: async (interactionId) => {
+      const { error } = await supabase
+        .from("interactions")
+        .delete()
+        .eq("id", interactionId)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+  };
+}
+
 async function executeOfflineMutation(mutation: OfflineMutation) {
   if (mutation.kind === "create-person") {
     const profilePhotoPath = mutation.photo
@@ -1581,7 +1956,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
   }
 
   if (mutation.kind === "create-interaction") {
-    const { error } = await supabase.from("interactions").upsert(
+    const { error } = await writeTolerantOfPendingColumns(
       {
         id: mutation.interactionId,
         user_id: mutation.userId,
@@ -1589,10 +1964,20 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         type: mutation.input.type,
         occurred_at: mutation.input.occurredAt,
         note: mutation.input.note,
+        custom_label: mutation.input.customLabel,
+        custom_icon: mutation.input.customIcon,
       },
-      { onConflict: "id" },
+      (row) => supabase.from("interactions").upsert(row, { onConflict: "id" }),
     );
     if (error) throw error;
+    return;
+  }
+
+  if (isQueuedUpdateMutation(mutation)) {
+    await replayQueuedUpdateMutation(
+      supabaseUpdateWriteClient(mutation.userId),
+      mutation,
+    );
     return;
   }
 
@@ -1629,20 +2014,28 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     if (peopleError) throw peopleError;
 
     if (mutation.input.isInteraction) {
-      const { error: interactionsError } = await supabase
-        .from("interactions")
-        .upsert(
-          mutation.input.personIds.map((personId) => ({
-            id: mutation.interactionIds[personId],
-            user_id: mutation.userId,
-            person_id: personId,
-            type: updateKind(mutation.input.interactionLabel),
-            occurred_at: mutation.input.recordedAt,
-            note: mutation.input.text,
-            source_update_id: mutation.updateId,
-          })),
-          { onConflict: "id" },
-        );
+      const type =
+        mutation.input.type ?? updateKind(mutation.input.interactionLabel);
+      const { error: interactionsError } = await writeTolerantOfPendingColumns(
+        {
+          type,
+          custom_label: mutation.input.customLabel,
+          custom_icon: mutation.input.customIcon,
+        },
+        (shared) =>
+          supabase.from("interactions").upsert(
+            mutation.input.personIds.map((personId) => ({
+              id: mutation.interactionIds[personId],
+              user_id: mutation.userId,
+              person_id: personId,
+              occurred_at: mutation.input.recordedAt,
+              note: mutation.input.text,
+              source_update_id: mutation.updateId,
+              ...shared,
+            })),
+            { onConflict: "id" },
+          ),
+      );
       if (interactionsError) throw interactionsError;
     }
     return;

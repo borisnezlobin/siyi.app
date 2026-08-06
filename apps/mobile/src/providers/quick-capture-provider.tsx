@@ -26,6 +26,7 @@ import {
   PencilSimple,
   Plus,
   Shuffle,
+  Trash,
   UserPlus,
   X,
 } from "phosphor-react-native";
@@ -60,11 +61,24 @@ import {
 import {
   createFollowUp,
   createPersonUpdate,
+  deleteInteraction,
+  deletePersonUpdate,
+  editInteraction,
+  editPersonUpdate,
   getPeople,
   getPersonDetails,
-  getRecentUpdateTypes,
+  getRecentCustomLabels,
   type PersonDetails,
 } from "@/lib/data";
+import { CustomTypeFields } from "@/components/custom-type-fields";
+import {
+  isCustomTypeIconKey,
+  type CustomTypeIconKey,
+} from "@/lib/custom-type-icons";
+import { interactionLabels } from "@/lib/interaction-labels";
+import { interactionOptions } from "@/lib/interaction-options";
+import { rankPeopleForPicker } from "@/lib/person-search";
+import type { EditableEntry } from "@/lib/update-entries";
 import {
   chooseCatchUpPerson,
   fallbackConversationStarters,
@@ -74,6 +88,7 @@ import {
   isFutureDateInput,
   isValidDateInput,
   timestampFromDateInput,
+  toDateInputValue,
   todayDateInputValue,
 } from "@/lib/date-input";
 import {
@@ -88,6 +103,7 @@ import {
 import { elapsedLabel } from "@/lib/date-labels";
 import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
 import {
+  type InteractionType,
   type Person,
 } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -106,23 +122,13 @@ type QuickCaptureContextValue = {
   addPerson: () => void;
   addFollowUp: (personId?: string) => void;
   addUpdate: (personId?: string) => void;
+  editEntry: (entry: EditableEntry) => void;
   catchUp: (personId?: string) => void;
   sayHello: (personId: string) => void;
 };
 
 const QuickCaptureContext =
   createContext<QuickCaptureContextValue | null>(null);
-
-const defaultUpdateTypes = [
-  "Talked",
-  "Texted",
-  "Called",
-  "Coffee",
-  "Meal",
-  "Party",
-  "Class",
-  "Event",
-];
 
 function dueAtFromOption(days: number) {
   const date = new Date();
@@ -223,29 +229,21 @@ function PersonPicker({
     );
   }
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const recentPeople = [...people].sort((left, right) => {
-    const leftDate = new Date(
-      left.lastInteractionAt || left.createdAt,
-    ).getTime();
-    const rightDate = new Date(
-      right.lastInteractionAt || right.createdAt,
-    ).getTime();
-    return rightDate - leftDate;
-  });
-  const filteredPeople = recentPeople
-    .filter((person) =>
-      [
-        person.fullName,
-        person.preferredName,
-        person.instagramUsername,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery),
-    )
-    .slice(0, normalizedQuery ? 12 : 6);
+  const normalizedQuery = query.trim();
+  // A plain list stops being usable somewhere past a hundred contacts, so the
+  // same ranking the web uses does the work here: name-start first, then
+  // whoever was seen most recently.
+  const ranked = rankPeopleForPicker(
+    people.map((person) => ({
+      ...person,
+      lastInteractionAt: person.lastInteractionAt || person.createdAt,
+    })),
+    normalizedQuery,
+    normalizedQuery ? 12 : 6,
+  );
+  const filteredPeople = ranked
+    .map((match) => people.find((person) => person.id === match.id))
+    .filter((person): person is Person => Boolean(person));
 
   return (
     <View style={styles.picker}>
@@ -422,10 +420,14 @@ export function QuickCaptureProvider({
   const [dueOption, setDueOption] = useState(1);
   const [updateText, setUpdateText] = useState("");
   const [updateIsInteraction, setUpdateIsInteraction] = useState(true);
-  const [updateType, setUpdateType] = useState("Talked");
+  const [updateType, setUpdateType] = useState<InteractionType>("texted");
+  const [customLabel, setCustomLabel] = useState("");
+  const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
   const [updateDate, setUpdateDate] = useState(todayDateInputValue());
   const [choosingUpdateDate, setChoosingUpdateDate] = useState(false);
-  const [recentUpdateTypes, setRecentUpdateTypes] = useState<string[]>([]);
+  const [recentCustomLabels, setRecentCustomLabels] = useState<string[]>([]);
+  const [editingEntry, setEditingEntry] = useState<EditableEntry | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -462,9 +464,13 @@ export function QuickCaptureProvider({
     setDueOption(1);
     setUpdateText("");
     setUpdateIsInteraction(true);
-    setUpdateType("Talked");
+    setUpdateType("texted");
+    setCustomLabel("");
+    setCustomIcon("");
     setUpdateDate(todayDateInputValue());
     setChoosingUpdateDate(false);
+    setEditingEntry(null);
+    setConfirmingDelete(false);
     setError(null);
   }, []);
 
@@ -480,12 +486,35 @@ export function QuickCaptureProvider({
         void loadPeople();
       }
       if (nextPhase === "update") {
-        void getRecentUpdateTypes()
-          .then(setRecentUpdateTypes)
-          .catch(() => setRecentUpdateTypes([]));
+        void getRecentCustomLabels()
+          .then(setRecentCustomLabels)
+          .catch(() => setRecentCustomLabels([]));
       }
     },
     [loadPeople, resetForm],
+  );
+
+  const editEntry = useCallback(
+    (entry: EditableEntry) => {
+      resetForm();
+      setPhase("update");
+      setEditingEntry(entry);
+      setSelectedPersonIds([]);
+      setPersonSelectionLocked(true);
+      setUpdateText(entry.body);
+      setUpdateType(entry.type);
+      setCustomLabel(entry.customLabel ?? "");
+      setCustomIcon(
+        isCustomTypeIconKey(entry.customIcon) ? entry.customIcon : "",
+      );
+      setUpdateDate(toDateInputValue(entry.at) || todayDateInputValue());
+      modalRef.current?.present();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      void getRecentCustomLabels()
+        .then(setRecentCustomLabels)
+        .catch(() => setRecentCustomLabels([]));
+    },
+    [resetForm],
   );
 
   const presentPersonContext = useCallback(
@@ -582,12 +611,21 @@ export function QuickCaptureProvider({
     }
   }
 
+  const savedCustomLabel =
+    updateType === "other" ? customLabel.trim() || null : null;
+  const savedCustomIcon =
+    updateType === "other" && customIcon ? customIcon : null;
+  const savedTypeLabel = savedCustomLabel || interactionLabels[updateType];
+
   async function saveUpdate() {
-    if (!session || selectedPersonIds.length === 0 || !updateText.trim()) {
-      setError("Choose someone and add what you learned.");
-      void Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Warning,
-      );
+    if (!session || !updateText.trim()) {
+      setError("Add what you learned.");
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+    if (!editingEntry && selectedPersonIds.length === 0) {
+      setError("Choose someone this update is about.");
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
@@ -600,13 +638,35 @@ export function QuickCaptureProvider({
     setSaving(true);
     setError(null);
     try {
-      await createPersonUpdate(session.user.id, {
-        personIds: selectedPersonIds,
-        text: updateText,
-        recordedAt: timestampFromDateInput(updateDate),
-        isInteraction: updateIsInteraction,
-        interactionLabel: updateIsInteraction ? updateType : null,
-      });
+      const recordedAt = timestampFromDateInput(updateDate);
+      if (editingEntry?.kind === "update") {
+        await editPersonUpdate(session.user.id, editingEntry.id, {
+          text: updateText,
+          recordedAt,
+          type: updateType,
+          customLabel: savedCustomLabel,
+          customIcon: savedCustomIcon,
+        });
+      } else if (editingEntry?.kind === "interaction") {
+        await editInteraction(session.user.id, editingEntry.id, {
+          type: updateType,
+          occurredAt: recordedAt,
+          note: updateText,
+          customLabel: savedCustomLabel,
+          customIcon: savedCustomIcon,
+        });
+      } else {
+        await createPersonUpdate(session.user.id, {
+          personIds: selectedPersonIds,
+          text: updateText,
+          recordedAt,
+          isInteraction: updateIsInteraction,
+          interactionLabel: updateIsInteraction ? savedTypeLabel : null,
+          type: updateIsInteraction ? updateType : null,
+          customLabel: updateIsInteraction ? savedCustomLabel : null,
+          customIcon: updateIsInteraction ? savedCustomIcon : null,
+        });
+      }
       setRevision((value) => value + 1);
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
@@ -617,6 +677,33 @@ export function QuickCaptureProvider({
         saveError instanceof Error
           ? saveError.message
           : "That update could not be saved.",
+      );
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeUpdate() {
+    if (!session || !editingEntry) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (editingEntry.kind === "update") {
+        await deletePersonUpdate(session.user.id, editingEntry.id);
+      } else {
+        await deleteInteraction(session.user.id, editingEntry.id);
+      }
+      setRevision((value) => value + 1);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      );
+      modalRef.current?.dismiss();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "That update could not be deleted.",
       );
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -644,6 +731,7 @@ export function QuickCaptureProvider({
       addPerson,
       addFollowUp: (personId) => present("follow-up", personId),
       addUpdate: (personId) => present("update", personId),
+      editEntry,
       catchUp: (personId) => {
         void presentPersonContext("catch-up", personId);
       },
@@ -651,7 +739,7 @@ export function QuickCaptureProvider({
         void presentPersonContext("contact", personId);
       },
     }),
-    [addPerson, present, presentPersonContext, revision],
+    [addPerson, editEntry, present, presentPersonContext, revision],
   );
   const contextPerson = catchUpDetails?.person || null;
   const conversationStarters =
@@ -660,13 +748,6 @@ export function QuickCaptureProvider({
       : contextPerson
         ? fallbackConversationStarters(contextPerson)
         : [];
-  const updateTypeOptions = Array.from(
-    new Set([...recentUpdateTypes, ...defaultUpdateTypes]),
-  )
-    .filter((label) =>
-      label.toLowerCase().includes(updateType.trim().toLowerCase()),
-    )
-    .slice(0, 6);
   const contactChoices = contextPerson
     ? contactChoicesForPerson(contextPerson).sort((left, right) => {
         if (left.method === preferredContactMethod) return -1;
@@ -1016,12 +1097,18 @@ export function QuickCaptureProvider({
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
                 <AppText variant="title">
-                  {phase === "follow-up" ? "Add a follow-up" : "Add an update"}
+                  {phase === "follow-up"
+                    ? "Add a follow-up"
+                    : editingEntry
+                      ? "Edit this update"
+                      : "Add an update"}
                 </AppText>
                 <AppText style={styles.muted}>
                   {phase === "follow-up"
                     ? "A small promise to your future self."
-                    : "One sentence is enough. You can be done in seconds."}
+                    : editingEntry
+                      ? "Change what you wrote, or take it off the timeline."
+                      : "One sentence is enough. You can be done in seconds."}
                 </AppText>
               </View>
               <Pressable
@@ -1139,7 +1226,7 @@ export function QuickCaptureProvider({
                   value={updateText}
                 />
 
-                {loadingPeople ? (
+                {editingEntry ? null : loadingPeople ? (
                   <ActivityIndicator
                     color={colors.coral}
                     style={styles.loader}
@@ -1168,81 +1255,81 @@ export function QuickCaptureProvider({
                   </View>
                 )}
 
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: updateIsInteraction }}
-                  onPress={() => {
-                    setUpdateIsInteraction((value) => !value);
-                    void Haptics.selectionAsync();
-                  }}
-                  style={styles.interactionToggle}
-                >
-                  <View
-                    style={[
-                      styles.toggleCheck,
-                      updateIsInteraction && styles.toggleCheckSelected,
-                    ]}
+                {editingEntry ? null : (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: updateIsInteraction }}
+                    onPress={() => {
+                      setUpdateIsInteraction((value) => !value);
+                      void Haptics.selectionAsync();
+                    }}
+                    style={styles.interactionToggle}
                   >
-                    {updateIsInteraction ? (
-                      <Check color={colors.paper} size={15} weight="bold" />
-                    ) : null}
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="label">This was an interaction</AppText>
-                    <AppText variant="caption">
-                      Counts as the latest time you spoke or spent time together
-                    </AppText>
-                  </View>
-                </Pressable>
-
-                {updateIsInteraction ? (
-                  <View style={styles.optionGroup}>
-                    <AppText variant="label">What kind?</AppText>
-                    <View style={styles.search}>
-                      <MagnifyingGlass color={colors.inkMuted} size={18} />
-                      <BottomSheetTextInput
-                        accessibilityLabel="Interaction type"
-                        autoCapitalize="words"
-                        onChangeText={setUpdateType}
-                        placeholder="Talked, coffee, study session…"
-                        placeholderTextColor={colors.inkMuted}
-                        selectionColor={colors.coral}
-                        style={styles.searchInput}
-                        value={updateType}
-                      />
+                    <View
+                      style={[
+                        styles.toggleCheck,
+                        updateIsInteraction && styles.toggleCheckSelected,
+                      ]}
+                    >
+                      {updateIsInteraction ? (
+                        <Check color={colors.paper} size={15} weight="bold" />
+                      ) : null}
                     </View>
+                    <View style={styles.flex}>
+                      <AppText variant="label">This was an interaction</AppText>
+                      <AppText variant="caption">
+                        Counts as the latest time you spoke or spent time
+                        together
+                      </AppText>
+                    </View>
+                  </Pressable>
+                )}
+
+                {updateIsInteraction || editingEntry ? (
+                  <View style={styles.optionGroup}>
+                    <AppText variant="label">What did you do?</AppText>
                     <View style={styles.typeGrid}>
-                      {updateTypeOptions.map((label) => (
-                      <Pressable
-                        accessibilityRole="radio"
-                        accessibilityState={{
-                            checked:
-                              updateType.toLowerCase() === label.toLowerCase(),
-                        }}
-                          key={label}
-                        onPress={() => {
-                            setUpdateType(label);
-                          void Haptics.selectionAsync();
-                        }}
-                        style={[
-                          styles.typeOption,
-                            updateType.toLowerCase() === label.toLowerCase() &&
-                            styles.typeOptionSelected,
-                        ]}
-                      >
-                        <AppText
-                          style={
-                              updateType.toLowerCase() === label.toLowerCase()
-                              ? styles.lightText
-                              : undefined
-                          }
-                          variant="label"
-                        >
-                            {label}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </View>
+                      {interactionOptions.map((option) => {
+                        const active = updateType === option.value;
+                        const IconComponent = option.icon;
+                        return (
+                          <Pressable
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: active }}
+                            key={option.value}
+                            onPress={() => {
+                              setUpdateType(option.value);
+                              void Haptics.selectionAsync();
+                            }}
+                            style={[
+                              styles.typeOption,
+                              active && styles.typeOptionSelected,
+                            ]}
+                          >
+                            <IconComponent
+                              color={active ? colors.paper : colors.inkMuted}
+                              size={21}
+                              weight={active ? "fill" : "regular"}
+                            />
+                            <AppText
+                              style={active ? styles.lightText : undefined}
+                              variant="caption"
+                            >
+                              {option.label}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    {updateType === "other" ? (
+                      <CustomTypeFields
+                        icon={customIcon}
+                        label={customLabel}
+                        onIconChange={setCustomIcon}
+                        onLabelChange={setCustomLabel}
+                        recentLabels={recentCustomLabels}
+                      />
+                    ) : null}
                   </View>
                 ) : null}
 
@@ -1319,7 +1406,9 @@ export function QuickCaptureProvider({
                   ) : null}
                 </View>
 
-                {personSelectionLocked && selectedPersonIds.length === 1 ? (
+                {!editingEntry &&
+                personSelectionLocked &&
+                selectedPersonIds.length === 1 ? (
                   <Button
                     compact
                     icon={PencilSimple}
@@ -1334,12 +1423,49 @@ export function QuickCaptureProvider({
                 ) : null}
                 <Button
                   disabled={
-                    selectedPersonIds.length === 0 || !updateText.trim()
+                    !updateText.trim() ||
+                    (!editingEntry && selectedPersonIds.length === 0)
                   }
-                  label="Save update"
+                  label={editingEntry ? "Save changes" : "Save update"}
                   loading={saving}
                   onPress={() => void saveUpdate()}
                 />
+
+                {editingEntry ? (
+                  confirmingDelete ? (
+                    <View style={styles.confirmDelete}>
+                      <AppText variant="label">
+                        Delete this update? You will not get it back, and your
+                        reminders will move back accordingly.
+                      </AppText>
+                      <View style={styles.confirmRow}>
+                        <Button
+                          compact
+                          label="Yes, delete it"
+                          loading={saving}
+                          onPress={() => void removeUpdate()}
+                          style={styles.flex}
+                          variant="danger"
+                        />
+                        <Button
+                          compact
+                          label="Keep it"
+                          onPress={() => setConfirmingDelete(false)}
+                          style={styles.flex}
+                          variant="secondary"
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <Button
+                      compact
+                      icon={Trash}
+                      label="Delete this update"
+                      onPress={() => setConfirmingDelete(true)}
+                      variant="quiet"
+                    />
+                  )
+                ) : null}
               </>
             )}
             {error ? (
@@ -1566,9 +1692,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.mist,
     borderRadius: radii.small,
+    flexBasis: "30%",
+    flexGrow: 1,
+    gap: 5,
     justifyContent: "center",
-    minHeight: 46,
-    paddingHorizontal: 17,
+    maxWidth: "32%",
+    minHeight: 74,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  confirmDelete: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.medium,
+    gap: 12,
+    padding: 15,
+  },
+  confirmRow: {
+    flexDirection: "row",
+    gap: 8,
   },
   typeOptionSelected: {
     backgroundColor: colors.sageStrong,
