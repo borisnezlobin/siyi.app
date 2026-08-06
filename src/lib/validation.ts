@@ -2,6 +2,12 @@ import { z } from "zod";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import {
+  maxNoteBodyLength,
+  maxNoteHeadingLength,
+  maxNoteSectionsPerPerson,
+  normalizeNoteHeading,
+} from "@/lib/note-sections";
+import {
   interactionTypes,
   personStatuses,
   relationshipStrengths,
@@ -159,6 +165,38 @@ export const personUpdateEditSchema = z
     customIcon,
   })
   .transform(onlyKeepLabelOnOther);
+
+const noteHeading = z
+  .string()
+  .trim()
+  .min(1, "Give the section a heading")
+  .max(
+    maxNoteHeadingLength,
+    `Keep the heading under ${maxNoteHeadingLength} characters`,
+  )
+  .transform(normalizeNoteHeading);
+
+const noteBody = z
+  .string()
+  .max(maxNoteBodyLength, "That section is too long to save")
+  .nullish()
+  .transform((value) => value ?? "");
+
+export const personNoteInputSchema = z.object({
+  personId: z.string().uuid(),
+  heading: noteHeading,
+  body: noteBody,
+});
+
+export const personNoteEditSchema = z.object({
+  heading: noteHeading,
+  body: noteBody,
+});
+
+export const personNoteOrderSchema = z.object({
+  personId: z.string().uuid(),
+  noteIds: z.array(z.string().uuid()).min(1).max(maxNoteSectionsPerPerson),
+});
 
 export const followUpInputSchema = z.object({
   personId: z.string().uuid(),

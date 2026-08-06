@@ -4,10 +4,13 @@ import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@
 import { resolveAvatarUrls, resolvedAvatarUrl } from "@/lib/avatar-urls";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { orderedNoteSections } from "@/lib/note-sections";
 import type {
   FollowUp,
   Interaction,
   Person,
+  PersonNote,
+  PersonNoteSections,
   PersonUpdate,
   RelationshipStrength,
   Tag,
@@ -198,6 +201,91 @@ export async function getPersonUpdates(
       (link: { person_id: string }) => link.person_id,
     ),
   }));
+}
+
+function mapPersonNote(row: {
+  id: string;
+  person_id: string;
+  user_id: string;
+  heading: string;
+  body: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}): PersonNote {
+  return {
+    id: row.id,
+    personId: row.person_id,
+    userId: row.user_id,
+    heading: row.heading,
+    body: row.body ?? "",
+    position: row.position,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Named note sections for one person. Reports itself unavailable rather than
+ * throwing when migration 0010 has not been applied yet.
+ */
+export async function getPersonNoteSections(
+  personId: string,
+): Promise<PersonNoteSections> {
+  if (!isSupabaseConfigured()) return { available: false, sections: [] };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("person_notes")
+    .select("*")
+    .eq("person_id", personId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+      return { available: false, sections: [] };
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    sections: orderedNoteSections((data ?? []).map(mapPersonNote)),
+  };
+}
+
+/**
+ * The headings this user has already written on other people, newest first,
+ * so adding a section is a tap instead of retyping "Interests" again.
+ * Returns nothing until migration 0010 has run.
+ */
+export async function getUsedNoteHeadings(limit = 40): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("person_notes")
+    .select("heading,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    throw new Error(error.message);
+  }
+
+  const seen: string[] = [];
+  for (const row of data ?? []) {
+    const heading = (row.heading as string | null)?.trim();
+    if (!heading) continue;
+    const alreadySeen = seen.some(
+      (existing) => existing.toLowerCase() === heading.toLowerCase(),
+    );
+    if (!alreadySeen) seen.push(heading);
+    if (seen.length === limit) break;
+  }
+  return seen;
 }
 
 export async function getInteractions(personId?: string): Promise<Interaction[]> {

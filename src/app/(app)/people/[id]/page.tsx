@@ -28,6 +28,7 @@ import {
   getFollowUps,
   getInteractions,
   getPerson,
+  getPersonNoteSections,
   getPersonUpdates,
   getRecentCustomLabels,
 } from "@/lib/data";
@@ -68,14 +69,21 @@ export default async function PersonDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [person, interactions, personUpdates, allFollowUps, recentCustomLabels] =
-    await Promise.all([
-      getPerson(id),
-      getInteractions(id),
-      getPersonUpdates(id),
-      getFollowUps(),
-      getRecentCustomLabels(),
-    ]);
+  const [
+    person,
+    interactions,
+    personUpdates,
+    allFollowUps,
+    recentCustomLabels,
+    noteSections,
+  ] = await Promise.all([
+    getPerson(id),
+    getInteractions(id),
+    getPersonUpdates(id),
+    getFollowUps(),
+    getRecentCustomLabels(),
+    getPersonNoteSections(id),
+  ]);
 
   // Updates written on the phone and interactions logged here share one
   // timeline. An interaction created by an update would otherwise show twice.
@@ -116,6 +124,9 @@ export default async function PersonDetailPage({
   );
   const openFollowUps = allFollowUps.filter(
     (followUp) => followUp.personId === id && !followUp.completedAt,
+  );
+  const visibleNoteSections = noteSections.sections.filter((noteSection) =>
+    noteSection.body.trim(),
   );
   const reminder = getContactReminderState(person);
   const displayName = person.preferredName ?? person.fullName;
@@ -261,15 +272,27 @@ export default async function PersonDetailPage({
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
-          {person.generalNotes ? (
+          {person.generalNotes || visibleNoteSections.length ? (
             <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
               <div className="flex items-center gap-2">
                 <NotePencil size={18} className="text-coral" aria-hidden="true" />
                 <h2 className="text-sm font-bold">What to remember</h2>
               </div>
-              <p className="mt-4 text-sm leading-7 text-ink/78">
-                {person.generalNotes}
-              </p>
+              {person.generalNotes ? (
+                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-ink/78">
+                  {person.generalNotes}
+                </p>
+              ) : null}
+              {visibleNoteSections.map((noteSection) => (
+                <div key={noteSection.id} className="mt-5">
+                  <h3 className="text-xs font-bold text-ink-muted">
+                    {noteSection.heading}
+                  </h3>
+                  <p className="mt-1.5 whitespace-pre-line text-sm leading-7 text-ink/78">
+                    {noteSection.body}
+                  </p>
+                </div>
+              ))}
             </section>
           ) : null}
 

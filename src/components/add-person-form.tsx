@@ -8,10 +8,13 @@ import {
   SpinnerGap,
   X,
 } from "@phosphor-icons/react";
-import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import {
+  ContactFields,
+  emptyContactFieldValues,
+} from "@/components/contact-fields";
 import { RelationshipFields } from "@/components/relationship-fields";
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
@@ -25,7 +28,6 @@ export function AddPersonForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState("");
-  const [instagramUsername, setInstagramUsername] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,9 @@ export function AddPersonForm() {
       const profilePhotoUrl = await uploadPhoto();
       const payload = {
         fullName,
-        instagramUsername,
+        instagramUsername: normalizeInstagramUsername(
+          String(formData.get("instagramUsername") ?? ""),
+        ),
         phoneNumber: formData.get("phoneNumber"),
         firstMetLocation: formData.get("firstMetLocation"),
         generalNotes: formData.get("generalNotes"),
@@ -215,39 +219,7 @@ export function AddPersonForm() {
             />
           </label>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className={labelClassName}>
-              Instagram
-              <input
-                value={instagramUsername}
-                onChange={(event) => setInstagramUsername(event.target.value)}
-                onBlur={() =>
-                  setInstagramUsername(normalizeInstagramUsername(instagramUsername))
-                }
-                autoCapitalize="none"
-                autoCorrect="off"
-                inputMode="text"
-                placeholder="@username or profile link"
-                className={inputClassName}
-              />
-            </label>
-            <label className={labelClassName}>
-              Phone
-              <input
-                name="phoneNumber"
-                type="tel"
-                autoComplete="tel"
-                inputMode="tel"
-                placeholder="(555) 555-0123"
-                onChange={(event) => {
-                  event.currentTarget.value = formatPhoneNumberInput(
-                    event.currentTarget.value,
-                  );
-                }}
-                className={inputClassName}
-              />
-            </label>
-          </div>
+          <ContactFields defaults={emptyContactFieldValues()} />
 
           <label className={labelClassName}>
             Where did you meet?
@@ -273,7 +245,12 @@ export function AddPersonForm() {
 
       <details className="group mt-4 rounded-[1.5rem] bg-white shadow-card ring-1 ring-black/[0.035]">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-3xl px-4 py-4 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral sm:px-6">
-          More details
+          <span className="min-w-0">
+            <span className="block">More details</span>
+            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+              Preferred name, birthday, school, reminders
+            </span>
+          </span>
           <CaretDown
             size={17}
             className="text-ink-muted transition-transform group-open:rotate-180"
@@ -284,15 +261,6 @@ export function AddPersonForm() {
           <label className={labelClassName}>
             Preferred name
             <input name="preferredName" className={inputClassName} />
-          </label>
-          <label className={labelClassName}>
-            Email
-            <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              className={inputClassName}
-            />
           </label>
           <label className={labelClassName}>
             Birthday
