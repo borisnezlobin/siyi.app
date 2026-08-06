@@ -14,6 +14,7 @@ import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
 import { getAccountSettings, getPeople } from "@/lib/data";
+import { relationshipTierLabels } from "@/lib/relationship-labels";
 import { overdueDays } from "@/lib/reminders";
 import type {
   Person,
@@ -197,11 +198,11 @@ export default function PeopleScreen() {
 
       {showFilters ? (
         <View style={styles.filters}>
-          <FilterGroup label="Relationship strength">
-            {[1, 2, 3, 4].map((value) => (
+          <FilterGroup label="Reminder pace">
+            {([1, 2, 3, 4] as const).map((value) => (
               <FilterChip
                 key={value}
-                label={`${value}`}
+                label={relationshipTierLabels[value]}
                 onPress={() =>
                   setStrength(
                     strength === value

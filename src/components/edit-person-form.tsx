@@ -12,6 +12,8 @@ import {
 import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
 import { getApiResponseError } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import { RelationshipFields } from "@/components/relationship-fields";
+import { relationshipLabelFor } from "@/lib/relationship-labels";
 import type { Person } from "@/lib/types";
 
 const inputClassName =
@@ -31,6 +33,8 @@ function initialFormValues(person: Person): FormValues {
     major: person.major ?? "",
     graduationYear: person.graduationYear ? String(person.graduationYear) : "",
     relationshipStrength: String(person.relationshipStrength),
+    relationshipLabel: relationshipLabelFor(person),
+    remindersEnabled: person.remindersEnabled ? "true" : "false",
     reminderIntervalDays: person.reminderIntervalDays
       ? String(person.reminderIntervalDays)
       : "",
@@ -140,6 +144,8 @@ export function EditPersonForm({ person }: { person: Person }) {
       major: formData.get("major"),
       graduationYear: formData.get("graduationYear") || null,
       relationshipStrength: Number(formData.get("relationshipStrength")),
+      relationshipLabel: formData.get("relationshipLabel") || null,
+      remindersEnabled: formData.get("remindersEnabled") !== "false",
       reminderIntervalDays: formData.get("reminderIntervalDays") || null,
       status: formData.get("status"),
       firstMetAt:
@@ -276,30 +282,13 @@ export function EditPersonForm({ person }: { person: Person }) {
             className={inputClassName}
           />
         </label>
-        <label className={labelClassName}>
-          Relationship
-          <select
-            name="relationshipStrength"
-            defaultValue={person.relationshipStrength}
-            className={inputClassName}
-          >
-            <option value="1">Acquaintance</option>
-            <option value="2">Getting to know</option>
-            <option value="3">Close</option>
-            <option value="4">Very close</option>
-          </select>
-        </label>
-        <label className={labelClassName}>
-          Reminder interval
-          <input
-            name="reminderIntervalDays"
-            type="number"
-            min="1"
-            max="3650"
-            defaultValue={person.reminderIntervalDays ?? ""}
-            className={inputClassName}
-          />
-        </label>
+        <RelationshipFields
+          personName={person.preferredName ?? person.fullName}
+          defaultStrength={person.relationshipStrength}
+          defaultLabel={person.relationshipLabel}
+          defaultRemindersEnabled={person.remindersEnabled}
+          defaultReminderIntervalDays={person.reminderIntervalDays}
+        />
         <label className={labelClassName}>
           Reminder status
           <select name="status" defaultValue={person.status} className={inputClassName}>

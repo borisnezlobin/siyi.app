@@ -12,6 +12,7 @@ import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { RelationshipFields } from "@/components/relationship-fields";
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { createClient } from "@/lib/supabase/client";
@@ -100,6 +101,8 @@ export function AddPersonForm() {
         major: formData.get("major"),
         graduationYear: formData.get("graduationYear") || null,
         relationshipStrength: Number(formData.get("relationshipStrength") || 2),
+        relationshipLabel: formData.get("relationshipLabel") || null,
+        remindersEnabled: formData.get("remindersEnabled") !== "false",
         reminderIntervalDays: formData.get("reminderIntervalDays") || null,
         status: "active",
         profilePhotoUrl,
@@ -318,38 +321,7 @@ export function AddPersonForm() {
               className={inputClassName}
             />
           </label>
-          <label className={labelClassName}>
-            Relationship
-            <select
-              name="relationshipStrength"
-              defaultValue="2"
-              className={inputClassName}
-            >
-              <option value="1">Acquaintance</option>
-              <option value="2">Getting to know</option>
-              <option value="3">Close</option>
-              <option value="4">Very close</option>
-            </select>
-          </label>
-          <label className={`${labelClassName} sm:col-span-2`}>
-            Custom reminder interval
-            <span className="mt-1 block text-[11px] font-normal leading-4 text-ink-muted">
-              Leave blank to use the default for this relationship.
-            </span>
-            <div className="relative">
-              <input
-                name="reminderIntervalDays"
-                type="number"
-                min="1"
-                max="3650"
-                inputMode="numeric"
-                className={`${inputClassName} pr-14`}
-              />
-              <span className="absolute right-4 top-[1.15rem] text-xs text-ink-muted">
-                days
-              </span>
-            </div>
-          </label>
+          <RelationshipFields personName={fullName.trim() || undefined} />
         </div>
       </details>
 

@@ -62,6 +62,8 @@ type PersonRow = {
   major: string | null;
   graduation_year: number | null;
   relationship_strength: number;
+  relationship_label: string | null;
+  reminders_enabled: boolean | null;
   reminder_interval_days: number | null;
   status: "active" | "muted" | "archived";
   first_met_at: string;
@@ -258,6 +260,8 @@ function mapPerson(
     graduationYear: row.graduation_year,
     relationshipStrength:
       row.relationship_strength as RelationshipStrength,
+    relationshipLabel: row.relationship_label ?? null,
+    remindersEnabled: row.reminders_enabled ?? true,
     reminderIntervalDays: row.reminder_interval_days,
     status: row.status,
     firstMetAt: row.first_met_at,
@@ -640,6 +644,8 @@ function optimisticPerson(
     major: input.major,
     graduationYear: input.graduationYear ?? null,
     relationshipStrength: input.relationshipStrength,
+    relationshipLabel: input.relationshipLabel ?? null,
+    remindersEnabled: input.remindersEnabled ?? true,
     reminderIntervalDays: input.reminderIntervalDays ?? null,
     status: current?.status ?? "active",
     firstMetAt: input.firstMetAt ?? current?.firstMetAt ?? now,
@@ -1281,6 +1287,8 @@ function personRecord(
     major: person.major,
     graduation_year: person.graduationYear,
     relationship_strength: person.relationshipStrength,
+    relationship_label: person.relationshipLabel,
+    reminders_enabled: person.remindersEnabled,
     reminder_interval_days: person.reminderIntervalDays,
     status: "active" as const,
     first_met_at: person.firstMetAt ?? firstMetAt,
@@ -1352,6 +1360,8 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         major: mutation.input.major,
         graduation_year: mutation.input.graduationYear,
         relationship_strength: mutation.input.relationshipStrength,
+        relationship_label: mutation.input.relationshipLabel,
+        reminders_enabled: mutation.input.remindersEnabled,
         reminder_interval_days: mutation.input.reminderIntervalDays,
         ...(mutation.input.firstMetAt
           ? { first_met_at: mutation.input.firstMetAt }

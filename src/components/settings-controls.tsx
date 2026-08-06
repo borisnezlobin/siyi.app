@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
+import { relationshipTierLabels } from "@/lib/relationship-labels";
 import type { FollowUp, Interaction, Person, RelationshipStrength } from "@/lib/types";
 import { importPayloadSchema } from "@/lib/validation";
 import { friendlyTimezoneOptions } from "@/lib/timezones";
@@ -49,13 +50,6 @@ function downloadFile(fileName: string, content: string, type: string) {
   anchor.click();
   URL.revokeObjectURL(url);
 }
-
-const strengthLabels: Record<RelationshipStrength, string> = {
-  1: "Acquaintance",
-  2: "Getting to know",
-  3: "Close",
-  4: "Very close",
-};
 
 export function SettingsControls({
   people,
@@ -379,7 +373,7 @@ export function SettingsControls({
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {([1, 2, 3, 4] as RelationshipStrength[]).map((strength) => (
             <label key={strength} className="text-[11px] font-semibold text-ink-muted">
-              {strengthLabels[strength]}
+              {relationshipTierLabels[strength]}
               <span className="relative mt-1.5 block">
                 <input
                   type="number"

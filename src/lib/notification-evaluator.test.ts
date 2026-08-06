@@ -23,6 +23,7 @@ const baseInput: NotificationEvaluationInput = {
       birthday: "2004-08-10",
       relationshipStrength: 4,
       reminderIntervalDays: null,
+      remindersEnabled: true,
       firstMetAt: "2026-01-01T18:00:00.000Z",
       lastInteractionAt: "2026-07-01T18:00:00.000Z",
     },
@@ -53,6 +54,24 @@ describe("evaluateUserNotifications", () => {
       "contact:00000000-0000-4000-8000-000000000001:20000000-0000-4000-8000-000000000001:2026-07-15",
     );
     expect(candidates[2].url).toContain("/follow-ups?person=");
+  });
+
+  it("skips the overdue nudge when a person turned reminders off", () => {
+    const candidates = evaluateUserNotifications(
+      {
+        ...baseInput,
+        people: baseInput.people.map((person) => ({
+          ...person,
+          remindersEnabled: false,
+        })),
+      },
+      evaluationTime,
+    );
+
+    expect(candidates.map(({ type }) => type)).toEqual([
+      "birthday",
+      "follow_up",
+    ]);
   });
 
   it("does not evaluate outside the preferred local hour", () => {

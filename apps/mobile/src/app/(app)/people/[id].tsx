@@ -40,7 +40,8 @@ import { Card, SectionHeading } from "@/components/surface";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { archivePerson, getPersonDetails } from "@/lib/data";
 import { dateLabel, elapsedLabel, relativeDayLabel } from "@/lib/date-labels";
-import { reminderDueDate } from "@/lib/reminders";
+import { relationshipLabelFor } from "@/lib/relationship-labels";
+import { nextReminderDate } from "@/lib/reminders";
 import type { InteractionType } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
@@ -131,7 +132,7 @@ export default function PersonDetailScreen() {
       new Date(right.occurredAt).getTime() -
       new Date(left.occurredAt).getTime(),
   );
-  const reminder = reminderDueDate(person);
+  const reminder = nextReminderDate(person);
   const facts = [
     {
       icon: At,
@@ -260,7 +261,7 @@ export default function PersonDetailScreen() {
             <View style={styles.tagRow}>
               <View style={styles.strengthChip}>
                 <AppText style={styles.strengthText} variant="caption">
-                  Strength {person.relationshipStrength}
+                  {relationshipLabelFor(person)}
                 </AppText>
               </View>
               {person.tags.map((tag) => (
@@ -321,7 +322,7 @@ export default function PersonDetailScreen() {
           <Card style={styles.stat}>
             <AppText variant="caption">Next reminder</AppText>
             <AppText variant="heading">
-              {relativeDayLabel(reminder)}
+              {reminder ? relativeDayLabel(reminder) : "Paused"}
             </AppText>
           </Card>
         </View>

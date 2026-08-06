@@ -20,6 +20,10 @@ export function daysBetween(left: Date, right: Date) {
   return localDayNumber(right) - localDayNumber(left);
 }
 
+export function remindersAreOn(person: Pick<Person, "remindersEnabled">) {
+  return person.remindersEnabled !== false;
+}
+
 export function reminderDueDate(
   person: Person,
   defaults: ReminderDefaults = defaultReminderIntervals,
@@ -39,8 +43,16 @@ export function overdueDays(
   now = new Date(),
   defaults: ReminderDefaults = defaultReminderIntervals,
 ) {
-  if (person.status !== "active") return 0;
+  if (person.status !== "active" || !remindersAreOn(person)) return 0;
   return Math.max(0, daysBetween(reminderDueDate(person, defaults), now));
+}
+
+export function nextReminderDate(
+  person: Person,
+  defaults: ReminderDefaults = defaultReminderIntervals,
+) {
+  if (person.status !== "active" || !remindersAreOn(person)) return null;
+  return reminderDueDate(person, defaults);
 }
 
 export function nextBirthday(

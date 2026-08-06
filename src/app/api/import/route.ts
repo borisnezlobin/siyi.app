@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
         major: person.major,
         graduation_year: person.graduationYear,
         relationship_strength: person.relationshipStrength,
+        relationship_label: person.relationshipLabel,
+        reminders_enabled: person.remindersEnabled,
         reminder_interval_days: person.reminderIntervalDays,
         status: person.status,
         first_met_at: person.firstMetAt ?? new Date().toISOString(),

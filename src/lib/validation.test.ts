@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { interactionInputSchema, personInputSchema } from "@/lib/validation";
 
 const personId = "11111111-1111-4111-8111-111111111111";
@@ -52,6 +53,43 @@ describe("personInputSchema", () => {
     });
   });
 
+  it("keeps a custom relationship label and defaults reminders on", () => {
+    const result = personInputSchema.parse({
+      fullName: "Maya Chen",
+      relationshipStrength: 4,
+      relationshipLabel: "  more than very close brochacho  ",
+      reminderIntervalDays: null,
+      graduationYear: null,
+    });
+
+    expect(result.relationshipLabel).toBe("more than very close brochacho");
+    expect(result.remindersEnabled).toBe(true);
+  });
+
+  it("accepts reminders switched off", () => {
+    const result = personInputSchema.parse({
+      fullName: "Maya Chen",
+      relationshipStrength: 2,
+      remindersEnabled: false,
+      reminderIntervalDays: null,
+      graduationYear: null,
+    });
+
+    expect(result.remindersEnabled).toBe(false);
+  });
+
+  it("rejects a relationship label longer than forty characters", () => {
+    const result = personInputSchema.safeParse({
+      fullName: "Maya Chen",
+      relationshipStrength: 2,
+      relationshipLabel: "x".repeat(41),
+      reminderIntervalDays: null,
+      graduationYear: null,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects invalid relationship strengths", () => {
     const result = personInputSchema.safeParse({
       fullName: "Maya Chen",
@@ -79,5 +117,22 @@ describe("personInputSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("relationshipLabelFor", () => {
+  it("falls back to the tier default when no label is set", () => {
+    expect(
+      relationshipLabelFor({ relationshipStrength: 3, relationshipLabel: null }),
+    ).toBe("Close");
+  });
+
+  it("prefers the person's own words", () => {
+    expect(
+      relationshipLabelFor({
+        relationshipStrength: 1,
+        relationshipLabel: "more than very close brochacho",
+      }),
+    ).toBe("more than very close brochacho");
   });
 });
