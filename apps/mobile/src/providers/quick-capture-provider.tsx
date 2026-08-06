@@ -55,6 +55,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
+import { DateField } from "@/components/date-field";
 import { FormField } from "@/components/form-field";
 import { useKeyboardHeight } from "@/components/keyboard-aware-form";
 import { brand } from "@/config/brand";
@@ -682,12 +683,10 @@ export function QuickCaptureProvider({
           </Pressable>
         </View>
         {choosingUpdateDate ? (
-          <FormField
+          <DateField
             bottomSheet
-            hint="Use YYYY-MM-DD."
-            keyboardType="numbers-and-punctuation"
             label="Date"
-            maxLength={10}
+            maximumDate={new Date()}
             onChangeText={setUpdateDate}
             placeholder={daysAgoDateInputValue(7)}
             value={updateDate}
@@ -709,7 +708,7 @@ export function QuickCaptureProvider({
     if (isValidDateInput(updateDate) && !isFutureDateInput(updateDate)) {
       return true;
     }
-    warnAbout("Use YYYY-MM-DD for a day that has already happened.");
+    warnAbout("Pick a day that has already happened.");
     return false;
   }
 
