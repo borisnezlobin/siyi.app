@@ -227,6 +227,8 @@ export async function getInteractions(personId?: string): Promise<Interaction[]>
     type: row.type,
     occurredAt: row.occurred_at,
     note: row.note,
+    customLabel: row.custom_label ?? null,
+    customIcon: row.custom_icon ?? null,
     sourceUpdateId: row.source_update_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -271,4 +273,34 @@ export async function getFollowUps(): Promise<FollowUp[]> {
         }
       : undefined,
   }));
+}
+
+/**
+ * Offers back the names this user has already invented, so a recurring "Went
+ * bouldering" is one tap rather than retyped. Returns nothing until migration
+ * 0009 has run.
+ */
+export async function getRecentCustomLabels(limit = 6): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("custom_label,occurred_at")
+    .not("custom_label", "is", null)
+    .order("occurred_at", { ascending: false })
+    .limit(60);
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    throw new Error(error.message);
+  }
+
+  const seen: string[] = [];
+  for (const row of data ?? []) {
+    const label = (row.custom_label as string | null)?.trim();
+    if (label && !seen.includes(label)) seen.push(label);
+    if (seen.length === limit) break;
+  }
+  return seen;
 }

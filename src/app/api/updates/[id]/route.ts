@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { interactionLabels } from "@/lib/interaction-labels";
+import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
 import { createClient } from "@/lib/supabase/server";
 import { personUpdateEditSchema } from "@/lib/validation";
 import type { InteractionType } from "@/lib/types";
@@ -37,7 +38,7 @@ export async function PATCH(
     if (!validation.success) {
       return apiError(validation.error.issues[0]?.message ?? "Invalid update.");
     }
-    const { text, recordedAt, type } = validation.data;
+    const { text, recordedAt, type, customLabel, customIcon } = validation.data;
 
     const supabase = await createClient();
     const existing = await loadOwnedUpdate(supabase, id, user.id);
@@ -48,11 +49,22 @@ export async function PATCH(
     // saving again re-applies both, rather than leaving a reminder pointing at a
     // date the user can no longer see.
     if (existing.is_interaction) {
-      const { error: interactionError } = await supabase
-        .from("interactions")
-        .update({ type, occurred_at: recordedAt, note: text })
-        .eq("source_update_id", id)
-        .eq("user_id", user.id);
+      const { error: interactionError } = await writeTolerantOfPendingColumns(
+        {
+          type,
+          occurred_at: recordedAt,
+          note: text,
+          custom_label: customLabel,
+          custom_icon: customIcon,
+        },
+        (row) =>
+          supabase
+            .from("interactions")
+            .update(row)
+            .eq("source_update_id", id)
+            .eq("user_id", user.id)
+            .select("id"),
+      );
       if (interactionError) return apiError(interactionError.message, 400);
     }
 
@@ -61,7 +73,9 @@ export async function PATCH(
       .update({
         text,
         recorded_at: recordedAt,
-        ...(existing.is_interaction && { interaction_label: labelForType(type) }),
+        ...(existing.is_interaction && {
+          interaction_label: customLabel || labelForType(type),
+        }),
       })
       .eq("id", id)
       .eq("user_id", user.id)

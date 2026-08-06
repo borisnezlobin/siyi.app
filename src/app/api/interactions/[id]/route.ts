@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
 import { createClient } from "@/lib/supabase/server";
 import { interactionEditSchema } from "@/lib/validation";
 
@@ -50,17 +51,23 @@ export async function PATCH(
     const guard = await requireStandaloneInteraction(supabase, id, user.id);
     if (guard.error) return guard.error;
 
-    const { data, error } = await supabase
-      .from("interactions")
-      .update({
+    const { data, error } = await writeTolerantOfPendingColumns(
+      {
         type: validation.data.type,
         occurred_at: validation.data.occurredAt,
         note: validation.data.note,
-      })
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .select()
-      .single();
+        custom_label: validation.data.customLabel,
+        custom_icon: validation.data.customIcon,
+      },
+      (row) =>
+        supabase
+          .from("interactions")
+          .update(row)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select()
+          .single(),
+    );
 
     if (error) return apiError(error.message, 400);
     return NextResponse.json({ interaction: data });

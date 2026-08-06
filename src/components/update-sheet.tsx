@@ -3,6 +3,11 @@
 import { Check, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
+import { CustomTypeFields } from "@/components/custom-type-fields";
+import {
+  isCustomTypeIconKey,
+  type CustomTypeIconKey,
+} from "@/lib/custom-type-icons";
 import { useEffect, useRef, useState } from "react";
 import {
   timestampFromDateInput,
@@ -18,7 +23,10 @@ export type EditableEntry = {
   type: InteractionType;
   body: string;
   at: string;
+  customLabel?: string | null;
+  customIcon?: string | null;
 };
+
 
 type UpdateSheetProps = {
   personId: string;
@@ -26,6 +34,7 @@ type UpdateSheetProps = {
   variant?: "primary" | "compact" | "edit";
   buttonLabel?: string;
   entry?: EditableEntry;
+  recentCustomLabels?: string[];
 };
 
 const isPreviewOnly = () => !process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,6 +45,7 @@ export function UpdateSheet({
   variant = "primary",
   buttonLabel = "Add update",
   entry,
+  recentCustomLabels = [],
 }: UpdateSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -49,6 +59,10 @@ export function UpdateSheet({
     entry ? toDateInputValue(entry.at) : today,
   );
   const [note, setNote] = useState(entry?.body ?? "");
+  const [customLabel, setCustomLabel] = useState(entry?.customLabel ?? "");
+  const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">(
+    isCustomTypeIconKey(entry?.customIcon) ? entry.customIcon : "",
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -62,6 +76,8 @@ export function UpdateSheet({
       setSelectedType(entry?.type ?? "texted");
       setOccurredOn(entry ? toDateInputValue(entry.at) : todayDateInputValue());
       setNote(entry?.body ?? "");
+      setCustomLabel(entry?.customLabel ?? "");
+      setCustomIcon(isCustomTypeIconKey(entry?.customIcon) ? entry.customIcon : "");
       setSaved(false);
       setConfirmingDelete(false);
       setError(null);
@@ -100,6 +116,10 @@ export function UpdateSheet({
       return;
     }
 
+    const naming = {
+      customLabel: selectedType === "other" ? customLabel : null,
+      customIcon: selectedType === "other" ? customIcon : null,
+    };
     const request = entry
       ? entry.kind === "update"
         ? {
@@ -108,6 +128,7 @@ export function UpdateSheet({
               text: note,
               recordedAt: timestampFromDateInput(occurredOn),
               type: selectedType,
+              ...naming,
             },
           }
         : {
@@ -116,6 +137,7 @@ export function UpdateSheet({
               type: selectedType,
               occurredAt: timestampFromDateInput(occurredOn),
               note,
+              ...naming,
             },
           }
       : {
@@ -125,6 +147,7 @@ export function UpdateSheet({
             type: selectedType,
             occurredAt: timestampFromDateInput(occurredOn),
             note,
+            ...naming,
           },
         };
 
@@ -256,6 +279,17 @@ export function UpdateSheet({
               })}
             </div>
           </fieldset>
+
+          {selectedType === "other" ? (
+            <CustomTypeFields
+              idPrefix={entry?.id ?? personId}
+              label={customLabel}
+              icon={customIcon}
+              onLabelChange={setCustomLabel}
+              onIconChange={setCustomIcon}
+              recentLabels={recentCustomLabels}
+            />
+          ) : null}
 
           <label
             className="mt-5 block text-xs font-semibold text-ink-muted"

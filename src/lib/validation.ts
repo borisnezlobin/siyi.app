@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import {
   interactionTypes,
   personStatuses,
@@ -100,7 +101,22 @@ export const personInputSchema = z.object({
   generalNotes: optionalText,
 });
 
-export const interactionInputSchema = z.object({
+const customLabel = z
+  .string()
+  .trim()
+  .max(40)
+  .nullish()
+  .transform((value) => value || null);
+
+// An icon is one of the app's fixed choices, so anything else is dropped
+// rather than stored and rendered as nothing.
+const customIcon = z
+  .string()
+  .trim()
+  .nullish()
+  .transform((value) => (isCustomTypeIconKey(value) ? value : null));
+
+export const interactionFields = z.object({
   personId: z.string().uuid(),
   type: z.enum(interactionTypes),
   occurredAt: pastTimestamp,
@@ -110,17 +126,39 @@ export const interactionInputSchema = z.object({
     .max(1000)
     .nullish()
     .transform((value) => value || null),
+  customLabel,
+  customIcon,
 });
 
-export const interactionEditSchema = interactionInputSchema.omit({
-  personId: true,
-});
+// A label belongs to "Other". Clearing it on every other type means the
+// timeline never shows a stale name from a since-changed choice.
+function onlyKeepLabelOnOther<T extends {
+  type: string;
+  customLabel: string | null;
+  customIcon: string | null;
+}>(value: T) {
+  return value.type === "other"
+    ? value
+    : { ...value, customLabel: null, customIcon: null };
+}
 
-export const personUpdateEditSchema = z.object({
-  text: z.string().trim().min(1).max(2000),
-  recordedAt: pastTimestamp,
-  type: z.enum(interactionTypes),
-});
+export const interactionInputSchema = interactionFields.transform(
+  onlyKeepLabelOnOther,
+);
+
+export const interactionEditSchema = interactionFields
+  .omit({ personId: true })
+  .transform(onlyKeepLabelOnOther);
+
+export const personUpdateEditSchema = z
+  .object({
+    text: z.string().trim().min(1).max(2000),
+    recordedAt: pastTimestamp,
+    type: z.enum(interactionTypes),
+    customLabel,
+    customIcon,
+  })
+  .transform(onlyKeepLabelOnOther);
 
 export const followUpInputSchema = z.object({
   personId: z.string().uuid(),
@@ -145,7 +183,7 @@ export const importPayloadSchema = z.object({
     .max(10_000),
   interactions: z
     .array(
-      interactionInputSchema.extend({
+      interactionFields.extend({
         id: z.string().uuid().optional(),
         // An import replays history as recorded, so it keeps the plain check.
         occurredAt: z.string().datetime(),

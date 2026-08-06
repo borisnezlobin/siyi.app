@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "postinstall": "node scripts/link-expo-router-to-root.mjs",
     "mobile:start": "npm run start --workspace=apps/mobile",
     "mobile:start:device": "npm run start:device --workspace=apps/mobile",
     "mobile:start:tunnel": "npm run start:tunnel --workspace=apps/mobile",
