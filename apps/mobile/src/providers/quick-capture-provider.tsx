@@ -934,7 +934,12 @@ export function QuickCaptureProvider({
         android_keyboardInputMode="adjustResize"
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
-        maxDynamicContentSize={windowHeight - insets.top - 12}
+        // The ceiling has to come down by the keyboard's height. Left at the
+        // full window the sheet is already as tall as it can be, so there is no
+        // room for "interactive" to lift it and the fields end up underneath.
+        maxDynamicContentSize={
+          windowHeight - insets.top - 12 - keyboardHeight
+        }
         ref={modalRef}
         topInset={insets.top + 8}
       >
@@ -961,15 +966,15 @@ export function QuickCaptureProvider({
                 <X color={colors.ink} size={21} />
               </Pressable>
             </View>
+            <CaptureAction
+              body="Someone new to remember"
+              divided={false}
+              icon={UserPlus}
+              onPress={addPerson}
+              primary
+              title="Add a person"
+            />
             <View style={styles.actionStack}>
-              <CaptureAction
-                body="Someone new to remember"
-                divided={false}
-                icon={UserPlus}
-                onPress={addPerson}
-                primary
-                title="Add a person"
-              />
               <CaptureAction
                 body="Who you saw or spoke to"
                 divided={false}
@@ -1729,7 +1734,6 @@ const styles = StyleSheet.create({
   captureActionPrimary: {
     backgroundColor: colors.coral,
     borderRadius: radii.medium,
-    marginBottom: 4,
     paddingHorizontal: 16,
   },
   captureActionDivided: {

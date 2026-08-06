@@ -47,8 +47,11 @@ export function useKeyboardHeight() {
   const [height, setHeight] = useState(0);
 
   useEffect(() => {
+    // Deliberately the show event rather than willChangeFrame: that one also
+    // fires as the keyboard leaves, still reporting its full height, which
+    // leaves the measurement stuck open.
     const showEvent =
-      Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent =
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const shown = Keyboard.addListener(showEvent, (event) => {

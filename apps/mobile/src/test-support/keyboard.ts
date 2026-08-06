@@ -28,7 +28,7 @@ export function mockKeyboardEvents() {
     hide: () => emit("keyboardWillHide"),
     /** Height in points, as the OS reports it when the keyboard settles. */
     resize: (height: number) =>
-      emit("keyboardWillChangeFrame", { endCoordinates: { height } }),
-    resizeWithoutMeasurements: () => emit("keyboardWillChangeFrame", {}),
+      emit("keyboardWillShow", { endCoordinates: { height } }),
+    resizeWithoutMeasurements: () => emit("keyboardWillShow", {}),
   };
 }
