@@ -93,7 +93,7 @@ export function RelationshipFields({
           value={customLabel}
           onChange={(event) => setCustomLabel(event.target.value)}
           maxLength={maxRelationshipLabelLength}
-          placeholder="more than very close brochacho"
+          placeholder="college roommate"
           className={inputClassName}
         />
       </label>

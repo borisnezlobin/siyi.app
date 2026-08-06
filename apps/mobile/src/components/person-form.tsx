@@ -502,7 +502,7 @@ export function PersonForm({ person }: { person?: Person }) {
               label="Or call it something of your own"
               maxLength={maxRelationshipLabelLength}
               onChangeText={setRelationshipLabel}
-              placeholder="more than very close brochacho"
+              placeholder="college roommate"
               value={relationshipLabel}
             />
             <View style={styles.reminderPanel}>
