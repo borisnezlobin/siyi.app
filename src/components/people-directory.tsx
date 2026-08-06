@@ -40,7 +40,7 @@ export function PeopleDirectory({
   const [filter, setFilter] = useState<FilterOption>(initialFilter);
   const [strength, setStrength] = useState<RelationshipStrength | "all">("all");
   const [tag, setTag] = useState("all");
-  const [sort, setSort] = useState<SortOption>("recently-contacted");
+  const [sort, setSort] = useState<SortOption>("name");
   const [missing, setMissing] = useState<MissingDetail[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(initialFilter !== "all");
   // The college table is close to a megabyte, so it is fetched the first time
@@ -159,9 +159,19 @@ export function PeopleDirectory({
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Name, tag, note, major…"
-            className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+            placeholder="Name, school, hometown, tag, note…"
+            className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-11 text-sm outline-none transition [&::-webkit-search-cancel-button]:hidden placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              <X size={14} weight="bold" aria-hidden="true" />
+            </button>
+          ) : null}
         </label>
         <button
           type="button"
