@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useEffect, useState } from "react";
 import { customTypeIconFor } from "@/components/custom-type-icon";
 import {
   customTypeIconKeys,
@@ -22,8 +23,26 @@ export function CustomTypeFields({
   icon,
   onLabelChange,
   onIconChange,
-  recentLabels = [],
+  recentLabels,
 }: CustomTypeFieldsProps) {
+  const [suggested, setSuggested] = useState<string[]>(recentLabels ?? []);
+
+  // These fields only render once someone picks "Other", so the request costs
+  // nothing on the page loads that never get here.
+  useEffect(() => {
+    if (recentLabels) return;
+    let cancelled = false;
+    fetch("/api/custom-labels")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!cancelled && Array.isArray(body?.labels)) setSuggested(body.labels);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [recentLabels]);
+
   return (
     <div className="mt-4 rounded-2xl bg-porcelain p-4">
       <label
@@ -42,9 +61,9 @@ export function CustomTypeFields({
         />
       </label>
 
-      {recentLabels.length ? (
+      {suggested.length ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {recentLabels.map((recent) => (
+          {suggested.map((recent) => (
             <button
               key={recent}
               type="button"

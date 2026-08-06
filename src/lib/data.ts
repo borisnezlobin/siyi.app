@@ -227,6 +227,61 @@ const loadPeople = async (): Promise<Person[]> => {
 
 export const getPeople = cache(loadPeople);
 
+type QuickPersonRow = {
+  id: string;
+  full_name: string;
+  preferred_name: string | null;
+  profile_photo_url: string | null;
+  interactions?: { occurred_at: string }[] | null;
+};
+
+/**
+ * The app shell only needs enough to draw the person picker, so it deliberately
+ * skips tags, contact rows and notes. Loading the full person record here cost
+ * more than twice as much and ran on every page load.
+ */
+const loadQuickPeople = async () => {
+  if (!isSupabaseConfigured()) {
+    return createDemoPeople().map((person) => ({
+      id: person.id,
+      fullName: person.fullName,
+      preferredName: person.preferredName,
+      profilePhotoUrl: person.profilePhotoUrl,
+      lastInteractionAt: person.lastInteractionAt ?? null,
+    }));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("people")
+    .select("id,full_name,preferred_name,profile_photo_url,interactions(occurred_at)")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .order("occurred_at", {
+      referencedTable: "interactions",
+      ascending: false,
+    })
+    .limit(1, { referencedTable: "interactions" });
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as QuickPersonRow[];
+  const avatarUrls = await resolveAvatarUrls(
+    supabase,
+    rows.map((row) => row.profile_photo_url),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    preferredName: row.preferred_name,
+    profilePhotoUrl: resolvedAvatarUrl(row.profile_photo_url, avatarUrls),
+    lastInteractionAt: row.interactions?.[0]?.occurred_at ?? null,
+  }));
+};
+
+export const getQuickPeople = cache(loadQuickPeople);
+
 /**
  * Accepts either the uuid that every existing link, bookmark and push
  * notification carries, or the slug introduced by migration 0012. Row level

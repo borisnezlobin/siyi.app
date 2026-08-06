@@ -32,7 +32,6 @@ import {
   getPerson,
   getPersonNoteSections,
   getPersonUpdates,
-  getRecentCustomLabels,
 } from "@/lib/data";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { getContactReminderState } from "@/lib/reminders";
@@ -82,13 +81,11 @@ export default async function PersonDetailPage({
     interactions,
     personUpdates,
     allFollowUps,
-    recentCustomLabels,
     noteSections,
   ] = await Promise.all([
     getInteractions(person.id),
     getPersonUpdates(person.id),
     getFollowUps(),
-    getRecentCustomLabels(),
     getPersonNoteSections(person.id),
   ]);
 
@@ -357,7 +354,6 @@ export default async function PersonDetailPage({
               <UpdateSheet
                 personId={person.id}
                 personName={displayName}
-                recentCustomLabels={recentCustomLabels}
               />
             </div>
             <ol className="mt-5 space-y-5">
@@ -392,7 +388,6 @@ export default async function PersonDetailPage({
                             personName={displayName}
                             variant="edit"
                             entry={entry.editable}
-                            recentCustomLabels={recentCustomLabels}
                           />
                         </div>
                       </div>

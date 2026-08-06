@@ -19,7 +19,6 @@ import {
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { brand } from "@/config/brand";
 import { InstallPrompt } from "@/components/install-prompt";
-import type { Person } from "@/lib/types";
 
 const primaryNavigation = [
   { href: "/today", label: "Today", icon: House },
@@ -42,17 +41,10 @@ export function AppShell({
   children,
   displayName = "Alex Vale",
   email = "alex@example.edu",
-  quickPeople,
-  recentCustomLabels,
 }: {
   children: React.ReactNode;
   displayName?: string;
   email?: string;
-  quickPeople: Pick<
-    Person,
-    "id" | "fullName" | "preferredName" | "profilePhotoUrl" | "lastInteractionAt"
-  >[];
-  recentCustomLabels: string[];
 }) {
   const pathname = usePathname();
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
@@ -238,8 +230,6 @@ export function AppShell({
         })}
       </nav>
       <QuickCaptureHub
-        people={quickPeople}
-        recentCustomLabels={recentCustomLabels}
         menuOpen={quickCaptureOpen}
         onMenuOpenChange={setQuickCaptureOpen}
       />
