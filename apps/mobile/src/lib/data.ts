@@ -14,6 +14,15 @@ import {
   type ReminderDefaults,
   type Tag,
 } from "@/lib/types";
+import {
+  contactMethodKinds,
+  isContactMethodKind,
+  resolveContactDrafts,
+  unavailableContactMethods,
+  type ContactMethod,
+  type ContactMethodKind,
+  type PersonContactMethods,
+} from "@/lib/contact-methods";
 import { looksLikeUuid } from "@/lib/person-links";
 import { supabase } from "@/lib/supabase";
 import {
@@ -235,9 +244,66 @@ function mapTag(row: TagRow): Tag {
   };
 }
 
+type ContactMethodRow = {
+  id: string;
+  user_id: string;
+  person_id: string;
+  kind: string;
+  value: string;
+  label: string | null;
+  position: number;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Postgres codes for "that table or column is not there yet". */
+const missingSchemaCodes = ["42P01", "42703", "PGRST202", "PGRST204", "PGRST205"];
+
+function isMissingContactMethodsSchema(error: { code?: string } | null) {
+  return Boolean(error && missingSchemaCodes.includes(error.code ?? ""));
+}
+
+/**
+ * Every contact row this account owns. Reports itself unavailable rather than
+ * throwing until migration 0013 has been applied on the server, and the phone
+ * then shows the single phone, email and handle it always has.
+ */
+async function getContactMethodsRemote(): Promise<PersonContactMethods> {
+  const { data, error } = await supabase
+    .from("person_contact_methods")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingContactMethodsSchema(error)) return unavailableContactMethods;
+    throw error;
+  }
+
+  const methods: ContactMethod[] = [];
+  for (const row of (data ?? []) as ContactMethodRow[]) {
+    if (!isContactMethodKind(row.kind)) continue;
+    methods.push({
+      id: row.id,
+      userId: row.user_id,
+      personId: row.person_id,
+      kind: row.kind,
+      value: row.value,
+      label: row.label,
+      position: row.position,
+      isPrimary: row.is_primary,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+  }
+  return { available: true, methods };
+}
+
 function mapPerson(
   row: PersonRow,
   avatarUrls: Map<string, string>,
+  storedContactMethods: PersonContactMethods = unavailableContactMethods,
 ): Person {
   const path = avatarPath(row.profile_photo_url);
   const tags = (row.person_tags || []).flatMap(({ tags: joinedTags }) => {
@@ -256,6 +322,19 @@ function mapPerson(
     instagramUsername: row.instagram_username,
     phoneNumber: row.phone_number,
     email: row.email,
+    contactMethods: resolveContactDrafts(
+      {
+        phoneNumber: row.phone_number,
+        email: row.email,
+        instagramUsername: row.instagram_username,
+      },
+      {
+        available: storedContactMethods.available,
+        methods: storedContactMethods.methods.filter(
+          (method) => method.personId === row.id,
+        ),
+      },
+    ),
     birthday: row.birthday,
     hometown: row.hometown,
     dormOrResidence: row.dorm_or_residence,
@@ -357,11 +436,12 @@ async function getPeopleRemote() {
 
   if (error) throw error;
   const rows = data as PersonRow[];
-  const avatarUrls = await signedAvatarUrls(
-    rows.map((row) => row.profile_photo_url),
-  );
+  const [avatarUrls, contactMethods] = await Promise.all([
+    signedAvatarUrls(rows.map((row) => row.profile_photo_url)),
+    getContactMethodsRemote(),
+  ]);
   return cachePeopleAvatars(
-    rows.map((row) => mapPerson(row, avatarUrls)),
+    rows.map((row) => mapPerson(row, avatarUrls, contactMethods)),
   );
 }
 
@@ -1322,6 +1402,76 @@ function personRecord(
   };
 }
 
+/**
+ * The phone still edits one number, one email and one handle — the primary of
+ * each kind — so the value it saves has to reach the contact rows too, or the
+ * web app carries on showing a number the person has just changed here. Any
+ * extra rows added on the web are left alone. Does nothing at all until
+ * migration 0013 has been applied.
+ */
+async function mirrorPrimaryContactMethods(
+  userId: string,
+  personId: string,
+  input: Pick<PersonInput, "phoneNumber" | "email" | "instagramUsername">,
+) {
+  const { data, error } = await supabase
+    .from("person_contact_methods")
+    .select("*")
+    .eq("person_id", personId);
+
+  if (error) {
+    if (isMissingContactMethodsSchema(error)) return;
+    throw error;
+  }
+
+  const existing = (data ?? []) as ContactMethodRow[];
+  const primaryValues: Record<ContactMethodKind, string | null> = {
+    phone: input.phoneNumber,
+    email: input.email,
+    instagram: input.instagramUsername,
+  };
+
+  for (const kind of contactMethodKinds) {
+    const value = primaryValues[kind]?.trim() || null;
+    const ofKind = existing.filter((row) => row.kind === kind);
+    const primary = ofKind.find((row) => row.is_primary) ?? ofKind[0];
+
+    if (!value) {
+      if (!primary) continue;
+      // Clearing the field here drops only the primary. Anything else saved on
+      // the web survives, and the next row takes over.
+      await supabase
+        .from("person_contact_methods")
+        .delete()
+        .eq("id", primary.id);
+      const next = ofKind.find((row) => row.id !== primary.id);
+      if (next) {
+        await supabase
+          .from("person_contact_methods")
+          .update({ is_primary: true })
+          .eq("id", next.id);
+      }
+      continue;
+    }
+
+    if (primary) {
+      await supabase
+        .from("person_contact_methods")
+        .update({ value, is_primary: true })
+        .eq("id", primary.id);
+    } else {
+      await supabase.from("person_contact_methods").insert({
+        user_id: userId,
+        person_id: personId,
+        kind,
+        value,
+        position: 0,
+        is_primary: true,
+      });
+    }
+  }
+}
+
 async function executeOfflineMutation(mutation: OfflineMutation) {
   if (mutation.kind === "create-person") {
     const profilePhotoPath = mutation.photo
@@ -1357,6 +1507,11 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         { onConflict: "id" },
       );
     if (interactionError) throw interactionError;
+    await mirrorPrimaryContactMethods(
+      mutation.userId,
+      mutation.personId,
+      mutation.input,
+    );
     await removeQueuedPhoto(mutation.photo);
     return;
   }
@@ -1396,6 +1551,11 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
       })
       .eq("id", mutation.personId);
     if (error) throw error;
+    await mirrorPrimaryContactMethods(
+      mutation.userId,
+      mutation.personId,
+      mutation.input,
+    );
     if (newPhotoPath && mutation.currentPhotoPath) {
       await supabase.storage
         .from("avatars")

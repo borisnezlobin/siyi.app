@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { saveContactMethods } from "@/app/api/people/contact-methods";
+import {
+  legacyColumnsFromDrafts,
+  normalizeContactDrafts,
+} from "@/lib/contact-methods";
 import { personSlug } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
@@ -20,6 +25,19 @@ export async function POST(request: NextRequest) {
       return apiError("The profile photo does not belong to this account.");
     }
 
+    // The single columns keep holding the primary of each kind, so everything
+    // that has always read them carries on unchanged.
+    const drafts = person.contactMethods
+      ? normalizeContactDrafts(person.contactMethods)
+      : null;
+    const primaries = drafts
+      ? legacyColumnsFromDrafts(drafts)
+      : {
+          phoneNumber: person.phoneNumber,
+          email: person.email,
+          instagramUsername: person.instagramUsername,
+        };
+
     const supabase = await createClient();
     const { data, error } = await supabase.rpc(
       "create_person_with_met_interaction",
@@ -28,9 +46,9 @@ export async function POST(request: NextRequest) {
           full_name: person.fullName,
           preferred_name: person.preferredName,
           profile_photo_url: person.profilePhotoUrl,
-          instagram_username: person.instagramUsername,
-          phone_number: person.phoneNumber,
-          email: person.email,
+          instagram_username: primaries.instagramUsername,
+          phone_number: primaries.phoneNumber,
+          email: primaries.email,
           birthday: person.birthday,
           hometown: person.hometown,
           dorm_or_residence: person.dormOrResidence,
@@ -52,6 +70,14 @@ export async function POST(request: NextRequest) {
     );
 
     if (error) return apiError(error.message, 500);
+
+    const createdId = (data as { id?: string } | null)?.id;
+    if (drafts && drafts.length > 0 && createdId) {
+      // The person is already saved; a contact row that fails to write should
+      // not take the whole save down with it.
+      await saveContactMethods(supabase, user.id, createdId, drafts);
+    }
+
     return NextResponse.json({ person: data }, { status: 201 });
   } catch (error) {
     return apiError(errorMessage(error), 401);

@@ -71,8 +71,8 @@ describe("building a vCard", () => {
     expect(card).toContain("VERSION:3.0");
     expect(card).toContain("N:Chen;Maya;;;");
     expect(card).toContain("NICKNAME:May");
-    expect(card).toContain("TEL;TYPE=CELL:+1 415 555 0134");
-    expect(card).toContain("EMAIL;TYPE=INTERNET:maya@example.edu");
+    expect(card).toContain("TEL;TYPE=CELL,PREF:+1 415 555 0134");
+    expect(card).toContain("EMAIL;TYPE=INTERNET,PREF:maya@example.edu");
     expect(card).toContain("BDAY:2004-05-12");
     expect(card).toContain("TITLE:Ceramics");
     expect(card).toContain("instagram.com/mayamakes");
@@ -111,6 +111,60 @@ describe("building a vCard", () => {
     for (const line of card.split("\r\n")) {
       expect(line.length).toBeLessThanOrEqual(75);
     }
+  });
+});
+
+describe("several ways to reach one person", () => {
+  const manyWays = person({
+    contactMethods: [
+      { kind: "phone", value: "+1 415 555 0134", label: null, isPrimary: true },
+      { kind: "phone", value: "+1 212 555 9999", label: "work", isPrimary: false },
+      {
+        kind: "email",
+        value: "maya@example.edu",
+        label: null,
+        isPrimary: true,
+      },
+      { kind: "email", value: "maya@studio.com", label: "work", isPrimary: false },
+      { kind: "instagram", value: "mayamakes", label: null, isPrimary: true },
+      { kind: "instagram", value: "mayaeats", label: "food", isPrimary: false },
+    ],
+  });
+
+  it("emits a TEL, EMAIL and profile line for every value", () => {
+    const card = buildVCard(manyWays, selectAll());
+    const lines = card.split("\r\n");
+
+    expect(lines.filter((line) => line.startsWith("TEL"))).toEqual([
+      "TEL;TYPE=CELL,PREF:+1 415 555 0134",
+      "TEL;TYPE=CELL:+1 212 555 9999",
+    ]);
+    expect(lines.filter((line) => line.startsWith("EMAIL"))).toEqual([
+      "EMAIL;TYPE=INTERNET,PREF:maya@example.edu",
+      "EMAIL;TYPE=INTERNET:maya@studio.com",
+    ]);
+    expect(
+      lines.filter((line) => line.startsWith("X-SOCIALPROFILE")),
+    ).toHaveLength(2);
+  });
+
+  it("still shares nothing that was not chosen", () => {
+    const card = buildVCard(manyWays, defaultContactShareSelection);
+    expect(card).not.toContain("TEL");
+    expect(card).not.toContain("EMAIL");
+    expect(card).toContain("X-SOCIALPROFILE");
+  });
+
+  it("emits the single saved value when migration 0013 has not run", () => {
+    const card = buildVCard(person(), selectAll());
+    const lines = card.split("\r\n");
+
+    expect(lines.filter((line) => line.startsWith("TEL"))).toEqual([
+      "TEL;TYPE=CELL,PREF:+1 415 555 0134",
+    ]);
+    expect(lines.filter((line) => line.startsWith("EMAIL"))).toEqual([
+      "EMAIL;TYPE=INTERNET,PREF:maya@example.edu",
+    ]);
   });
 });
 

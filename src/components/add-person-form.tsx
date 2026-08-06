@@ -11,11 +11,9 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import {
-  ContactFields,
-  emptyContactFieldValues,
-} from "@/components/contact-fields";
+import { ContactFields } from "@/components/contact-fields";
 import { RelationshipFields } from "@/components/relationship-fields";
+import { parseContactDraftsJson } from "@/lib/contact-methods";
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { createClient } from "@/lib/supabase/client";
@@ -89,8 +87,12 @@ export function AddPersonForm() {
     try {
       const formData = new FormData(event.currentTarget);
       const profilePhotoUrl = await uploadPhoto();
+      const contactMethods = parseContactDraftsJson(
+        formData.get("contactMethods"),
+      );
       const payload = {
         fullName,
+        contactMethods,
         instagramUsername: normalizeInstagramUsername(
           String(formData.get("instagramUsername") ?? ""),
         ),
@@ -219,7 +221,7 @@ export function AddPersonForm() {
             />
           </label>
 
-          <ContactFields defaults={emptyContactFieldValues()} />
+          <ContactFields />
 
           <label className={labelClassName}>
             Where did you meet?

@@ -6,6 +6,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { looksLikeUuid } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
 import { orderedNoteSections } from "@/lib/note-sections";
+import {
+  isContactMethodKind,
+  resolveContactDrafts,
+  unavailableContactMethods,
+  type ContactMethod,
+  type PersonContactMethods,
+} from "@/lib/contact-methods";
 import type {
   FollowUp,
   Interaction,
@@ -62,7 +69,79 @@ function mapTag(row: TagRow): Tag {
   };
 }
 
-function mapPerson(row: PersonRow, profilePhotoUrl = row.profile_photo_url): Person {
+type ContactMethodRow = {
+  id: string;
+  user_id: string;
+  person_id: string;
+  kind: string;
+  value: string;
+  label: string | null;
+  position: number;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapContactMethod(row: ContactMethodRow): ContactMethod | null {
+  if (!isContactMethodKind(row.kind)) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personId: row.person_id,
+    kind: row.kind,
+    value: row.value,
+    label: row.label,
+    position: row.position,
+    isPrimary: row.is_primary,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Every contact row this user owns, reported as unavailable rather than
+ * throwing until migration 0013 has been applied. Callers then fall back to the
+ * single phone, email and handle on `people`, which is exactly today's app.
+ */
+async function loadContactMethods(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<PersonContactMethods> {
+  const { data, error } = await supabase
+    .from("person_contact_methods")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+      return unavailableContactMethods;
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    methods: (data as ContactMethodRow[] | null ?? [])
+      .map(mapContactMethod)
+      .filter((method): method is ContactMethod => method !== null),
+  };
+}
+
+function contactMethodsFor(
+  stored: PersonContactMethods,
+  personId: string,
+): PersonContactMethods {
+  return {
+    available: stored.available,
+    methods: stored.methods.filter((method) => method.personId === personId),
+  };
+}
+
+function mapPerson(
+  row: PersonRow,
+  profilePhotoUrl = row.profile_photo_url,
+  storedContactMethods: PersonContactMethods = unavailableContactMethods,
+): Person {
   const joinedTags = (row.person_tags ?? []).flatMap(({ tags }) => {
     if (!tags) return [];
     return Array.isArray(tags) ? tags : [tags];
@@ -78,6 +157,14 @@ function mapPerson(row: PersonRow, profilePhotoUrl = row.profile_photo_url): Per
     instagramUsername: row.instagram_username,
     phoneNumber: row.phone_number,
     email: row.email,
+    contactMethods: resolveContactDrafts(
+      {
+        phoneNumber: row.phone_number,
+        email: row.email,
+        instagramUsername: row.instagram_username,
+      },
+      storedContactMethods,
+    ),
     birthday: row.birthday,
     hometown: row.hometown,
     dormOrResidence: row.dorm_or_residence,
@@ -121,15 +208,19 @@ const loadPeople = async (): Promise<Person[]> => {
   }
 
   const rows = data as PersonRow[];
-  const avatarUrls = await resolveAvatarUrls(
-    supabase,
-    rows.map((row) => row.profile_photo_url),
-  );
+  const [avatarUrls, contactMethods] = await Promise.all([
+    resolveAvatarUrls(
+      supabase,
+      rows.map((row) => row.profile_photo_url),
+    ),
+    loadContactMethods(supabase),
+  ]);
 
   return rows.map((row) =>
     mapPerson(
       row,
       resolvedAvatarUrl(row.profile_photo_url, avatarUrls),
+      contactMethodsFor(contactMethods, row.id),
     ),
   );
 };
@@ -173,11 +264,42 @@ export async function getPerson(identifier: string): Promise<Person> {
   }
 
   const row = data as PersonRow;
-  const avatarUrls = await resolveAvatarUrls(supabase, [row.profile_photo_url]);
+  const [avatarUrls, contactMethods] = await Promise.all([
+    resolveAvatarUrls(supabase, [row.profile_photo_url]),
+    loadPersonContactMethods(supabase, row.id),
+  ]);
   return mapPerson(
     row,
     resolvedAvatarUrl(row.profile_photo_url, avatarUrls),
+    contactMethods,
   );
+}
+
+/** One person's contact rows, degrading to unavailable before migration 0013. */
+async function loadPersonContactMethods(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  personId: string,
+): Promise<PersonContactMethods> {
+  const { data, error } = await supabase
+    .from("person_contact_methods")
+    .select("*")
+    .eq("person_id", personId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+      return unavailableContactMethods;
+    }
+    throw new Error(error.message);
+  }
+
+  return {
+    available: true,
+    methods: (data as ContactMethodRow[] | null ?? [])
+      .map(mapContactMethod)
+      .filter((method): method is ContactMethod => method !== null),
+  };
 }
 
 /** Older deployments may not have the person_updates tables yet. */

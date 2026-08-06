@@ -97,6 +97,88 @@ describe("finding an existing contact", () => {
     const match = findContactMatch(person(), [contact({ name: "Luis Ortega" })]);
     expect(match).toBeNull();
   });
+
+  it("matches on any of their numbers, not only the primary", () => {
+    const match = findContactMatch(
+      person({
+        fullName: "Maya Chen",
+        phoneNumber: "4155550134",
+        contactMethods: [
+          { kind: "phone", value: "4155550134", label: null, isPrimary: true },
+          { kind: "phone", value: "2125559999", label: "old", isPrimary: false },
+        ],
+      }),
+      [contact({ id: "c7", name: "M", phoneNumbers: ["+1 212 555 9999"] })],
+    );
+    expect(match).toEqual({
+      contact: expect.objectContaining({ id: "c7" }),
+      matchedOn: "phone",
+    });
+  });
+
+  it("refuses to guess when two contacts hold different numbers of theirs", () => {
+    const match = findContactMatch(
+      person({
+        phoneNumber: "4155550134",
+        contactMethods: [
+          { kind: "phone", value: "4155550134", label: null, isPrimary: true },
+          { kind: "phone", value: "2125559999", label: "old", isPrimary: false },
+        ],
+      }),
+      [
+        contact({ id: "a", name: "Maya C", phoneNumbers: ["4155550134"] }),
+        contact({ id: "b", name: "Maya Chen", phoneNumbers: ["2125559999"] }),
+      ],
+    );
+    expect(match).toBeNull();
+  });
+
+  it("refuses to guess when two contacts hold different emails of theirs", () => {
+    const match = findContactMatch(
+      person({
+        email: "maya@example.edu",
+        contactMethods: [
+          {
+            kind: "email",
+            value: "maya@example.edu",
+            label: null,
+            isPrimary: true,
+          },
+          {
+            kind: "email",
+            value: "maya@work.com",
+            label: "work",
+            isPrimary: false,
+          },
+        ],
+      }),
+      [
+        contact({ id: "a", name: "Maya C", emails: ["maya@example.edu"] }),
+        contact({ id: "b", name: "M Chen", emails: ["maya@work.com"] }),
+      ],
+    );
+    expect(match).toBeNull();
+  });
+
+  it("still matches when one contact holds two of their numbers", () => {
+    const match = findContactMatch(
+      person({
+        phoneNumber: "4155550134",
+        contactMethods: [
+          { kind: "phone", value: "4155550134", label: null, isPrimary: true },
+          { kind: "phone", value: "2125559999", label: "old", isPrimary: false },
+        ],
+      }),
+      [
+        contact({
+          id: "only",
+          name: "Maya C",
+          phoneNumbers: ["4155550134", "2125559999"],
+        }),
+      ],
+    );
+    expect(match?.contact.id).toBe("only");
+  });
 });
 
 describe("planning a contact write", () => {
@@ -110,7 +192,9 @@ describe("planning a contact write", () => {
       fields: {
         name: "Maya Chen",
         phoneNumber: "4155550134",
+        phoneNumbers: ["4155550134"],
         email: "maya@example.edu",
+        emails: ["maya@example.edu"],
       },
     });
   });
@@ -156,6 +240,40 @@ describe("planning a contact write", () => {
         incoming: "4155550134",
       },
     ]);
+  });
+
+  it("offers every number the device has never seen", () => {
+    const plan = planContactSync(
+      person({
+        phoneNumber: "4155550134",
+        contactMethods: [
+          { kind: "phone", value: "4155550134", label: null, isPrimary: true },
+          { kind: "phone", value: "2125559999", label: "work", isPrimary: false },
+        ],
+      }),
+      null,
+    );
+    expect(plan).toMatchObject({
+      action: "create",
+      fields: { phoneNumbers: ["4155550134", "2125559999"] },
+    });
+  });
+
+  it("never overwrites the device's number, however many they have", () => {
+    const plan = planContactSync(
+      person({
+        phoneNumber: "4155550134",
+        contactMethods: [
+          { kind: "phone", value: "4155550134", label: null, isPrimary: true },
+          { kind: "phone", value: "2125559999", label: "work", isPrimary: false },
+        ],
+      }),
+      {
+        contact: contact({ phoneNumbers: ["6175551212"], emails: [] }),
+        matchedOn: "name",
+      },
+    );
+    expect(plan.action).toBe("none");
   });
 
   it("does nothing when there is nothing new to add", () => {

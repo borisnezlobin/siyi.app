@@ -3,6 +3,11 @@ import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { saveContactMethods } from "@/app/api/people/contact-methods";
+import {
+  legacyColumnsFromDrafts,
+  normalizeContactDrafts,
+} from "@/lib/contact-methods";
 import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
@@ -71,8 +76,26 @@ export async function PATCH(
     }
 
     const supabase = await createClient();
+    // The three single columns stay the primary of each kind, because every
+    // other reader — export, contact sync, search, the phone app — still reads
+    // them. Dropping them is a separate job for later.
+    const drafts = validation.data.contactMethods
+      ? normalizeContactDrafts(validation.data.contactMethods)
+      : null;
+    const primaries = drafts ? legacyColumnsFromDrafts(drafts) : null;
+    const personUpdate = {
+      ...toDatabaseUpdate(validation.data),
+      ...(primaries
+        ? {
+            phone_number: primaries.phoneNumber,
+            email: primaries.email,
+            instagram_username: primaries.instagramUsername,
+          }
+        : {}),
+    };
+
     const { data, error } = await writeTolerantOfPendingColumns(
-      toDatabaseUpdate(validation.data),
+      personUpdate,
       (row) =>
         supabase
           .from("people")
@@ -84,6 +107,12 @@ export async function PATCH(
     );
 
     if (error) return apiError(error.message, 400);
+
+    if (drafts) {
+      const saved = await saveContactMethods(supabase, user.id, id, drafts);
+      if (saved.error) return apiError(saved.error, 400);
+    }
+
     return NextResponse.json({ person: data });
   } catch (error) {
     return apiError(errorMessage(error), 401);

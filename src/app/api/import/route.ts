@@ -142,8 +142,34 @@ export async function POST(request: NextRequest) {
       if (error) return apiError(error.message, 400);
     }
 
+    // Silently skipped when migration 0013 has not been applied: the primary of
+    // each kind already arrived on the person rows above, so nothing is lost.
+    let importedContactMethods = 0;
+    if (payload.contactMethods.length) {
+      const { error } = await supabase.from("person_contact_methods").upsert(
+        payload.contactMethods.map((method) => ({
+          id: method.id ?? crypto.randomUUID(),
+          user_id: user.id,
+          person_id: personIdMap.get(method.personId) ?? method.personId,
+          kind: method.kind,
+          value: method.value,
+          label: method.label,
+          position: method.position,
+          is_primary: method.isPrimary,
+        })),
+      );
+      if (error) {
+        if (!["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code)) {
+          return apiError(error.message, 400);
+        }
+      } else {
+        importedContactMethods = payload.contactMethods.length;
+      }
+    }
+
     return NextResponse.json({
       imported: {
+        contactMethods: importedContactMethods,
         people: payload.people.length,
         updates: payload.updates.length,
         interactions: payload.interactions.length,

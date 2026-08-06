@@ -1,3 +1,4 @@
+import { contactDraftsOf, contactValuesOfKind } from "@/lib/contact-methods";
 import type { Person } from "@/lib/types";
 
 export type ContactShareField =
@@ -102,18 +103,31 @@ export function buildVCard(
   if (selection.preferredName && person.preferredName) {
     lines.push(`NICKNAME:${escapeValue(person.preferredName)}`);
   }
-  if (selection.phoneNumber && person.phoneNumber) {
-    lines.push(`TEL;TYPE=CELL:${escapeValue(person.phoneNumber)}`);
+  // vCard 3.0 repeats TEL and EMAIL freely, so someone with three numbers
+  // arrives in the other person's address book with all three, primary marked
+  // PREF. Sharing is still all-or-nothing per kind, as the picker promises.
+  const contactMethods = contactDraftsOf(person);
+
+  if (selection.phoneNumber) {
+    for (const phone of contactValuesOfKind(contactMethods, "phone")) {
+      const types = phone.isPrimary ? "CELL,PREF" : "CELL";
+      lines.push(`TEL;TYPE=${types}:${escapeValue(phone.value)}`);
+    }
   }
-  if (selection.email && person.email) {
-    lines.push(`EMAIL;TYPE=INTERNET:${escapeValue(person.email)}`);
+  if (selection.email) {
+    for (const email of contactValuesOfKind(contactMethods, "email")) {
+      const types = email.isPrimary ? "INTERNET,PREF" : "INTERNET";
+      lines.push(`EMAIL;TYPE=${types}:${escapeValue(email.value)}`);
+    }
   }
-  if (selection.instagram && person.instagramUsername) {
-    lines.push(
-      `X-SOCIALPROFILE;TYPE=instagram:https://instagram.com/${escapeValue(
-        person.instagramUsername,
-      )}`,
-    );
+  if (selection.instagram) {
+    for (const handle of contactValuesOfKind(contactMethods, "instagram")) {
+      lines.push(
+        `X-SOCIALPROFILE;TYPE=instagram:https://instagram.com/${escapeValue(
+          handle.value,
+        )}`,
+      );
+    }
   }
   if (selection.birthday && person.birthday) {
     lines.push(`BDAY:${escapeValue(person.birthday)}`);
