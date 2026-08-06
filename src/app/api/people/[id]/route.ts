@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { isOwnedAvatarReference } from "@/lib/avatar-urls";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import { writeTolerantOfPendingColumns } from "@/lib/pending-columns";
 import { createClient } from "@/lib/supabase/server";
 import { personInputSchema } from "@/lib/validation";
 
@@ -70,13 +71,17 @@ export async function PATCH(
     }
 
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("people")
-      .update(toDatabaseUpdate(validation.data))
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .select()
-      .single();
+    const { data, error } = await writeTolerantOfPendingColumns(
+      toDatabaseUpdate(validation.data),
+      (row) =>
+        supabase
+          .from("people")
+          .update(row)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select()
+          .single(),
+    );
 
     if (error) return apiError(error.message, 400);
     return NextResponse.json({ person: data });

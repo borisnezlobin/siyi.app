@@ -1,14 +1,11 @@
 # Siyi backlog
 
-> **HOLD: one commit is committed locally but deliberately NOT pushed.**
-> `11a954b` (relationship labels + reminder opt-out) writes to
-> `people.relationship_label` and `people.reminders_enabled`. Those columns do
-> not exist until `0008_relationship_labels.sql` runs. Pushing first would make
-> every profile save fail and stop the reminder cron.
->
-> Order: run 0008 in Supabase, then `git push origin main`.
-
 Working file. Delete entries as they ship. Ordered by launch risk.
+
+> Deploys no longer have to wait for migrations. Code that reads schema which
+> may not exist yet degrades to empty; code that writes it retries without the
+> pending columns (`src/lib/pending-columns.ts`). Running a migration turns its
+> feature on — nothing breaks in the meantime. Keep it that way.
 
 ## Done (shipped and live)
 
@@ -37,10 +34,15 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## P0 — before launch
 
-- [ ] **Push notifications failing for real users.** Root cause still
-      unconfirmed; new error messages ship the diagnosis. Collect one real
-      failure message before guessing further.
-- [ ] **Edit an update after saving it** (currently write-once).
+- [x] **Push notifications failing for real users.** Root cause: migration
+      0004 was never applied, so `native_push_subscriptions` does not exist.
+      `sendPushToUser` ran web and phone delivery in one `Promise.all`, so the
+      missing phone table rejected the whole send and browser push failed with
+      "Could not find the table 'public.native_push_subscriptions'". The same
+      missing table was also breaking data export for every user. Both now
+      tolerate it. Applying 0004 is still worth doing before the phone app
+      ships, but nothing is blocked on it.
+- [ ] **Edit an update after saving it** (currently write-once). NOT STARTED.
 
 ## P1 — UX that users tripped on
 
@@ -97,7 +99,11 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 Nothing in this repo applies migrations automatically. Run these in order
 against production; both are additive and touch no existing data:
 
-- `0007_marketing_consent.sql` — NOT YET APPLIED. The settings toggle errors
-  until it is.
+- `0004_native_push_subscriptions.sql` — NOT APPLIED. This was the cause of
+  the push and export failures. No longer urgent (the code copes), but the
+  phone app cannot register for notifications until it runs.
+- `0007_marketing_consent.sql` — NOT YET APPLIED. The marketing toggle in
+  settings does nothing until it is.
 - `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
-  and reminders_enabled, and replaces the create-person RPC.
+  and reminders_enabled, and replaces the create-person RPC. Until it runs,
+  relationship labels silently do not persist and every person gets reminders.

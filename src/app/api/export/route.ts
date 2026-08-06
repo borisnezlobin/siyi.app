@@ -21,7 +21,7 @@ function downloadResponse(
   });
 }
 
-function isMissingUpdatesSchema(error: { code?: string } | null) {
+function isMissingSchema(error: { code?: string } | null) {
   return Boolean(
     error && ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code ?? ""),
   );
@@ -83,7 +83,11 @@ export async function GET(request: NextRequest) {
       followUpsResult.error,
       deliveriesResult.error,
       subscriptionsResult.error,
-      nativeSubscriptionsResult.error,
+      // A web-only project has no phone-app table, which must not block
+      // someone from exporting their own data.
+      isMissingSchema(nativeSubscriptionsResult.error)
+        ? null
+        : nativeSubscriptionsResult.error,
     ].find(Boolean);
 
     if (firstError) return apiError(firstError.message, 500);
@@ -92,14 +96,14 @@ export async function GET(request: NextRequest) {
       supabase.from("person_updates").select("*").eq("user_id", user.id),
       supabase.from("person_update_people").select("*").eq("user_id", user.id),
     ]);
-    const updates = isMissingUpdatesSchema(updatesResult.error)
+    const updates = isMissingSchema(updatesResult.error)
       ? []
       : updatesResult.data ?? [];
-    const updatePeople = isMissingUpdatesSchema(updatePeopleResult.error)
+    const updatePeople = isMissingSchema(updatePeopleResult.error)
       ? []
       : updatePeopleResult.data ?? [];
     const updatesError = [updatesResult.error, updatePeopleResult.error].find(
-      (error) => error && !isMissingUpdatesSchema(error),
+      (error) => error && !isMissingSchema(error),
     );
     if (updatesError) return apiError(updatesError.message, 500);
 
