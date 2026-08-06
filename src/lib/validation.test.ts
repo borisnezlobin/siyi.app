@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
-import { interactionInputSchema, personInputSchema } from "@/lib/validation";
+import {
+  interactionEditSchema,
+  interactionInputSchema,
+  personInputSchema,
+  personUpdateEditSchema,
+} from "@/lib/validation";
 
 const personId = "11111111-1111-4111-8111-111111111111";
 
@@ -134,5 +139,48 @@ describe("relationshipLabelFor", () => {
         relationshipLabel: "more than very close brochacho",
       }),
     ).toBe("more than very close brochacho");
+  });
+});
+
+describe("editing an update that already exists", () => {
+  it("accepts the timestamptz Postgres hands back", () => {
+    expect(
+      personUpdateEditSchema.safeParse({
+        text: "Caught up after class",
+        recordedAt: "2026-01-02T03:04:05.678+00:00",
+        type: "coffee",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("refuses to move an update into the future", () => {
+    expect(
+      personUpdateEditSchema.safeParse({
+        text: "Caught up after class",
+        recordedAt: "2099-01-02T03:04:05.678Z",
+        type: "coffee",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("needs the update to still say something", () => {
+    expect(
+      personUpdateEditSchema.safeParse({
+        text: "   ",
+        recordedAt: "2026-01-02T03:04:05.678Z",
+        type: "coffee",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("edits a standalone interaction without naming the person again", () => {
+    const result = interactionEditSchema.safeParse({
+      type: "meal",
+      occurredAt: "2026-01-02T03:04:05.678+00:00",
+      note: "",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.note).toBeNull();
   });
 });

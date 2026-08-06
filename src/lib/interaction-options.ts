@@ -10,20 +10,39 @@ import {
   Phone,
   UserFocus,
 } from "@phosphor-icons/react";
+import { interactionLabels } from "@/lib/interaction-labels";
 import type { InteractionType } from "@/lib/types";
+
+const iconsByType: Record<InteractionType, Icon> = {
+  texted: ChatCircleText,
+  called: Phone,
+  coffee: Coffee,
+  meal: ForkKnife,
+  class: GraduationCap,
+  party: Confetti,
+  event: MicrophoneStage,
+  met: UserFocus,
+  other: CalendarDots,
+};
+
+const pickerOrder: InteractionType[] = [
+  "texted",
+  "called",
+  "coffee",
+  "meal",
+  "class",
+  "party",
+  "event",
+  "met",
+  "other",
+];
 
 export const interactionOptions: {
   value: InteractionType;
   label: string;
   icon: Icon;
-}[] = [
-  { value: "texted", label: "Texted", icon: ChatCircleText },
-  { value: "called", label: "Called", icon: Phone },
-  { value: "coffee", label: "Coffee", icon: Coffee },
-  { value: "meal", label: "Meal", icon: ForkKnife },
-  { value: "class", label: "Class", icon: GraduationCap },
-  { value: "party", label: "Party", icon: Confetti },
-  { value: "event", label: "Event", icon: MicrophoneStage },
-  { value: "met", label: "Met", icon: UserFocus },
-  { value: "other", label: "Other", icon: CalendarDots },
-];
+}[] = pickerOrder.map((value) => ({
+  value,
+  label: interactionLabels[value],
+  icon: iconsByType[value],
+}));
