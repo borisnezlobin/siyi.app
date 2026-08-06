@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isAdminUser,
   type AdminUserFacts,
   bucketContactCounts,
   bucketForContactCount,
@@ -154,5 +155,59 @@ describe("contact-count buckets", () => {
       { bucket: expect.objectContaining({ id: "51-100" }), users: 1 },
       { bucket: expect.objectContaining({ id: "100+" }), users: 1 },
     ]);
+  });
+});
+
+describe("deciding who is an admin", () => {
+  const confirmed = {
+    id: "11111111-1111-4111-8111-111111111111",
+    email: "boris@example.com",
+    emailConfirmedAt: "2026-01-01T00:00:00Z",
+  };
+  const emails = { adminEmails: "boris@example.com", adminUserIds: null };
+
+  it("lets a confirmed allowlisted address in", () => {
+    expect(isAdminUser(confirmed, emails)).toBe(true);
+  });
+
+  it("refuses an allowlisted address that was never confirmed", () => {
+    // Signup is open, so an unconfirmed address proves nothing about who owns it.
+    expect(
+      isAdminUser({ ...confirmed, emailConfirmedAt: null }, emails),
+    ).toBe(false);
+  });
+
+  it("ignores the email allowlist entirely once user ids are set", () => {
+    const byId = {
+      adminEmails: "boris@example.com",
+      adminUserIds: "99999999-9999-4999-8999-999999999999",
+    };
+
+    expect(isAdminUser(confirmed, byId)).toBe(false);
+    expect(isAdminUser({ ...confirmed, id: "99999999-9999-4999-8999-999999999999" }, byId)).toBe(true);
+  });
+
+  it("still matches an id even when the address is unconfirmed", () => {
+    const byId = { adminEmails: null, adminUserIds: confirmed.id };
+
+    expect(
+      isAdminUser({ ...confirmed, emailConfirmedAt: null }, byId),
+    ).toBe(true);
+  });
+
+  it("admits nobody when neither variable is set", () => {
+    expect(
+      isAdminUser(confirmed, { adminEmails: null, adminUserIds: null }),
+    ).toBe(false);
+    expect(isAdminUser(null, emails)).toBe(false);
+  });
+
+  it("tolerates spacing in the id list", () => {
+    expect(
+      isAdminUser(confirmed, {
+        adminEmails: null,
+        adminUserIds: ` ${confirmed.id} , other `,
+      }),
+    ).toBe(true);
   });
 });

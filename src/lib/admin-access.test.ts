@@ -24,8 +24,15 @@ const { adminNotFound, requireAdminPageUser, resolveAdminRequest } = await impor
 
 const request = {} as NextRequest;
 
-function signedInAs(email: string | null) {
-  const user = { id: "user-1", email };
+function signedInAs(
+  email: string | null,
+  { confirmed = true, id = "user-1" } = {},
+) {
+  const user = {
+    id,
+    email,
+    email_confirmed_at: confirmed ? "2026-01-01T00:00:00Z" : null,
+  };
   requireAuthenticatedRequest.mockResolvedValue({ user, supabase: {} });
   getAuthenticatedUser.mockResolvedValue(user);
 }
@@ -34,6 +41,7 @@ describe("guarding the admin area", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.ADMIN_EMAILS = "boris@example.com, jerry@example.com";
+    delete process.env.ADMIN_USER_IDS;
   });
 
   it("lets an allowlisted admin through on API routes", async () => {
@@ -79,5 +87,28 @@ describe("guarding the admin area", () => {
 
     getAuthenticatedUser.mockResolvedValue(null);
     await expect(requireAdminPageUser()).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
+
+describe("guarding the admin area against a claimed address", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.ADMIN_EMAILS = "boris@example.com";
+    delete process.env.ADMIN_USER_IDS;
+  });
+
+  it("turns away an allowlisted address that was never confirmed", async () => {
+    // Signup is open, so anyone can register an address they do not own.
+    signedInAs("boris@example.com", { confirmed: false });
+    await expect(resolveAdminRequest(request)).resolves.toBeNull();
+  });
+
+  it("ignores the email allowlist once user ids are configured", async () => {
+    process.env.ADMIN_USER_IDS = "the-real-admin";
+    signedInAs("boris@example.com");
+    await expect(resolveAdminRequest(request)).resolves.toBeNull();
+
+    signedInAs("someone-else@example.com", { id: "the-real-admin" });
+    await expect(resolveAdminRequest(request)).resolves.not.toBeNull();
   });
 });
