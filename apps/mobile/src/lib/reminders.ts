@@ -1,4 +1,8 @@
 import {
+  daysUntilBirthday as daysUntilNextBirthday,
+  nextBirthdayDate,
+} from "@/lib/birthday-calendar";
+import {
   defaultReminderIntervals,
   type Person,
   type ReminderDefaults,
@@ -55,23 +59,10 @@ export function nextReminderDate(
   return reminderDueDate(person, defaults);
 }
 
-export function nextBirthday(
-  birthday: string | null,
-  now = new Date(),
-) {
-  if (!birthday) return null;
-  const [, month, day] = birthday.split("-").map(Number);
-  const next = new Date(now.getFullYear(), month - 1, day);
-  if (localDayNumber(next) < localDayNumber(now)) {
-    next.setFullYear(next.getFullYear() + 1);
-  }
-  return next;
+export function nextBirthday(birthday: string | null, now = new Date()) {
+  return nextBirthdayDate(birthday, now);
 }
 
-export function daysUntilBirthday(
-  birthday: string | null,
-  now = new Date(),
-) {
-  const next = nextBirthday(birthday, now);
-  return next ? daysBetween(now, next) : null;
+export function daysUntilBirthday(birthday: string | null, now = new Date()) {
+  return daysUntilNextBirthday(birthday, now);
 }
