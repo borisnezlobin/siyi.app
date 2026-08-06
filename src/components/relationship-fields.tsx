@@ -1,7 +1,7 @@
 "use client";
 
 import { BellSlash, Check } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   isDefaultRelationshipLabel,
   maxRelationshipLabelLength,
@@ -29,12 +29,14 @@ export function RelationshipFields({
   defaultLabel = null,
   defaultRemindersEnabled = true,
   defaultReminderIntervalDays = null,
+  onValuesChange,
 }: {
   personName?: string;
   defaultStrength?: RelationshipStrength;
   defaultLabel?: string | null;
   defaultRemindersEnabled?: boolean;
   defaultReminderIntervalDays?: number | null;
+  onValuesChange?: (values: Record<string, string>) => void;
 }) {
   const [strength, setStrength] =
     useState<RelationshipStrength>(defaultStrength);
@@ -52,6 +54,24 @@ export function RelationshipFields({
     ? customLabel.trim()
     : relationshipTierLabels[strength];
   const who = personName ? personName : "them";
+
+  // The hidden inputs below are controlled, so they still hold the previous
+  // value while the form's change event is running. Anything reading the form
+  // to build a preview would render a keystroke behind, so the new values are
+  // handed over directly instead.
+  //
+  // Held in a ref because callers pass a fresh function every render, and the
+  // callback sets state: depending on its identity here would loop forever.
+  const notifyRef = useRef(onValuesChange);
+  notifyRef.current = onValuesChange;
+
+  useEffect(() => {
+    notifyRef.current?.({
+      relationshipStrength: String(strength),
+      relationshipLabel: label,
+      remindersEnabled: remindersEnabled ? "true" : "false",
+    });
+  }, [label, remindersEnabled, strength]);
 
   return (
     <fieldset className="sm:col-span-2">
