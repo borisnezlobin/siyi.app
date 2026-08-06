@@ -75,6 +75,16 @@ describe("saving while a migration is still pending", () => {
     ).toEqual({ full_name: "Amelia" });
   });
 
+  it("drops the university while migration 0016 is still pending", () => {
+    expect(
+      droppingPendingColumns({
+        full_name: "Amelia",
+        university: "Westmont University",
+        major: "Product design",
+      }),
+    ).toEqual({ full_name: "Amelia", major: "Product design" });
+  });
+
   it("keeps every column the database already has", () => {
     expect(
       droppingPendingColumns({

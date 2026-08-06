@@ -4,6 +4,7 @@ import type { Person } from "@/lib/types";
 function personContext(person: Person) {
   return [
     `Name: ${person.preferredName || person.fullName}`,
+    person.university ? `University: ${person.university}` : null,
     person.major ? `Major: ${person.major}` : null,
     person.hometown ? `Hometown: ${person.hometown}` : null,
     person.dormOrResidence
@@ -26,6 +27,7 @@ function personContext(person: Person) {
 function shareableContext(person: Person) {
   return [
     `Name: ${person.preferredName || person.fullName}`,
+    person.university ? `Studies at: ${person.university}` : null,
     person.major ? `Studies: ${person.major}` : null,
     person.graduationYear ? `Class of: ${person.graduationYear}` : null,
     person.hometown ? `From: ${person.hometown}` : null,

@@ -66,6 +66,16 @@ afterEach(() => {
 });
 
 describe("editing a person", () => {
+  it("offers a university beside the other school details", async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <PersonForm person={{ ...person, university: "Westmont University" }} />
+      </SafeAreaProvider>,
+    );
+
+    expect(screen.getByDisplayValue("Westmont University")).toBeTruthy();
+  });
+
   it("keeps Cancel and Save changes reachable with the keyboard up", async () => {
     const keyboard = mockKeyboardEvents();
     await render(

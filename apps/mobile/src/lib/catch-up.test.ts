@@ -19,6 +19,7 @@ function person(overrides: Partial<Person>): Person {
     birthday: null,
     hometown: null,
     dormOrResidence: null,
+    university: null,
     major: null,
     graduationYear: null,
     relationshipStrength: 2,

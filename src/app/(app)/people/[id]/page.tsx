@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowSquareOut,
   At,
+  Buildings,
   Cake,
   CalendarBlank,
   EnvelopeSimple,
@@ -23,6 +24,7 @@ import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { CustomTypeIcon } from "@/components/custom-type-icon";
 import { UpdateSheet } from "@/components/update-sheet";
+import { ageOnDate } from "@/lib/birthday-age";
 import { buildPersonTimeline } from "@/lib/person-timeline";
 import { contactDraftsOf } from "@/lib/contact-methods";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
@@ -104,7 +106,12 @@ export default async function PersonDetailPage({
       })
     : "No updates yet";
 
+  const age = ageOnDate(person.birthday);
+
   const facts = [
+    person.university
+      ? { label: "University", value: person.university, icon: Buildings }
+      : null,
     person.major
       ? { label: "Major", value: person.major, icon: GraduationCap }
       : null,
@@ -120,7 +127,12 @@ export default async function PersonDetailPage({
     person.birthday
       ? {
           label: "Birthday",
-          value: format(new Date(`${person.birthday}T12:00:00`), "MMMM d"),
+          value: [
+            format(new Date(`${person.birthday}T12:00:00`), "MMMM d"),
+            age === null ? null : `${age}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
           icon: Cake,
         }
       : null,

@@ -1,4 +1,4 @@
-import { addDays, format, subDays, subHours } from "date-fns";
+import { addDays, format, subDays, subHours, subYears } from "date-fns";
 import { DEMO_USER_ID } from "@/lib/constants";
 import type { FollowUp, Interaction, Person, Tag } from "@/lib/types";
 
@@ -37,9 +37,10 @@ export function createDemoPeople(now = new Date()): Person[] {
       instagramUsername: "mayamakes",
       phoneNumber: "(415) 555-0142",
       email: "maya@example.edu",
-      birthday: format(addDays(now, 3), "yyyy-MM-dd"),
+      birthday: format(addDays(subYears(now, 21), 3), "yyyy-MM-dd"),
       hometown: "Oakland, California",
       dormOrResidence: "Birch Hall",
+      university: "Westmont University",
       major: "Product design",
       graduationYear: 2027,
       relationshipStrength: 4,
@@ -69,6 +70,7 @@ export function createDemoPeople(now = new Date()): Person[] {
       birthday: null,
       hometown: "San Diego, California",
       dormOrResidence: "Off campus",
+      university: "Westmont University",
       major: "Economics",
       graduationYear: 2026,
       relationshipStrength: 3,
@@ -97,6 +99,7 @@ export function createDemoPeople(now = new Date()): Person[] {
       birthday: null,
       hometown: "Portland, Oregon",
       dormOrResidence: "Juniper House",
+      university: "Westmont University",
       major: "Environmental science",
       graduationYear: 2028,
       relationshipStrength: 2,
@@ -122,9 +125,10 @@ export function createDemoPeople(now = new Date()): Person[] {
       instagramUsername: "noahpark",
       phoneNumber: "(650) 555-0101",
       email: "noah@example.edu",
-      birthday: format(addDays(now, 11), "yyyy-MM-dd"),
+      birthday: format(addDays(subYears(now, 20), 11), "yyyy-MM-dd"),
       hometown: "Seattle, Washington",
       dormOrResidence: "Birch Hall",
+      university: "Westmont University",
       major: "Computer science",
       graduationYear: 2027,
       relationshipStrength: 2,
@@ -153,6 +157,7 @@ export function createDemoPeople(now = new Date()): Person[] {
       birthday: null,
       hometown: "Fremont, California",
       dormOrResidence: "Cedar Court",
+      university: "Ridgeline College",
       major: "Comparative literature",
       graduationYear: 2026,
       relationshipStrength: 4,

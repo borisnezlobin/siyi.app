@@ -167,16 +167,24 @@ export function evaluateUserNotifications(
   if (preferences.birthdayEnabled) {
     for (const person of input.people) {
       if (!person.birthday) continue;
-      const [, birthdayMonth, birthdayDay] = person.birthday.split("-").map(Number);
+      const [birthYear, birthdayMonth, birthdayDay] = person.birthday
+        .split("-")
+        .map(Number);
+      let birthdayYear = localNow.year;
       let birthdayDayNumber = Math.floor(
-        Date.UTC(localNow.year, birthdayMonth - 1, birthdayDay) / 86_400_000,
+        Date.UTC(birthdayYear, birthdayMonth - 1, birthdayDay) / 86_400_000,
       );
       if (birthdayDayNumber < localNow.dayNumber) {
+        birthdayYear = localNow.year + 1;
         birthdayDayNumber = Math.floor(
-          Date.UTC(localNow.year + 1, birthdayMonth - 1, birthdayDay) / 86_400_000,
+          Date.UTC(birthdayYear, birthdayMonth - 1, birthdayDay) / 86_400_000,
         );
       }
       const daysUntil = birthdayDayNumber - localNow.dayNumber;
+      // A birthday saved with a placeholder year would put them past 120, so
+      // the reminder simply says nothing about the age.
+      const turning = birthdayYear - birthYear;
+      const hasPlausibleAge = turning > 0 && turning <= 120;
 
       if (daysUntil === 0 || daysUntil === 7) {
         const displayName = person.preferredName ?? person.fullName;
@@ -188,10 +196,14 @@ export function evaluateUserNotifications(
           scheduledFor: now.toISOString(),
           deduplicationKey: `birthday:${input.userId}:${person.id}:${localNow.year}:${daysUntil}`,
           title: `${displayName}’s birthday is ${occasion}`,
-          body:
+          body: [
+            hasPlausibleAge ? `They turn ${turning}.` : null,
             daysUntil === 0
               ? "A quick message can mean a lot."
               : "You have time to plan a thoughtful hello.",
+          ]
+            .filter(Boolean)
+            .join(" "),
           url: `/people/${person.id}`,
           tag: `birthday-${person.id}-${daysUntil}`,
         });

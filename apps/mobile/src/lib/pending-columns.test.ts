@@ -59,6 +59,16 @@ describe("saving while migration 0009 is still pending", () => {
     expect(write).toHaveBeenCalledTimes(1);
   });
 
+  it("drops the university while migration 0016 is still pending", () => {
+    expect(
+      droppingPendingColumns({
+        full_name: "Amelia",
+        university: "Westmont University",
+        major: "Product design",
+      }),
+    ).toEqual({ full_name: "Amelia", major: "Product design" });
+  });
+
   it("drops only the columns migration 0009 would add", () => {
     expect(
       droppingPendingColumns({

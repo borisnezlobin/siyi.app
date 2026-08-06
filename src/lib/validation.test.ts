@@ -3,6 +3,7 @@ import { relationshipLabelFor } from "@/lib/relationship-labels";
 import {
   interactionEditSchema,
   interactionInputSchema,
+  maxUniversityLength,
   personInputSchema,
   personUpdateEditSchema,
 } from "@/lib/validation";
@@ -93,6 +94,56 @@ describe("personInputSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("trims a university and drops an empty one", () => {
+    const result = personInputSchema.parse({
+      fullName: "Maya Chen",
+      relationshipStrength: 2,
+      reminderIntervalDays: null,
+      graduationYear: null,
+      university: "  Westmont University  ",
+    });
+
+    expect(result.university).toBe("Westmont University");
+    expect(
+      personInputSchema.parse({
+        fullName: "Maya Chen",
+        relationshipStrength: 2,
+        reminderIntervalDays: null,
+        graduationYear: null,
+        university: "",
+      }).university,
+    ).toBeNull();
+  });
+
+  it("accepts a university at the limit and rejects one past it", () => {
+    const atLimit = {
+      fullName: "Maya Chen",
+      relationshipStrength: 2,
+      reminderIntervalDays: null,
+      graduationYear: null,
+      university: "u".repeat(maxUniversityLength),
+    };
+
+    expect(personInputSchema.safeParse(atLimit).success).toBe(true);
+    expect(
+      personInputSchema.safeParse({
+        ...atLimit,
+        university: "u".repeat(maxUniversityLength + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("leaves the university out entirely when it is not sent", () => {
+    const result = personInputSchema.parse({
+      fullName: "Maya Chen",
+      relationshipStrength: 2,
+      reminderIntervalDays: null,
+      graduationYear: null,
+    });
+
+    expect(result.university).toBeNull();
   });
 
   it("rejects invalid relationship strengths", () => {

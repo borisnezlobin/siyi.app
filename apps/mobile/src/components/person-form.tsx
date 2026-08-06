@@ -92,6 +92,7 @@ export function PersonForm({
   const [dormOrResidence, setDormOrResidence] = useState(
     person?.dormOrResidence || "",
   );
+  const [university, setUniversity] = useState(person?.university || "");
   const [major, setMajor] = useState(person?.major || "");
   const [graduationYear, setGraduationYear] = useState(
     person?.graduationYear ? String(person.graduationYear) : "",
@@ -159,6 +160,7 @@ export function PersonForm({
     birthday,
     hometown,
     dormOrResidence,
+    university,
     major,
     graduationYear,
     relationshipStrength: String(relationshipStrength),
@@ -184,6 +186,7 @@ export function PersonForm({
       birthday: person?.birthday || "",
       hometown: person?.hometown || "",
       dormOrResidence: person?.dormOrResidence || "",
+      university: person?.university || "",
       major: person?.major || "",
       graduationYear: person?.graduationYear
         ? String(person.graduationYear)
@@ -244,6 +247,7 @@ export function PersonForm({
       birthday: parseDateInput(birthday) ?? "",
       hometown,
       dormOrResidence,
+      university,
       major,
       graduationYear: Number.isNaN(parsedGraduationYear)
         ? null
@@ -323,6 +327,7 @@ export function PersonForm({
     "birthday",
     "hometown",
     "dormOrResidence",
+    "university",
     "major",
     "graduationYear",
   ]);
@@ -504,6 +509,14 @@ export function PersonForm({
               onChangeText={setDormOrResidence}
               value={dormOrResidence}
               {...detailField("dormOrResidence")}
+            />
+            <FormField
+              autoCapitalize="words"
+              label="University"
+              maxLength={120}
+              onChangeText={setUniversity}
+              value={university}
+              {...detailField("university")}
             />
             <FormField
               autoCapitalize="words"

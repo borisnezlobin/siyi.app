@@ -104,6 +104,7 @@ export function AddPersonForm() {
         birthday: formData.get("birthday"),
         hometown: formData.get("hometown"),
         dormOrResidence: formData.get("dormOrResidence"),
+        university: formData.get("university"),
         major: formData.get("major"),
         graduationYear: formData.get("graduationYear") || null,
         relationshipStrength: Number(formData.get("relationshipStrength") || 2),
@@ -275,6 +276,10 @@ export function AddPersonForm() {
           <label className={labelClassName}>
             Dorm or residence
             <input name="dormOrResidence" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            University
+            <input name="university" maxLength={120} className={inputClassName} />
           </label>
           <label className={labelClassName}>
             Major

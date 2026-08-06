@@ -8,6 +8,7 @@ export type ContactShareField =
   | "instagram"
   | "birthday"
   | "hometown"
+  | "university"
   | "major"
   | "notes"
   | "bio";
@@ -25,6 +26,7 @@ export const defaultContactShareSelection: ContactShareSelection = {
   instagram: true,
   birthday: false,
   hometown: true,
+  university: true,
   major: true,
   notes: false,
   bio: false,
@@ -37,6 +39,7 @@ export const contactShareFieldLabels: Record<ContactShareField, string> = {
   instagram: "Instagram",
   birthday: "Birthday",
   hometown: "Hometown",
+  university: "University",
   major: "Major",
   notes: "Your private notes",
   bio: "Short bio",
@@ -50,6 +53,7 @@ export function availableContactShareFields(person: Person) {
   if (person.instagramUsername) available.push("instagram");
   if (person.birthday) available.push("birthday");
   if (person.hometown) available.push("hometown");
+  if (person.university) available.push("university");
   if (person.major) available.push("major");
   if (person.generalNotes) available.push("notes");
   return available;
@@ -131,6 +135,9 @@ export function buildVCard(
   }
   if (selection.birthday && person.birthday) {
     lines.push(`BDAY:${escapeValue(person.birthday)}`);
+  }
+  if (selection.university && person.university) {
+    lines.push(`ORG:${escapeValue(person.university)}`);
   }
   if (selection.major && person.major) {
     lines.push(`TITLE:${escapeValue(person.major)}`);

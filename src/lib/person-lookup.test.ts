@@ -62,6 +62,7 @@ function personRow(overrides: Record<string, unknown> = {}) {
     birthday: null,
     hometown: null,
     dorm_or_residence: null,
+    university: null,
     major: null,
     graduation_year: null,
     relationship_strength: 2,
