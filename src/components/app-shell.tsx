@@ -16,6 +16,7 @@ import {
   QuickCaptureHub,
   QuickCaptureTrigger,
 } from "@/components/quick-capture-hub";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { brand } from "@/config/brand";
 import { InstallPrompt } from "@/components/install-prompt";
 import type { Person } from "@/lib/types";
@@ -164,6 +165,7 @@ export function AppShell({
       </aside>
 
       <main className="min-h-screen pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:ml-[248px] lg:pb-0">
+        <AnnouncementBanner />
         {children}
       </main>
 
