@@ -120,14 +120,26 @@ export async function syncPersonToDeviceContacts(
 
     if (plan.action === "create") {
       const { givenName, familyName } = splitName(plan.fields.name);
+      const phoneNumbers = plan.fields.phoneNumbers ?? [];
+      const emailAddresses = plan.fields.emails ?? [];
       const created = await Contact.create({
         givenName,
         familyName,
-        ...(plan.fields.phoneNumber
-          ? { phones: [{ label: "mobile", number: plan.fields.phoneNumber }] }
+        ...(phoneNumbers.length
+          ? {
+              phones: phoneNumbers.map((number) => ({
+                label: "mobile",
+                number,
+              })),
+            }
           : {}),
-        ...(plan.fields.email
-          ? { emails: [{ label: "home", address: plan.fields.email }] }
+        ...(emailAddresses.length
+          ? {
+              emails: emailAddresses.map((address) => ({
+                label: "home",
+                address,
+              })),
+            }
           : {}),
       });
       await AsyncStorage.setItem(linkKey(person.id), created.id);
@@ -141,11 +153,11 @@ export async function syncPersonToDeviceContacts(
       return { status: "failed", message: "That contact is no longer on this device." };
     }
 
-    if (plan.fields.phoneNumber) {
-      await target.addPhone({ label: "mobile", number: plan.fields.phoneNumber });
+    for (const number of plan.fields.phoneNumbers ?? []) {
+      await target.addPhone({ label: "mobile", number });
     }
-    if (plan.fields.email) {
-      await target.addEmail({ label: "home", address: plan.fields.email });
+    for (const address of plan.fields.emails ?? []) {
+      await target.addEmail({ label: "home", address });
     }
 
     await AsyncStorage.setItem(linkKey(person.id), plan.contactId);

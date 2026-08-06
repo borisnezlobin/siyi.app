@@ -1,3 +1,5 @@
+import type { ContactMethodDraft } from "@/lib/contact-methods";
+
 export const relationshipStrengths = [1, 2, 3, 4] as const;
 export type RelationshipStrength = (typeof relationshipStrengths)[number];
 
@@ -46,9 +48,13 @@ export type Person = {
   preferredName: string | null;
   profilePhotoUrl: string | null;
   profilePhotoPath: string | null;
+  /** The primary of each kind, still the only value older screens read. */
   instagramUsername: string | null;
   phoneNumber: string | null;
   email: string | null;
+  /** Every phone, email and handle. Falls back to the three fields above until
+   * migration 0013 has been applied on the server. */
+  contactMethods?: ContactMethodDraft[];
   birthday: string | null;
   hometown: string | null;
   dormOrResidence: string | null;

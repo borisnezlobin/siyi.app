@@ -107,6 +107,38 @@ export async function GET(request: NextRequest) {
     );
     if (updatesError) return apiError(updatesError.message, 500);
 
+    // Migration 0013 may not have run yet; an export must not fail because of
+    // a table that does not exist, so the single columns carry it instead.
+    const contactMethodsResult = await supabase
+      .from("person_contact_methods")
+      .select("*")
+      .eq("user_id", user.id);
+    if (contactMethodsResult.error && !isMissingSchema(contactMethodsResult.error)) {
+      return apiError(contactMethodsResult.error.message, 500);
+    }
+    const contactMethods = contactMethodsResult.error
+      ? []
+      : contactMethodsResult.data ?? [];
+    const contactValuesByPerson = new Map<string, Record<string, string[]>>();
+    for (const method of contactMethods) {
+      const forPerson = contactValuesByPerson.get(method.person_id) ?? {};
+      const values = forPerson[method.kind] ?? [];
+      // Primary first, so a spreadsheet's first value is the main one.
+      if (method.is_primary) values.unshift(method.value);
+      else values.push(method.value);
+      forPerson[method.kind] = values;
+      contactValuesByPerson.set(method.person_id, forPerson);
+    }
+    const allValuesOf = (
+      person: { id: string },
+      kind: string,
+      fallback: string | null,
+    ) => {
+      const values = contactValuesByPerson.get(person.id)?.[kind];
+      if (values?.length) return values.join("; ");
+      return fallback ?? "";
+    };
+
     if (format === "people-csv") {
       const headers = [
         "Full name",
@@ -114,6 +146,9 @@ export async function GET(request: NextRequest) {
         "Instagram",
         "Phone",
         "Email",
+        "All Instagram",
+        "All phones",
+        "All emails",
         "Birthday",
         "Hometown",
         "Residence",
@@ -135,6 +170,9 @@ export async function GET(request: NextRequest) {
           person.instagram_username,
           person.phone_number,
           person.email,
+          allValuesOf(person, "instagram", person.instagram_username),
+          allValuesOf(person, "phone", person.phone_number),
+          allValuesOf(person, "email", person.email),
           person.birthday,
           person.hometown,
           person.dorm_or_residence,
@@ -267,6 +305,17 @@ export async function GET(request: NextRequest) {
         generalNotes: person.general_notes,
         createdAt: person.created_at,
         updatedAt: person.updated_at,
+      })),
+      contactMethods: contactMethods.map((method) => ({
+        id: method.id,
+        personId: method.person_id,
+        kind: method.kind,
+        value: method.value,
+        label: method.label,
+        position: method.position,
+        isPrimary: method.is_primary,
+        createdAt: method.created_at,
+        updatedAt: method.updated_at,
       })),
       interactions: (interactionsResult.data ?? []).map((interaction) => ({
         id: interaction.id,

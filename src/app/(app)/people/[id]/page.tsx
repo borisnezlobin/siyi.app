@@ -23,6 +23,7 @@ import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { CustomTypeIcon } from "@/components/custom-type-icon";
 import { UpdateSheet } from "@/components/update-sheet";
+import { contactDraftsOf } from "@/lib/contact-methods";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import { interactionTypeFromLabel } from "@/lib/interaction-labels";
 import {
@@ -134,6 +135,22 @@ export default async function PersonDetailPage({
   const visibleNoteSections = noteSections.sections.filter((noteSection) =>
     noteSection.body.trim(),
   );
+  // The three big buttons stay on the primary of each kind. Anything else they
+  // gave you sits underneath as a quiet second row rather than crowding them.
+  const otherWaysToReachThem = contactDraftsOf(person)
+    .filter((method) => !method.isPrimary)
+    .map((method) => ({
+      kind: method.kind,
+      value: method.value,
+      label: method.label,
+      display: method.kind === "instagram" ? `@${method.value}` : method.value,
+      href:
+        method.kind === "phone"
+          ? `tel:${method.value}`
+          : method.kind === "email"
+            ? `mailto:${method.value}`
+            : `https://instagram.com/${method.value}`,
+    }));
   const reminder = getContactReminderState(person);
   const displayName = person.preferredName ?? person.fullName;
   const lastInteractionLabel = person.lastInteractionAt
@@ -274,6 +291,33 @@ export default async function PersonDetailPage({
             </span>
           )}
         </div>
+
+        {otherWaysToReachThem.length ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {otherWaysToReachThem.map((method) => (
+              <a
+                key={`${method.kind}-${method.value}`}
+                href={method.href}
+                {...(method.kind === "instagram"
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
+                className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/78 transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
+              >
+                {method.kind === "phone" ? (
+                  <Phone size={13} weight="fill" aria-hidden="true" />
+                ) : method.kind === "email" ? (
+                  <EnvelopeSimple size={13} weight="fill" aria-hidden="true" />
+                ) : (
+                  <At size={13} weight="bold" aria-hidden="true" />
+                )}
+                {method.label ? (
+                  <span className="text-white/50">{method.label}</span>
+                ) : null}
+                {method.display}
+              </a>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -30,6 +30,8 @@ export type UserProfile = {
   updatedAt: string;
 };
 
+import type { ContactMethodDraft } from "@/lib/contact-methods";
+
 export type Person = {
   id: string;
   /** Null until migration 0012 has been applied; links fall back to the id. */
@@ -38,9 +40,14 @@ export type Person = {
   fullName: string;
   preferredName: string | null;
   profilePhotoUrl: string | null;
+  /** The primary of each kind. Kept in step with `contactMethods`, because
+   * every older reader still expects exactly one of each here. */
   instagramUsername: string | null;
   phoneNumber: string | null;
   email: string | null;
+  /** Every phone, email and handle, primary first within each kind. Falls back
+   * to the three columns above until migration 0013 has run. */
+  contactMethods?: ContactMethodDraft[];
   birthday: string | null;
   hometown: string | null;
   dormOrResidence: string | null;

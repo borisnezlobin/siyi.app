@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  contactMethodKinds,
+  maxContactMethodLabelLength,
+  maxContactMethodValueLength,
+  maxContactMethodsPerKind,
+} from "@/lib/contact-methods";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import {
@@ -33,6 +39,26 @@ const pastTimestamp = z
     (value) => Date.parse(value) <= Date.now() + clockSkewToleranceMs,
     "Pick a date that has already happened.",
   );
+
+export const contactMethodInputSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid().optional(),
+      kind: z.enum(contactMethodKinds),
+      value: z.string().trim().max(maxContactMethodValueLength),
+      label: z
+        .string()
+        .trim()
+        .max(maxContactMethodLabelLength)
+        .nullish()
+        .transform((value) => value || null),
+      isPrimary: z
+        .boolean()
+        .nullish()
+        .transform((value) => value === true),
+    }),
+  )
+  .max(maxContactMethodsPerKind * contactMethodKinds.length);
 
 export const personInputSchema = z.object({
   fullName: z.string().trim().min(1, "Add a name").max(120),
@@ -105,6 +131,9 @@ export const personInputSchema = z.object({
   firstMetAt: pastTimestamp.optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,
+  // Optional everywhere: an older client, and the phone app, still send only
+  // the three single fields above.
+  contactMethods: contactMethodInputSchema.optional(),
 });
 
 const customLabel = z
@@ -273,6 +302,28 @@ export const importPayloadSchema = z.object({
       z.object({
         personId: z.string().uuid(),
         tagId: z.string().uuid(),
+      }),
+    )
+    .max(100_000)
+    .optional()
+    .default([]),
+  // Absent from every export written before migration 0013, so an older file
+  // still imports cleanly.
+  contactMethods: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        personId: z.string().uuid(),
+        kind: z.enum(contactMethodKinds),
+        value: z.string().trim().min(1).max(maxContactMethodValueLength),
+        label: z
+          .string()
+          .trim()
+          .max(maxContactMethodLabelLength)
+          .nullish()
+          .transform((value) => value || null),
+        position: z.coerce.number().int().min(0).max(1000).optional().default(0),
+        isPrimary: z.boolean().optional().default(false),
       }),
     )
     .max(100_000)

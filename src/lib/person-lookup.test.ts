@@ -6,12 +6,16 @@ let queryResult: { data: unknown; error: { code: string } | null } = {
   error: null,
 };
 
+// Reading a person also reads their contact rows; only the lookup against
+// `people` is what these tests are about.
+let currentTable = "people";
+
 const queryBuilder = {
   select: () => queryBuilder,
   order: () => queryBuilder,
   limit: () => queryBuilder,
   eq: (column: string, value: string) => {
-    lookups.push({ column, value });
+    if (currentTable === "people") lookups.push({ column, value });
     return queryBuilder;
   },
   single: async () => queryResult,
@@ -22,7 +26,12 @@ vi.mock("@/lib/supabase/config", () => ({
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ from: () => queryBuilder }),
+  createClient: async () => ({
+    from: (table: string) => {
+      currentTable = table;
+      return queryBuilder;
+    },
+  }),
 }));
 
 vi.mock("@/lib/avatar-urls", () => ({

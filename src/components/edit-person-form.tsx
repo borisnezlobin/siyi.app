@@ -1,11 +1,15 @@
 "use client";
 
-import { formatPhoneNumberInput } from "@/lib/phone-format";
 import { Camera, Check, ImageSquare, SpinnerGap, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { ContactFields } from "@/components/contact-fields";
+import {
+  contactFormValues,
+  initialContactDrafts,
+  parseContactDraftsJson,
+} from "@/lib/contact-methods";
 import { FormSection } from "@/components/form-section";
 import { PersonNoteSections } from "@/components/person-note-sections";
 import { RelationshipFields } from "@/components/relationship-fields";
@@ -29,9 +33,7 @@ function initialFormValues(person: Person): FormValues {
   return {
     fullName: person.fullName,
     preferredName: person.preferredName ?? "",
-    instagramUsername: person.instagramUsername ?? "",
-    phoneNumber: formatPhoneNumberInput(person.phoneNumber ?? ""),
-    email: person.email ?? "",
+    ...contactFormValues(initialContactDrafts(person)),
     birthday: person.birthday ?? "",
     hometown: person.hometown ?? "",
     dormOrResidence: person.dormOrResidence ?? "",
@@ -145,10 +147,13 @@ export function EditPersonForm({
     };
   }, [dirty]);
 
-  function refreshDirtyState() {
+  // The contact rows live in React state, so their hidden fields trail one
+  // render behind a keystroke. Passing the new values in directly keeps the
+  // unsaved-changes warning honest.
+  function refreshDirtyState(overrides?: FormValues) {
     const form = formRef.current;
     if (!form) return;
-    const current = readFormValues(form);
+    const current = { ...readFormValues(form), ...overrides };
     setValues(current);
     setDirty(Boolean(photoFile) || hasUnsavedChanges(initialValues, current));
   }
@@ -217,6 +222,7 @@ export function EditPersonForm({
     const payload = {
       fullName: formData.get("fullName"),
       preferredName: formData.get("preferredName"),
+      contactMethods: parseContactDraftsJson(formData.get("contactMethods")),
       instagramUsername: normalizeInstagramUsername(
         String(formData.get("instagramUsername") ?? ""),
       ),
@@ -269,8 +275,8 @@ export function EditPersonForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      onInput={refreshDirtyState}
-      onChange={refreshDirtyState}
+      onInput={() => refreshDirtyState()}
+      onChange={() => refreshDirtyState()}
       className="mt-7 space-y-3"
     >
       <FormSection
@@ -363,11 +369,8 @@ export function EditPersonForm({
         )}
       >
         <ContactFields
-          defaults={{
-            phoneNumber: person.phoneNumber ?? "",
-            email: person.email ?? "",
-            instagramUsername: person.instagramUsername ?? "",
-          }}
+          drafts={initialContactDrafts(person)}
+          onChange={(drafts) => refreshDirtyState(contactFormValues(drafts))}
         />
       </FormSection>
 

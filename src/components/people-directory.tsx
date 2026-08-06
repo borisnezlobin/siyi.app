@@ -12,6 +12,7 @@ import { differenceInCalendarDays } from "date-fns";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PersonRow } from "@/components/person-row";
+import { contactDraftsOf } from "@/lib/contact-methods";
 import { getContactReminderState } from "@/lib/reminders";
 import type { Person, RelationshipStrength } from "@/lib/types";
 
@@ -49,8 +50,13 @@ export function PeopleDirectory({
         const searchableText = [
           person.fullName,
           person.preferredName,
-          person.instagramUsername,
-          person.phoneNumber,
+          // Every number, address and handle, not only the primary — searching
+          // for the old number of someone who changed it still finds them.
+          ...contactDraftsOf(person).flatMap((method) => [
+            method.value,
+            method.label,
+          ]),
+          person.email,
           person.generalNotes,
           person.major,
           person.dormOrResidence,
