@@ -2,6 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { Directory, File, Paths } from "expo-file-system";
 import type { AccountSettings, PersonDetails } from "@/lib/data";
+import type { ContactMethodDraft } from "@/lib/contact-methods";
+import type { NoteText } from "@/lib/note-sync";
 import type {
   FollowUp,
   NotificationPreference,
@@ -24,6 +26,20 @@ export type QueuedPhoto = {
   mimeType: string | null;
 };
 
+/**
+ * The contact rows a person save carries. `knownIds` is what the form had on
+ * screen when it opened, so a replay can tell a row the person deleted from
+ * one added somewhere else while this sat in the queue. Both are optional
+ * because a mutation queued by an older build has neither.
+ */
+export type QueuedContactMethods = {
+  drafts: ContactMethodDraft[];
+  knownIds: string[];
+  /** The same rows by value, for a person whose contact rows do not exist yet
+   * and therefore have no ids to remember. */
+  knownValues?: { kind: ContactMethodDraft["kind"]; value: string }[];
+};
+
 export type OfflineMutation =
   | {
       id: string;
@@ -34,6 +50,7 @@ export type OfflineMutation =
       interactionId: string;
       input: PersonInput;
       photo: QueuedPhoto | null;
+      contactMethods?: QueuedContactMethods;
     }
   | {
       id: string;
@@ -44,6 +61,48 @@ export type OfflineMutation =
       input: PersonInput;
       photo: QueuedPhoto | null;
       currentPhotoPath: string | null;
+      contactMethods?: QueuedContactMethods;
+    }
+  | {
+      id: string;
+      kind: "create-person-note";
+      userId: string;
+      createdAt: string;
+      personId: string;
+      noteId: string;
+      heading: string;
+      body: string;
+      position: number;
+    }
+  | {
+      id: string;
+      kind: "update-person-note";
+      userId: string;
+      createdAt: string;
+      personId: string;
+      noteId: string;
+      position: number;
+      /** What the section said when this edit began, so a replay can tell an
+       * untouched section from one changed elsewhere in the meantime. */
+      base: NoteText;
+      heading: string;
+      body: string;
+    }
+  | {
+      id: string;
+      kind: "delete-person-note";
+      userId: string;
+      createdAt: string;
+      personId: string;
+      noteId: string;
+    }
+  | {
+      id: string;
+      kind: "reorder-person-notes";
+      userId: string;
+      createdAt: string;
+      personId: string;
+      noteIds: string[];
     }
   | {
       id: string;

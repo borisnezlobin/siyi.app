@@ -5,10 +5,13 @@ import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import {
   defaultReminderIntervals,
+  unavailableNoteSections,
   type FollowUp,
   type Interaction,
   type NotificationPreference,
   type Person,
+  type PersonNote,
+  type PersonNoteSections,
   type PersonUpdate,
   type RelationshipStrength,
   type ReminderDefaults,
@@ -17,17 +20,35 @@ import {
 import {
   contactMethodKinds,
   isContactMethodKind,
+  normalizeContactDrafts,
   resolveContactDrafts,
   unavailableContactMethods,
   type ContactMethod,
+  type ContactMethodDraft,
   type ContactMethodKind,
   type PersonContactMethods,
 } from "@/lib/contact-methods";
+import {
+  planContactMethodRows,
+  type StoredContactMethodRow,
+} from "@/lib/contact-method-sync";
+import {
+  isMissingNoteSchema,
+  maxNoteBodyLength,
+  maxNoteHeadingLength,
+  maxNoteSectionsPerPerson,
+  moveNoteSection,
+  nextNotePosition,
+  normalizeNoteHeading,
+  orderedNoteSections,
+} from "@/lib/note-sections";
+import { resolveNoteConflict } from "@/lib/note-sync";
 import { looksLikeUuid } from "@/lib/person-links";
 import { supabase } from "@/lib/supabase";
 import {
   clearOfflineUserData,
   enqueueOfflineMutation,
+  type QueuedContactMethods,
   getOfflineQueue,
   getOfflineSnapshot,
   isOnline,
@@ -140,7 +161,14 @@ export type PersonDetails = {
   interactions: Interaction[];
   followUps: FollowUp[];
   updates: PersonUpdate[];
+  /** Named note sections. Absent on anything cached by a build that predates
+   * them, and unavailable until migration 0010 has been applied. */
+  notes?: PersonNoteSections;
 };
+
+export function noteSectionsOf(details: PersonDetails | undefined) {
+  return details?.notes ?? unavailableNoteSections;
+}
 
 export type AccountSettings = {
   timezone: string;
@@ -310,6 +338,70 @@ async function getContactMethodsRemote(): Promise<PersonContactMethods> {
     });
   }
   return { available: true, methods };
+}
+
+type PersonNoteRow = {
+  id: string;
+  user_id: string;
+  person_id: string;
+  heading: string;
+  body: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapPersonNote(row: PersonNoteRow): PersonNote {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personId: row.person_id,
+    heading: row.heading,
+    body: row.body ?? "",
+    position: row.position,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Every named note section this account owns, in one query. Reports itself
+ * unavailable rather than throwing until migration 0010 has been applied, and
+ * the phone then shows only the untitled note it always has.
+ */
+async function getPersonNotesRemote(
+  personId?: string,
+): Promise<PersonNoteSections> {
+  const query = supabase
+    .from("person_notes")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+  const { data, error } = await (personId
+    ? query.eq("person_id", personId)
+    : query);
+
+  if (error) {
+    if (isMissingNoteSchema(error.code)) return unavailableNoteSections;
+    throw error;
+  }
+
+  return {
+    available: true,
+    sections: orderedNoteSections(
+      ((data ?? []) as PersonNoteRow[]).map(mapPersonNote),
+    ),
+  };
+}
+
+function noteSectionsFor(
+  notes: PersonNoteSections,
+  personId: string,
+): PersonNoteSections {
+  return {
+    available: notes.available,
+    sections: notes.sections.filter((note) => note.personId === personId),
+  };
 }
 
 function mapPerson(
@@ -493,11 +585,13 @@ async function getOfflineDatasetRemote(userId: string) {
     const [
       people,
       followUps,
+      notes,
       interactionsResult,
       updatesResult,
     ] = await Promise.all([
       getPeopleRemote(),
       getFollowUpsRemote(),
+      getPersonNotesRemote(),
       supabase
         .from("interactions")
         .select("*")
@@ -536,6 +630,7 @@ async function getOfflineDatasetRemote(userId: string) {
           updates: updates.filter((update) =>
             update.personIds.includes(person.id),
           ),
+          notes: noteSectionsFor(notes, person.id),
         } satisfies PersonDetails,
       ]),
     );
@@ -563,8 +658,9 @@ async function remotePersonId(identifier: string) {
 
 async function getPersonDetailsRemote(identifier: string) {
   const personId = await remotePersonId(identifier);
-  const [people, interactionsResult, followUpsResult] = await Promise.all([
+  const [people, notes, interactionsResult, followUpsResult] = await Promise.all([
     getPeopleRemote(),
+    getPersonNotesRemote(personId),
     supabase
       .from("interactions")
       .select("*")
@@ -611,6 +707,7 @@ async function getPersonDetailsRemote(identifier: string) {
       followUpRows.map((row) => mapFollowUp(row, avatarUrls)),
     ),
     updates,
+    notes,
   } satisfies PersonDetails;
 }
 
@@ -743,6 +840,7 @@ function optimisticPerson(
   profilePhotoUrl: string | null,
   profilePhotoPath: string | null,
   current?: Person,
+  contactMethods?: ContactMethodDraft[],
 ): Person {
   return {
     id: personId,
@@ -757,6 +855,7 @@ function optimisticPerson(
     instagramUsername: input.instagramUsername,
     phoneNumber: input.phoneNumber,
     email: input.email,
+    contactMethods,
     birthday: input.birthday,
     hometown: input.hometown,
     dormOrResidence: input.dormOrResidence,
@@ -781,6 +880,7 @@ export async function createPerson(
   userId: string,
   input: PersonInput,
   photo?: { uri: string; fileName?: string | null; mimeType?: string | null },
+  contactMethods?: ContactMethodDraft[],
 ) {
   const person = personInputSchema.parse(input);
   const personId = Crypto.randomUUID();
@@ -788,6 +888,7 @@ export async function createPerson(
   const mutationId = Crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const queuedPhoto = await persistPhotoForQueue(mutationId, photo);
+  const queuedContacts = queuedContactMethods(contactMethods, []);
   const createdPerson = optimisticPerson(
     userId,
     personId,
@@ -795,6 +896,8 @@ export async function createPerson(
     createdAt,
     queuedPhoto?.uri ?? null,
     null,
+    undefined,
+    queuedContacts?.drafts,
   );
   const details: PersonDetails = {
     person: createdPerson,
@@ -826,6 +929,7 @@ export async function createPerson(
     interactionId,
     input: person,
     photo: queuedPhoto,
+    contactMethods: queuedContacts,
   });
   await updateOfflineSnapshot(userId, (snapshot) => ({
     ...snapshot,
@@ -846,10 +950,16 @@ export async function updatePerson(
   input: PersonInput,
   photo?: { uri: string; fileName?: string | null; mimeType?: string | null },
   currentPhotoPath?: string | null,
+  contactMethods?: ContactMethodDraft[],
+  knownContactMethods: ContactMethodDraft[] = [],
 ) {
   const person = personInputSchema.parse(input);
   const mutationId = Crypto.randomUUID();
   const queuedPhoto = await persistPhotoForQueue(mutationId, photo);
+  const queuedContacts = queuedContactMethods(
+    contactMethods,
+    knownContactMethods,
+  );
   const updatedAt = new Date().toISOString();
   let updatedPerson: Person | null = null;
 
@@ -862,6 +972,7 @@ export async function updatePerson(
     input: person,
     photo: queuedPhoto,
     currentPhotoPath: currentPhotoPath ?? null,
+    contactMethods: queuedContacts,
   });
   await updateOfflineSnapshot(userId, (snapshot) => {
     const current =
@@ -876,6 +987,7 @@ export async function updatePerson(
       queuedPhoto?.uri ?? current.profilePhotoUrl,
       queuedPhoto ? null : currentPhotoPath ?? current.profilePhotoPath,
       current,
+      queuedContacts?.drafts ?? current.contactMethods,
     );
 
     return {
@@ -1627,6 +1739,203 @@ export async function saveNotificationPreferences(
   void flushOfflineMutations(userId);
 }
 
+/**
+ * The contact rows a person save should carry, normalised once here so the
+ * queue, the cache and the server all hold the same shape.
+ */
+function queuedContactMethods(
+  drafts: ContactMethodDraft[] | undefined,
+  known: ContactMethodDraft[],
+): QueuedContactMethods | undefined {
+  if (!drafts) return undefined;
+  return {
+    drafts: normalizeContactDrafts(drafts),
+    knownIds: known
+      .map((draft) => draft.id)
+      .filter((id): id is string => Boolean(id)),
+    knownValues: known.map(({ kind, value }) => ({ kind, value })),
+  };
+}
+
+function replaceNoteSections(
+  userId: string,
+  personId: string,
+  replace: (sections: PersonNote[]) => PersonNote[],
+) {
+  return updateOfflineSnapshot(userId, (snapshot) => {
+    const details = snapshot.personDetails[personId];
+    if (!details) return snapshot;
+    const current = noteSectionsOf(details);
+    return {
+      ...snapshot,
+      personDetails: {
+        ...snapshot.personDetails,
+        [personId]: {
+          ...details,
+          notes: {
+            available: current.available,
+            sections: orderedNoteSections(replace(current.sections)),
+          },
+        },
+      },
+    };
+  });
+}
+
+async function cachedNoteSections(userId: string, personId: string) {
+  const snapshot = await getOfflineSnapshot(userId);
+  return noteSectionsOf(snapshot.personDetails[personId]).sections;
+}
+
+/**
+ * The headings this user already wrote on other people, most recently touched
+ * first, so adding a section is a tap rather than retyping "Interests" again.
+ * Read from the cache, so it works with no signal.
+ */
+export async function getUsedNoteHeadings(
+  userId: string,
+  excludePersonId?: string,
+) {
+  const snapshot = await getOfflineSnapshot(userId);
+  const notes = Object.values(snapshot.personDetails)
+    .flatMap((details) => noteSectionsOf(details).sections)
+    .filter((note) => note.personId !== excludePersonId)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+
+  const headings: string[] = [];
+  for (const note of notes) {
+    const heading = normalizeNoteHeading(note.heading);
+    if (!heading) continue;
+    const alreadySeen = headings.some(
+      (existing) => existing.toLowerCase() === heading.toLowerCase(),
+    );
+    if (!alreadySeen) headings.push(heading);
+  }
+  return headings;
+}
+
+export async function createPersonNote(
+  userId: string,
+  personId: string,
+  heading: string,
+) {
+  const cleanHeading = normalizeNoteHeading(heading).slice(
+    0,
+    maxNoteHeadingLength,
+  );
+  if (!cleanHeading) throw new Error("Give the section a heading first.");
+
+  const existing = await cachedNoteSections(userId, personId);
+  if (existing.length >= maxNoteSectionsPerPerson) {
+    throw new Error(
+      `You can keep up to ${maxNoteSectionsPerPerson} sections on one person.`,
+    );
+  }
+
+  const noteId = Crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const position = nextNotePosition(existing);
+  const note: PersonNote = {
+    id: noteId,
+    userId,
+    personId,
+    heading: cleanHeading,
+    body: "",
+    position,
+    createdAt,
+    updatedAt: createdAt,
+  };
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "create-person-note",
+    userId,
+    createdAt,
+    personId,
+    noteId,
+    heading: cleanHeading,
+    body: "",
+    position,
+  });
+  await replaceNoteSections(userId, personId, (sections) => [
+    ...sections,
+    note,
+  ]);
+  void flushOfflineMutations(userId);
+  return note;
+}
+
+export async function savePersonNote(
+  userId: string,
+  note: PersonNote,
+  draft: { heading: string; body: string },
+) {
+  const heading = normalizeNoteHeading(draft.heading).slice(
+    0,
+    maxNoteHeadingLength,
+  );
+  if (!heading) throw new Error("A section needs a heading.");
+  const body = draft.body.slice(0, maxNoteBodyLength);
+  const savedAt = new Date().toISOString();
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "update-person-note",
+    userId,
+    createdAt: savedAt,
+    personId: note.personId,
+    noteId: note.id,
+    position: note.position,
+    base: { heading: note.heading, body: note.body },
+    heading,
+    body,
+  });
+  await replaceNoteSections(userId, note.personId, (sections) =>
+    sections.map((section) =>
+      section.id === note.id
+        ? { ...section, heading, body, updatedAt: savedAt }
+        : section,
+    ),
+  );
+  void flushOfflineMutations(userId);
+}
+
+export async function deletePersonNote(userId: string, note: PersonNote) {
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "delete-person-note",
+    userId,
+    createdAt: new Date().toISOString(),
+    personId: note.personId,
+    noteId: note.id,
+  });
+  await replaceNoteSections(userId, note.personId, (sections) =>
+    sections.filter((section) => section.id !== note.id),
+  );
+  void flushOfflineMutations(userId);
+}
+
+export async function movePersonNote(
+  userId: string,
+  note: PersonNote,
+  direction: "up" | "down",
+) {
+  const sections = await cachedNoteSections(userId, note.personId);
+  const reordered = moveNoteSection(sections, note.id, direction);
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "reorder-person-notes",
+    userId,
+    createdAt: new Date().toISOString(),
+    personId: note.personId,
+    noteIds: reordered.map((section) => section.id),
+  });
+  await replaceNoteSections(userId, note.personId, () => reordered);
+  void flushOfflineMutations(userId);
+  return reordered;
+}
+
 function personRecord(
   userId: string,
   personId: string,
@@ -1847,7 +2156,200 @@ function supabaseUpdateWriteClient(userId: string): UpdateWriteClient {
   };
 }
 
+/**
+ * Writes the whole set of contact rows a person save carried, keeping anything
+ * added elsewhere while the save waited in the queue. Does nothing at all until
+ * migration 0013 has been applied, and the single columns on `people` carry the
+ * primary of each kind on their own until then.
+ */
+async function saveQueuedContactMethods(
+  userId: string,
+  personId: string,
+  queued: QueuedContactMethods,
+) {
+  const { data, error } = await supabase
+    .from("person_contact_methods")
+    .select("*")
+    .eq("person_id", personId);
+
+  if (error) {
+    if (isMissingContactMethodsSchema(error)) return;
+    throw error;
+  }
+
+  const plan = planContactMethodRows({
+    userId,
+    personId,
+    drafts: queued.drafts,
+    knownIds: queued.knownIds,
+    knownValues: queued.knownValues,
+    existingRows: (data ?? []) as StoredContactMethodRow[],
+    newId: () => Crypto.randomUUID(),
+  });
+
+  if (plan.upserts.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("person_contact_methods")
+      .upsert(plan.upserts, { onConflict: "id" });
+    if (upsertError) {
+      if (isMissingContactMethodsSchema(upsertError)) return;
+      throw upsertError;
+    }
+  }
+
+  if (plan.deleteIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("person_contact_methods")
+      .delete()
+      .eq("person_id", personId)
+      .in("id", plan.deleteIds);
+    if (deleteError) throw deleteError;
+  }
+}
+
+async function writeQueuedContactMethods(
+  mutation: Extract<
+    OfflineMutation,
+    { kind: "create-person" | "update-person" }
+  >,
+) {
+  if (mutation.contactMethods) {
+    await saveQueuedContactMethods(
+      mutation.userId,
+      mutation.personId,
+      mutation.contactMethods,
+    );
+    return;
+  }
+  // Queued by a build that only ever edited one value per kind.
+  await mirrorPrimaryContactMethods(
+    mutation.userId,
+    mutation.personId,
+    mutation.input,
+  );
+}
+
+async function executeNoteMutation(
+  mutation: Extract<
+    OfflineMutation,
+    {
+      kind:
+        | "create-person-note"
+        | "update-person-note"
+        | "delete-person-note"
+        | "reorder-person-notes";
+    }
+  >,
+) {
+  if (mutation.kind === "create-person-note") {
+    const { error } = await supabase.from("person_notes").upsert(
+      {
+        id: mutation.noteId,
+        user_id: mutation.userId,
+        person_id: mutation.personId,
+        heading: mutation.heading,
+        body: mutation.body,
+        position: mutation.position,
+      },
+      { onConflict: "id" },
+    );
+    if (error && !isMissingNoteSchema(error.code)) throw error;
+    return;
+  }
+
+  if (mutation.kind === "delete-person-note") {
+    const { error } = await supabase
+      .from("person_notes")
+      .delete()
+      .eq("id", mutation.noteId)
+      .eq("user_id", mutation.userId);
+    if (error && !isMissingNoteSchema(error.code)) throw error;
+    return;
+  }
+
+  if (mutation.kind === "reorder-person-notes") {
+    for (const [position, noteId] of mutation.noteIds.entries()) {
+      const { error } = await supabase
+        .from("person_notes")
+        .update({ position })
+        .eq("id", noteId)
+        .eq("person_id", mutation.personId)
+        .eq("user_id", mutation.userId);
+      if (error) {
+        if (isMissingNoteSchema(error.code)) return;
+        throw error;
+      }
+    }
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("person_notes")
+    .select("heading,body")
+    .eq("id", mutation.noteId)
+    .eq("user_id", mutation.userId)
+    .maybeSingle();
+  if (error) {
+    if (isMissingNoteSchema(error.code)) return;
+    throw error;
+  }
+
+  const remote = data
+    ? { heading: String(data.heading), body: data.body ?? "" }
+    : null;
+  const resolution = resolveNoteConflict({
+    base: mutation.base,
+    ours: { heading: mutation.heading, body: mutation.body },
+    remote,
+  });
+
+  const { error: writeError } = remote
+    ? await supabase
+        .from("person_notes")
+        .update({ heading: resolution.heading, body: resolution.body })
+        .eq("id", mutation.noteId)
+        .eq("user_id", mutation.userId)
+    : // Deleted elsewhere while this edit waited. Put it back rather than
+      // throwing away what the person wrote on their phone.
+      await supabase.from("person_notes").insert({
+        id: mutation.noteId,
+        user_id: mutation.userId,
+        person_id: mutation.personId,
+        heading: resolution.heading,
+        body: resolution.body,
+        position: mutation.position,
+      });
+  if (writeError) {
+    if (isMissingNoteSchema(writeError.code)) return;
+    throw writeError;
+  }
+
+  if (!resolution.spillover) return;
+  const { error: spilloverError } = await supabase
+    .from("person_notes")
+    .insert({
+      user_id: mutation.userId,
+      person_id: mutation.personId,
+      heading: resolution.spillover.heading,
+      body: resolution.spillover.body,
+      position: mutation.position + 1,
+    });
+  if (spilloverError && !isMissingNoteSchema(spilloverError.code)) {
+    throw spilloverError;
+  }
+}
+
 async function executeOfflineMutation(mutation: OfflineMutation) {
+  if (
+    mutation.kind === "create-person-note" ||
+    mutation.kind === "update-person-note" ||
+    mutation.kind === "delete-person-note" ||
+    mutation.kind === "reorder-person-notes"
+  ) {
+    await executeNoteMutation(mutation);
+    return;
+  }
+
   if (mutation.kind === "create-person") {
     const profilePhotoPath = mutation.photo
       ? await uploadProfilePhoto(
@@ -1882,11 +2384,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         { onConflict: "id" },
       );
     if (interactionError) throw interactionError;
-    await mirrorPrimaryContactMethods(
-      mutation.userId,
-      mutation.personId,
-      mutation.input,
-    );
+    await writeQueuedContactMethods(mutation);
     await removeQueuedPhoto(mutation.photo);
     return;
   }
@@ -1926,11 +2424,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
       })
       .eq("id", mutation.personId);
     if (error) throw error;
-    await mirrorPrimaryContactMethods(
-      mutation.userId,
-      mutation.personId,
-      mutation.input,
-    );
+    await writeQueuedContactMethods(mutation);
     if (newPhotoPath && mutation.currentPhotoPath) {
       await supabase.storage
         .from("avatars")

@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { PersonForm } from "@/components/person-form";
 import { ErrorState, LoadingState } from "@/components/load-state";
-import { getPersonDetails } from "@/lib/data";
+import { getPersonDetails, noteSectionsOf } from "@/lib/data";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 
 export default function EditPersonScreen() {
@@ -20,5 +20,10 @@ export default function EditPersonScreen() {
     );
   }
 
-  return <PersonForm person={personData.data!.person} />;
+  return (
+    <PersonForm
+      noteSections={noteSectionsOf(personData.data!)}
+      person={personData.data!.person}
+    />
+  );
 }

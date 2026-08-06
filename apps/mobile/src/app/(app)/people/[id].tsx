@@ -35,7 +35,11 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card, SectionHeading } from "@/components/surface";
 import { colors, floatShadow, radii } from "@/constants/theme";
-import { archivePerson, getPersonDetails } from "@/lib/data";
+import { archivePerson, getPersonDetails, noteSectionsOf } from "@/lib/data";
+import {
+  contactDraftsOf,
+  type ContactMethodDraft,
+} from "@/lib/contact-methods";
 import { dateLabel, elapsedLabel, relativeDayLabel } from "@/lib/date-labels";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { nextReminderDate } from "@/lib/reminders";
@@ -112,6 +116,14 @@ export default function PersonDetailScreen() {
 
   const { person, interactions, followUps, updates } = personData.data!;
   const openFollowUps = followUps.filter((followUp) => !followUp.completedAt);
+  const visibleNoteSections = noteSectionsOf(personData.data!).sections.filter(
+    (section) => section.body.trim(),
+  );
+  // The big buttons stay on the primary of each kind. Anything else they gave
+  // you sits underneath rather than crowding them.
+  const otherWaysToReachThem = contactDraftsOf(person).filter(
+    (method) => !method.isPrimary,
+  );
   const timelineEntries = [
     ...updates.map((update) => ({
       kind: "update" as const,
@@ -312,6 +324,28 @@ export default function PersonDetailScreen() {
           ) : null}
         </View>
 
+        {otherWaysToReachThem.length > 0 ? (
+          <View style={styles.otherContacts}>
+            {otherWaysToReachThem.map((method) => (
+              <Pressable
+                accessibilityRole="button"
+                key={`${method.kind}-${method.value}`}
+                onPress={() => void Linking.openURL(contactUrl(method))}
+                style={({ pressed }) => [
+                  styles.otherContact,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText variant="caption">
+                  {method.label
+                    ? `${method.label} · ${contactDisplay(method)}`
+                    : contactDisplay(method)}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.stats}>
           <Card style={styles.stat}>
             <AppText variant="caption">Last interaction</AppText>
@@ -353,11 +387,19 @@ export default function PersonDetailScreen() {
           </View>
         ) : null}
 
-        {person.generalNotes ? (
+        {person.generalNotes || visibleNoteSections.length > 0 ? (
           <View style={styles.section}>
             <SectionHeading title="Notes" />
-            <Card>
-              <AppText>{person.generalNotes}</AppText>
+            <Card style={styles.notesCard}>
+              {person.generalNotes ? (
+                <AppText>{person.generalNotes}</AppText>
+              ) : null}
+              {visibleNoteSections.map((section) => (
+                <View key={section.id} style={styles.noteSection}>
+                  <AppText variant="caption">{section.heading}</AppText>
+                  <AppText>{section.body}</AppText>
+                </View>
+              ))}
             </Card>
           </View>
         ) : null}
@@ -528,6 +570,16 @@ function EditEntryButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+function contactDisplay(method: ContactMethodDraft) {
+  return method.kind === "instagram" ? `@${method.value}` : method.value;
+}
+
+function contactUrl(method: ContactMethodDraft) {
+  if (method.kind === "phone") return `tel:${method.value}`;
+  if (method.kind === "email") return `mailto:${method.value}`;
+  return `https://instagram.com/${method.value}`;
+}
+
 function ContactAction({
   icon: IconComponent,
   label,
@@ -636,6 +688,26 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.78,
     transform: [{ scale: 0.97 }],
+  },
+  otherContacts: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: -10,
+  },
+  otherContact: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.round,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 13,
+  },
+  notesCard: {
+    gap: 16,
+  },
+  noteSection: {
+    gap: 4,
   },
   stats: {
     flexDirection: "row",
