@@ -1,0 +1,87 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - link "Siyi.app Your people, remembered" [ref=e4] [cursor=pointer]:
+      - /url: /today
+      - generic [ref=e8]:
+        - generic [ref=e9]: Siyi.app
+        - generic [ref=e10]: Your people, remembered
+    - navigation "Primary navigation" [ref=e11]:
+      - link "Today" [ref=e12] [cursor=pointer]:
+        - /url: /today
+      - link "People" [ref=e15] [cursor=pointer]:
+        - /url: /people
+      - link "Follow-ups" [ref=e18] [cursor=pointer]:
+        - /url: /follow-ups
+    - generic [ref=e21]:
+      - link "Add someone" [ref=e22] [cursor=pointer]:
+        - /url: /people/new
+      - button "Follow-up" [ref=e25]
+      - button "Update" [ref=e28]
+    - navigation "Account navigation" [ref=e31]:
+      - link "Notifications" [ref=e32] [cursor=pointer]:
+        - /url: /notifications
+      - link "Settings" [ref=e35] [cursor=pointer]:
+        - /url: /settings
+    - generic [ref=e38]:
+      - generic [ref=e39]: AV
+      - generic [ref=e40]:
+        - generic [ref=e41]: Alex Vale
+        - generic [ref=e42]: alex@example.edu
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - link "People" [ref=e45] [cursor=pointer]:
+        - /url: /people
+      - generic [ref=e49]:
+        - paragraph [ref=e50]: Your circle
+        - heading "Where everyone's from" [level=1] [ref=e51]
+        - paragraph [ref=e52]: Built from the hometowns you've written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this.
+      - img [ref=e55]:
+        - link [ref=e234] [cursor=pointer]:
+          - /url: "#place-fremont-california-united-states"
+        - link [ref=e236] [cursor=pointer]:
+          - /url: "#place-oakland-california-united-states"
+        - link [ref=e238] [cursor=pointer]:
+          - /url: "#place-portland-oregon-united-states"
+        - link [ref=e240] [cursor=pointer]:
+          - /url: "#place-san-diego-california-united-states"
+        - link [ref=e242] [cursor=pointer]:
+          - /url: "#place-seattle-washington-united-states"
+      - paragraph [ref=e244]: 5 people placed across 5 places.
+      - region [ref=e245]:
+        - heading "Places" [level=2] [ref=e246]
+        - list [ref=e247]:
+          - listitem [ref=e248]:
+            - generic [ref=e249]:
+              - heading "Fremont, California, United States" [level=3] [ref=e250]
+              - generic [ref=e253]: "1"
+            - paragraph [ref=e254]:
+              - link "Priya" [ref=e256] [cursor=pointer]:
+                - /url: /people/20000000-0000-4000-8000-000000000005
+          - listitem [ref=e257]:
+            - generic [ref=e258]:
+              - heading "Oakland, California, United States" [level=3] [ref=e259]
+              - generic [ref=e262]: "1"
+            - paragraph [ref=e263]:
+              - link "Amelia" [ref=e265] [cursor=pointer]:
+                - /url: /people/20000000-0000-4000-8000-000000000001
+          - listitem [ref=e266]:
+            - generic [ref=e267]:
+              - heading "Portland, Oregon, United States" [level=3] [ref=e268]
+              - generic [ref=e271]: "1"
+            - paragraph [ref=e272]:
+              - link "Amara" [ref=e274] [cursor=pointer]:
+                - /url: /people/20000000-0000-4000-8000-000000000003
+          - listitem [ref=e275]:
+            - generic [ref=e276]:
+              - heading "San Diego, California, United States" [level=3] [ref=e277]
+              - generic [ref=e280]: "1"
+            - paragraph [ref=e281]:
+              - link "Luis" [ref=e283] [cursor=pointer]:
+                - /url: /people/20000000-0000-4000-8000-000000000002
+          - listitem [ref=e284]:
+            - generic [ref=e285]:
+              - heading "Seattle, Washington, United States" [level=3] [ref=e286]
+              - generic [ref=e289]: "1"
+            - paragraph [ref=e290]:
+              - link "Noah" [ref=e292] [cursor=pointer]:
+                - /url: /people/20000000-0000-4000-8000-000000000004
