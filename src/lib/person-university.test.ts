@@ -137,7 +137,7 @@ describe("university survives a round trip through export and import", () => {
   });
 });
 
-describe("saving a university before migration 0016 has run", () => {
+describe("saving a university before migration 0014 has run", () => {
   it("retries the update without the column instead of failing", async () => {
     const attempts: Record<string, unknown>[] = [];
     const missingColumn = {

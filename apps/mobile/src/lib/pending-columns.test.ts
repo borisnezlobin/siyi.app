@@ -59,7 +59,7 @@ describe("saving while migration 0009 is still pending", () => {
     expect(write).toHaveBeenCalledTimes(1);
   });
 
-  it("drops the university while migration 0016 is still pending", () => {
+  it("drops the university while migration 0014 is still pending", () => {
     expect(
       droppingPendingColumns({
         full_name: "Amelia",
