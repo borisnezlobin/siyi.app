@@ -168,6 +168,30 @@ export default async function MapPage() {
           {withoutHometown.length === 1 ? "has" : "have"} no hometown saved yet.
         </p>
       ) : null}
+
+      {/* CC BY asks for the credit to be visible, not buried in a comment. */}
+      <p className="mt-9 text-xs leading-5 text-ink-muted">
+        Places come from{" "}
+        <a
+          href="https://www.geonames.org/"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="underline underline-offset-2 hover:text-ink"
+        >
+          GeoNames
+        </a>{" "}
+        (CC BY 4.0) and country outlines from{" "}
+        <a
+          href="https://www.naturalearthdata.com/"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="underline underline-offset-2 hover:text-ink"
+        >
+          Natural Earth
+        </a>
+        . Both are stored with Siyi, so nobody&rsquo;s hometown is ever sent
+        anywhere to draw this map.
+      </p>
     </div>
   );
 }

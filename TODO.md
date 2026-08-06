@@ -149,6 +149,17 @@ against production; both are additive and touch no existing data:
       `U&'[\0300-\036F]'` escape and `person_slug_suffix` are worth an eyeball
       before applying.
 
+- [x] **Map of hometowns.** Offline gazetteer, no dependency, no request at
+      render — hometowns never leave the server. GeoNames cities15000 (1.4 MB,
+      ~34k cities, CC BY 4.0) plus Natural Earth outlines (108 KB, public
+      domain), both server-only, so /map ships 0 B of page JavaScript.
+      Ambiguous names resolve to NOTHING and are listed as unplaced:
+      Cambridge, San Jose, Springfield, Georgia, Washington. Add a state and
+      they resolve. Region matches are drawn hollow and labelled approximate.
+      No migration: the resolver is a pure hash lookup, so there is no 0014.
+      Not tested: the unplaced and no-hometown sections never rendered with
+      real data, and it has never run against a real Supabase dataset.
+
 ## In flight
 
 Migration numbers are reserved per agent so they cannot collide:
