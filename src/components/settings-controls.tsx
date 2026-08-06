@@ -363,8 +363,8 @@ export function SettingsControls({
   }
 
   return (
-    <div className="mt-7 space-y-4">
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+    <div className="mt-7 divide-y divide-ink/[0.08]">
+      <section className="py-7 first:pt-0">
         <h2 className="text-sm font-bold">How often to check in</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           After this many days without an update, a person shows up as due. Any
@@ -397,7 +397,7 @@ export function SettingsControls({
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <h2 className="text-sm font-bold">Local time</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           Used to evaluate reminder dates and delivery times.
@@ -430,7 +430,7 @@ export function SettingsControls({
 
 
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
             <LockKey size={19} weight="fill" aria-hidden="true" />
@@ -512,7 +512,7 @@ export function SettingsControls({
         </form>
       </section>
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
             <EnvelopeSimple size={19} weight="fill" aria-hidden="true" />
@@ -576,7 +576,7 @@ export function SettingsControls({
         Save settings
       </button>
 
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-full bg-sage text-sage-strong">
             <CloudArrowDown size={20} weight="fill" aria-hidden="true" />
@@ -613,7 +613,7 @@ export function SettingsControls({
           </button>
         </div>
       </section>
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+      <section className="py-7 first:pt-0">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-sm font-bold">Import from JSON</h2>
@@ -673,7 +673,7 @@ export function SettingsControls({
           </p>
         ) : null}
       </section>
-      <section className="rounded-[1.75rem] bg-[#fbe5e0] p-5 text-coral-strong">
+      <section className="py-7 text-coral-strong">
         <h2 className="text-sm font-bold">Delete account</h2>
         <p className="mt-1 text-xs leading-5">
           Permanently removes your account, people, notes, photos, interactions,
