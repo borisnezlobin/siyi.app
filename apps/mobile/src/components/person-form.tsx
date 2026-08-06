@@ -15,6 +15,7 @@ import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { ContactMethodField } from "@/components/contact-method-field";
+import { DateField } from "@/components/date-field";
 import { FormField } from "@/components/form-field";
 import {
   KeyboardAwareForm,
@@ -31,7 +32,7 @@ import {
 import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
 import {
   isFutureDateInput,
-  isValidDateInput,
+  parseDateInput,
   timestampFromDateInput,
   toDateInputValue,
 } from "@/lib/date-input";
@@ -227,8 +228,9 @@ export function PersonForm({
   function buildInput(): PersonInput {
     const parsedGraduationYear = Number.parseInt(graduationYear, 10);
     const parsedReminderDays = Number.parseInt(reminderIntervalDays, 10);
+    const firstMetDay = parseDateInput(firstMetOn);
     const firstMetChanged =
-      firstMetOn !== initialValues.firstMetOn && isValidDateInput(firstMetOn);
+      firstMetDay !== null && firstMetDay !== initialValues.firstMetOn;
     return {
       fullName,
       // The primary of each kind keeps the field it has always had, so
@@ -239,7 +241,7 @@ export function PersonForm({
       generalNotes,
       preferredName,
       email: contactValues.email,
-      birthday,
+      birthday: parseDateInput(birthday) ?? "",
       hometown,
       dormOrResidence,
       major,
@@ -254,15 +256,19 @@ export function PersonForm({
         ? null
         : parsedReminderDays,
       firstMetAt: firstMetChanged
-        ? timestampFromDateInput(firstMetOn)
+        ? timestampFromDateInput(firstMetDay)
         : person?.firstMetAt,
     };
   }
 
   async function save() {
     if (!session) return;
-    if (firstMetOn && !isValidDateInput(firstMetOn)) {
-      setError("Write the date you met as YYYY-MM-DD.");
+    if (birthday.trim() && !parseDateInput(birthday)) {
+      setError("We couldn’t read that birthday. Try “April 18, 2007”.");
+      return;
+    }
+    if (firstMetOn.trim() && !parseDateInput(firstMetOn)) {
+      setError("We couldn’t read the date you met. Try “February 14, 2026”.");
       return;
     }
     if (isFutureDateInput(firstMetOn)) {
@@ -477,13 +483,11 @@ export function PersonForm({
               kind="email"
               onChange={setContactDrafts}
             />
-            <FormField
-              hint="Use YYYY-MM-DD. The year can be approximate if needed."
-              keyboardType="numbers-and-punctuation"
+            <DateField
+              hint="Type it any way you like, or pick it from the calendar."
               label="Birthday"
-              maxLength={10}
               onChangeText={setBirthday}
-              placeholder="2007-04-18"
+              placeholder="April 18, 2007"
               value={birthday}
               {...detailField("birthday")}
             />
@@ -634,13 +638,12 @@ export function PersonForm({
               ) : null}
             </View>
             {person ? (
-              <FormField
-                hint="Use YYYY-MM-DD. Change it if you actually met earlier."
-                keyboardType="numbers-and-punctuation"
+              <DateField
+                hint="Type it any way you like, or pick it from the calendar."
                 label="First met"
-                maxLength={10}
+                maximumDate={new Date()}
                 onChangeText={setFirstMetOn}
-                placeholder="2026-02-14"
+                placeholder="February 14, 2026"
                 value={firstMetOn}
               />
             ) : null}
