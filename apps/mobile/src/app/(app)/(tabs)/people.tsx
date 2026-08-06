@@ -3,6 +3,7 @@ import {
   MagnifyingGlass,
   SlidersHorizontal,
   UsersThree,
+  XCircle,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +15,13 @@ import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
 import { getAccountSettings, getPeople } from "@/lib/data";
+import {
+  type MissingDetail,
+  isMissingDetail,
+  matchesPeopleQuery,
+  missingDetailLabels,
+  sectionPeopleAlphabetically,
+} from "@/lib/people-filters";
 import { relationshipTierLabels } from "@/lib/relationship-labels";
 import { overdueDays } from "@/lib/reminders";
 import type {
@@ -26,8 +34,8 @@ import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
 type SortMode =
-  | "newest"
   | "name"
+  | "newest"
   | "recently-contacted"
   | "least-recently-contacted";
 
@@ -39,11 +47,13 @@ type PeopleData = {
 };
 
 const sortLabels: Record<SortMode, string> = {
-  newest: "Newest",
   name: "Name",
+  newest: "Newest",
   "recently-contacted": "Recently contacted",
   "least-recently-contacted": "Least recently contacted",
 };
+
+const missingDetailOptions: MissingDetail[] = ["birthday", "email", "phone"];
 
 export default function PeopleScreen() {
   const router = useRouter();
@@ -66,7 +76,8 @@ export default function PeopleScreen() {
   const [tagId, setTagId] = useState<string | null>(null);
   const [overdueFilter, setOverdueFilter] =
     useState<OverdueFilter>("all");
-  const [sort, setSort] = useState<SortMode>("newest");
+  const [missing, setMissing] = useState<MissingDetail[]>([]);
+  const [sort, setSort] = useState<SortMode>("name");
 
   useEffect(() => {
     if (quickCapture.revision > 0) void screenData.reload();
@@ -76,26 +87,12 @@ export default function PeopleScreen() {
   const filteredPeople = useMemo(() => {
     if (!screenData.data) return [];
     const { people, reminderDefaults } = screenData.data;
-    const normalizedQuery = query.trim().toLowerCase();
     const now = new Date();
     const thirtyDaysAgo = now.getTime() - 30 * 86_400_000;
     const filtered = people.filter((person) => {
       if (person.status === "archived") return false;
-      const searchText = [
-        person.fullName,
-        person.preferredName,
-        person.instagramUsername,
-        person.phoneNumber,
-        person.generalNotes,
-        person.university,
-        person.major,
-        person.dormOrResidence,
-        ...person.tags.map((tag) => tag.name),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      if (normalizedQuery && !searchText.includes(normalizedQuery)) return false;
+      if (!matchesPeopleQuery(person, query)) return false;
+      if (missing.some((detail) => !isMissingDetail(person, detail))) return false;
       if (strength && person.relationshipStrength !== strength) return false;
       if (tagId && !person.tags.some((tag) => tag.id === tagId)) return false;
       if (
@@ -134,7 +131,12 @@ export default function PeopleScreen() {
         new Date(left.createdAt).getTime()
       );
     });
-  }, [overdueFilter, query, screenData.data, sort, strength, tagId]);
+  }, [missing, overdueFilter, query, screenData.data, sort, strength, tagId]);
+
+  const sections = useMemo(
+    () => (sort === "name" ? sectionPeopleAlphabetically(filteredPeople) : []),
+    [filteredPeople, sort],
+  );
 
   if (screenData.loading && !screenData.data) {
     return <LoadingState label="Opening your circle…" />;
@@ -161,7 +163,7 @@ export default function PeopleScreen() {
       eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="Search by name, username, phone, note, major, dorm, or tag."
+      subtitle="Search by name, school, hometown, note, major, dorm, or tag."
       title="People"
     >
       <View style={styles.searchRow}>
@@ -178,6 +180,16 @@ export default function PeopleScreen() {
             style={styles.searchInput}
             value={query}
           />
+          {query.length > 0 ? (
+            <Pressable
+              accessibilityLabel="Clear search"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => setQuery("")}
+            >
+              <XCircle color={colors.inkMuted} size={20} weight="fill" />
+            </Pressable>
+          ) : null}
         </View>
         <Pressable
           accessibilityLabel="Show filters"
@@ -231,6 +243,22 @@ export default function PeopleScreen() {
               />
             ))}
           </FilterGroup>
+          <FilterGroup label="Missing details">
+            {missingDetailOptions.map((detail) => (
+              <FilterChip
+                key={detail}
+                label={missingDetailLabels[detail]}
+                onPress={() =>
+                  setMissing((current) =>
+                    current.includes(detail)
+                      ? current.filter((entry) => entry !== detail)
+                      : [...current, detail],
+                  )
+                }
+                selected={missing.includes(detail)}
+              />
+            ))}
+          </FilterGroup>
           {tags.length > 0 ? (
             <FilterGroup label="Tag">
               {tags.map((tag) => (
@@ -271,15 +299,36 @@ export default function PeopleScreen() {
       </View>
 
       {filteredPeople.length > 0 ? (
-        <View style={styles.list}>
-          {filteredPeople.map((person) => (
-            <PersonRow
-              key={person.id}
-              onPress={() => router.push(`/people/${person.id}`)}
-              person={person}
-            />
-          ))}
-        </View>
+        sections.length > 0 ? (
+          <View style={styles.sections}>
+            {sections.map((section) => (
+              <View key={section.letter} style={styles.section}>
+                <AppText style={styles.sectionLetter} variant="label">
+                  {section.letter}
+                </AppText>
+                <View style={styles.list}>
+                  {section.people.map((person) => (
+                    <PersonRow
+                      key={person.id}
+                      onPress={() => router.push(`/people/${person.id}`)}
+                      person={person}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {filteredPeople.map((person) => (
+              <PersonRow
+                key={person.id}
+                onPress={() => router.push(`/people/${person.id}`)}
+                person={person}
+              />
+            ))}
+          </View>
+        )
       ) : (
         <EmptyState
           body={
@@ -423,5 +472,15 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 9,
+  },
+  sections: {
+    gap: 20,
+  },
+  section: {
+    gap: 9,
+  },
+  sectionLetter: {
+    color: colors.inkMuted,
+    paddingHorizontal: 4,
   },
 });

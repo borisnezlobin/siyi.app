@@ -1,3 +1,4 @@
+import { collegeCoordinates, collegePlaceCandidates } from "@/lib/colleges";
 import { cityTable, countryTable, regionTable } from "@/lib/place-table";
 
 /**
@@ -591,7 +592,22 @@ export type MappablePerson = {
   id: string;
   name: string;
   hometown: string | null;
+  university?: string | null;
 };
+
+/** Which place on a person the map is showing. */
+export type MapMode = "hometown" | "college";
+
+function collegeCoordinatesAsPlace(university: string): GeocodedPlace | null {
+  const found = collegeCoordinates(university);
+  if (!found) return null;
+  return {
+    label: found.label,
+    latitude: found.latitude,
+    longitude: found.longitude,
+    precision: "city",
+  };
+}
 
 export type HometownPlace = GeocodedPlace & {
   key: string;
@@ -618,13 +634,17 @@ function slugForKey(value: string) {
  * who have not told us where they are from. The middle group is the point: it
  * is the only honest way to show what the place table is missing.
  */
-export function summariseHometowns(people: MappablePerson[]): HometownSummary {
+export function summariseHometowns(
+  people: MappablePerson[],
+  mode: MapMode = "hometown",
+): HometownSummary {
   const places = new Map<string, HometownPlace>();
   const unplaced = new Map<string, UnplacedHometown>();
   const withoutHometown: { id: string; name: string }[] = [];
 
   for (const person of people) {
-    const hometown = person.hometown?.trim();
+    const hometown =
+      mode === "college" ? person.university?.trim() : person.hometown?.trim();
     const entry = { id: person.id, name: person.name };
 
     if (!hometown) {
@@ -632,7 +652,14 @@ export function summariseHometowns(people: MappablePerson[]): HometownSummary {
       continue;
     }
 
-    const found = geocodeHometown(hometown);
+    const found =
+      mode === "college"
+        ? collegeCoordinatesAsPlace(hometown) ??
+          collegePlaceCandidates(hometown)
+            .map((candidate) => geocodeHometown(candidate))
+            .find(Boolean) ??
+          null
+        : geocodeHometown(hometown);
     if (!found) {
       const key = normalizePlaceName(hometown);
       const existing = unplaced.get(key);
