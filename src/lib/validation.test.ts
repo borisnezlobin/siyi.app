@@ -60,4 +60,24 @@ describe("personInputSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("accepts a postgres timestamptz with a numeric offset", () => {
+    const result = personInputSchema.safeParse({
+      fullName: "Amelia Chen",
+      relationshipStrength: 2,
+      firstMetAt: "2026-01-02T03:04:05.678+00:00",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("still accepts a plain UTC timestamp", () => {
+    const result = personInputSchema.safeParse({
+      fullName: "Amelia Chen",
+      relationshipStrength: 2,
+      firstMetAt: "2026-01-02T03:04:05.678Z",
+    });
+
+    expect(result.success).toBe(true);
+  });
 });

@@ -16,9 +16,12 @@ const optionalText = z
 // A little slack absorbs a device clock that runs slightly fast.
 const clockSkewToleranceMs = 5 * 60 * 1000;
 
+// Postgres returns timestamptz with a numeric offset (+00:00), which
+// z.datetime() rejects unless offsets are allowed. Without this, saving a
+// person with an untouched date fails validation.
 const pastTimestamp = z
   .string()
-  .datetime()
+  .datetime({ offset: true })
   .refine(
     (value) => Date.parse(value) <= Date.now() + clockSkewToleranceMs,
     "Pick a date that has already happened.",
