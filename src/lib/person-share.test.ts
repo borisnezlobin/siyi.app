@@ -304,3 +304,75 @@ describe("the link itself", () => {
     expect(token).not.toContain("p1");
   });
 });
+
+describe("a person field added later cannot leak by default", () => {
+  /**
+   * Written out in full rather than built from a helper: `Person` is a complete
+   * literal here, so adding a field to the type breaks this file until someone
+   * fills it in, and the assertion below then catches it if redaction forgot it.
+   * Every value is a sentinel that must not survive an empty selection.
+   */
+  const everythingFilled: Person = {
+    id: "sentinel-id",
+    slug: "sentinel-slug",
+    userId: "sentinel-user",
+    fullName: "Amelia Chen",
+    preferredName: "sentinel-preferred",
+    profilePhotoUrl: "sentinel-photo",
+    instagramUsername: "sentinelhandle",
+    phoneNumber: "sentinel-phone",
+    email: "sentinel-email",
+    contactMethods: [
+      { kind: "phone", value: "sentinel-method", label: null, isPrimary: true },
+    ],
+    birthday: "1904-03-18",
+    hometown: "sentinel-hometown",
+    dormOrResidence: "sentinel-dorm",
+    university: "sentinel-university",
+    major: "sentinel-major",
+    graduationYear: 2027,
+    relationshipStrength: 2,
+    relationshipLabel: "sentinel-label",
+    remindersEnabled: true,
+    reminderIntervalDays: 42,
+    status: "active",
+    firstMetAt: "2026-01-02T03:04:05.678Z",
+    firstMetLocation: "sentinel-location",
+    generalNotes: "sentinel-notes",
+    createdAt: "2026-01-02T03:04:05.678Z",
+    updatedAt: "2026-01-02T03:04:05.678Z",
+    lastInteractionAt: "2026-01-02T03:04:05.678Z",
+    tags: [
+      {
+        id: "sentinel-tag-id",
+        userId: "sentinel-user",
+        name: "sentinel-tag",
+        createdAt: "2026-01-02T03:04:05.678Z",
+      },
+    ],
+  };
+
+  it("keeps nothing a sharer did not tick", () => {
+    const serialized = JSON.stringify(
+      redactedSharePerson(everythingFilled, {
+        ...defaultContactShareSelection,
+        preferredName: false,
+        instagram: false,
+        hometown: false,
+        university: false,
+        major: false,
+      }),
+    );
+
+    const leaked = Object.entries(everythingFilled)
+      .filter(([, value]) => typeof value === "string")
+      .filter(([, value]) => (value as string).startsWith("sentinel-"))
+      .filter(([, value]) => serialized.includes(value as string))
+      .map(([field]) => field);
+
+    expect(leaked).toEqual([]);
+    expect(serialized).not.toContain("sentinel-tag");
+    expect(serialized).not.toContain("sentinel-method");
+    expect(serialized).not.toContain("sentinelhandle");
+  });
+});
