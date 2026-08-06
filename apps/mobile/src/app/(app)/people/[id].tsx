@@ -7,7 +7,6 @@ import {
   Cake,
   CalendarCheck,
   ChatCircleDots,
-  Coffee,
   Envelope,
   GraduationCap,
   HouseLine,
@@ -17,8 +16,6 @@ import {
   PencilSimple,
   ShareNetwork,
   Phone,
-  PhoneCall,
-  UsersThree,
 } from "phosphor-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -42,33 +39,36 @@ import { archivePerson, getPersonDetails } from "@/lib/data";
 import { dateLabel, elapsedLabel, relativeDayLabel } from "@/lib/date-labels";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
 import { nextReminderDate } from "@/lib/reminders";
+import { customTypeIconOrFallback } from "@/lib/custom-type-icon";
+import { interactionLabels } from "@/lib/interaction-labels";
+import { interactionIconFor } from "@/lib/interaction-options";
+import {
+  editableEntryFromInteraction,
+  editableEntryFromUpdate,
+} from "@/lib/update-entries";
 import type { InteractionType } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
-const interactionIcons: Record<InteractionType, typeof ChatCircleDots> = {
-  met: UsersThree,
-  texted: ChatCircleDots,
-  called: PhoneCall,
-  coffee: Coffee,
-  meal: Coffee,
-  party: UsersThree,
-  class: GraduationCap,
-  event: CalendarCheck,
-  other: NotePencil,
-};
+/**
+ * An "Other" entry the user has named shows their own words and icon; anything
+ * else falls back to the fixed set the composer offers.
+ */
+function timelineIcon(entry: {
+  type: InteractionType;
+  customIcon: string | null;
+}) {
+  return entry.type === "other" && entry.customIcon
+    ? customTypeIconOrFallback(entry.customIcon)
+    : interactionIconFor(entry.type);
+}
 
-const interactionLabels: Record<InteractionType, string> = {
-  met: "Met",
-  texted: "Texted",
-  called: "Called",
-  coffee: "Coffee",
-  meal: "Meal",
-  party: "Party",
-  class: "Class",
-  event: "Event",
-  other: "Other",
-};
+function timelineTitle(entry: {
+  type: InteractionType;
+  customLabel: string | null;
+}) {
+  return entry.customLabel?.trim() || interactionLabels[entry.type];
+}
 
 export default function PersonDetailScreen() {
   const router = useRouter();
@@ -406,10 +406,22 @@ export default function PersonDetailScreen() {
             <Card style={styles.timelineCard}>
               {timelineEntries.map((entry) => {
                 if (entry.kind === "update") {
+                  const linked =
+                    interactions.find(
+                      (interaction) =>
+                        interaction.sourceUpdateId === entry.update.id,
+                    ) ?? null;
+                  const editable = editableEntryFromUpdate(
+                    entry.update,
+                    linked,
+                  );
+                  const IconComponent = entry.update.isInteraction
+                    ? timelineIcon(editable)
+                    : NotePencil;
                   return (
                     <View key={entry.id} style={styles.timelineItem}>
                       <View style={styles.interactionIcon}>
-                        <NotePencil
+                        <IconComponent
                           color={colors.sageStrong}
                           size={19}
                           weight="duotone"
@@ -418,7 +430,7 @@ export default function PersonDetailScreen() {
                       <View style={styles.timelineCopy}>
                         <AppText variant="label">
                           {entry.update.isInteraction
-                            ? entry.update.interactionLabel || "Interaction"
+                            ? timelineTitle(editable)
                             : "Note"}
                         </AppText>
                         <AppText variant="caption">
@@ -428,11 +440,15 @@ export default function PersonDetailScreen() {
                           {entry.update.text}
                         </AppText>
                       </View>
+                      <EditEntryButton
+                        onPress={() => quickCapture.editEntry(editable)}
+                      />
                     </View>
                   );
                 }
                 const { interaction } = entry;
-                const IconComponent = interactionIcons[interaction.type];
+                const editable = editableEntryFromInteraction(interaction);
+                const IconComponent = timelineIcon(interaction);
                 return (
                   <View key={entry.id} style={styles.timelineItem}>
                     <View style={styles.interactionIcon}>
@@ -444,7 +460,7 @@ export default function PersonDetailScreen() {
                     </View>
                     <View style={styles.timelineCopy}>
                       <AppText variant="label">
-                        {interactionLabels[interaction.type]}
+                        {timelineTitle(interaction)}
                       </AppText>
                       <AppText variant="caption">
                         {dateLabel(interaction.occurredAt)}
@@ -455,6 +471,11 @@ export default function PersonDetailScreen() {
                         </AppText>
                       ) : null}
                     </View>
+                    {editable ? (
+                      <EditEntryButton
+                        onPress={() => quickCapture.editEntry(editable)}
+                      />
+                    ) : null}
                   </View>
                 );
               })}
@@ -490,6 +511,20 @@ export default function PersonDetailScreen() {
         onClose={() => setSharing(false)}
       />
     </View>
+  );
+}
+
+function EditEntryButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel="Edit this update"
+      accessibilityRole="button"
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => [styles.editEntry, pressed && styles.pressed]}
+    >
+      <PencilSimple color={colors.inkMuted} size={16} />
+    </Pressable>
   );
 }
 
@@ -659,6 +694,12 @@ const styles = StyleSheet.create({
   timelineCopy: {
     flex: 1,
     gap: 2,
+  },
+  editEntry: {
+    alignItems: "center",
+    height: 32,
+    justifyContent: "center",
+    width: 32,
   },
   note: {
     color: colors.inkMuted,

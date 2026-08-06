@@ -11,8 +11,10 @@ import type {
 } from "@/lib/types";
 import type {
   FollowUpInput,
+  InteractionEdit,
   InteractionInput,
   PersonInput,
+  PersonUpdateEdit,
   PersonUpdateInput,
 } from "@/lib/validation";
 
@@ -70,6 +72,40 @@ export type OfflineMutation =
     }
   | {
       id: string;
+      kind: "edit-person-update";
+      userId: string;
+      createdAt: string;
+      updateId: string;
+      /** What the row said when the edit was made, so a replay can tell that
+       * somebody else has changed it since. */
+      baseUpdatedAt: string | null;
+      input: PersonUpdateEdit;
+    }
+  | {
+      id: string;
+      kind: "delete-person-update";
+      userId: string;
+      createdAt: string;
+      updateId: string;
+    }
+  | {
+      id: string;
+      kind: "edit-interaction";
+      userId: string;
+      createdAt: string;
+      interactionId: string;
+      baseUpdatedAt: string | null;
+      input: InteractionEdit;
+    }
+  | {
+      id: string;
+      kind: "delete-interaction";
+      userId: string;
+      createdAt: string;
+      interactionId: string;
+    }
+  | {
+      id: string;
       kind: "set-follow-up-complete";
       userId: string;
       createdAt: string;
@@ -121,6 +157,7 @@ export type OfflineSnapshot = {
   personDetails: Record<string, PersonDetails>;
   accountSettings: AccountSettings | null;
   recentUpdateTypes: string[];
+  recentCustomLabels: string[];
 };
 
 const cachePrefix = "siyi.offline.cache";
@@ -148,6 +185,7 @@ function emptySnapshot(userId: string): OfflineSnapshot {
     personDetails: {},
     accountSettings: null,
     recentUpdateTypes: [],
+    recentCustomLabels: [],
   };
 }
 
@@ -193,8 +231,10 @@ export async function getOfflineSnapshot(userId: string) {
 
   try {
     const parsed = JSON.parse(stored) as OfflineSnapshot;
+    // Spreading over an empty snapshot means a cache written by an older build
+    // simply has no value for a field this one added, rather than undefined.
     return parsed.version === 1 && parsed.userId === userId
-      ? parsed
+      ? { ...emptySnapshot(userId), ...parsed }
       : emptySnapshot(userId);
   } catch {
     return emptySnapshot(userId);

@@ -1,7 +1,9 @@
 import {
   followUpInputSchema,
   importPreviewSchema,
+  interactionEditSchema,
   personInputSchema,
+  personUpdateEditSchema,
   personUpdateInputSchema,
 } from "@/lib/validation";
 
@@ -82,6 +84,43 @@ describe("mobile validation", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("keeps an icon from the app's own set", () => {
+    const edit = personUpdateEditSchema.parse({
+      text: "Went bouldering after class",
+      recordedAt: new Date(Date.now() - 3_600_000).toISOString(),
+      type: "other",
+      customLabel: "Bouldering",
+      customIcon: "climb",
+    });
+
+    expect(edit.customIcon).toBe("climb");
+  });
+
+  it("drops an icon that is not one of the app's own", () => {
+    const edit = personUpdateEditSchema.parse({
+      text: "Went bouldering after class",
+      recordedAt: new Date(Date.now() - 3_600_000).toISOString(),
+      type: "other",
+      customLabel: "Bouldering",
+      customIcon: "skull-and-crossbones",
+    });
+
+    expect(edit.customIcon).toBeNull();
+  });
+
+  it("clears the user's own name once the type is no longer Other", () => {
+    const edit = interactionEditSchema.parse({
+      type: "coffee",
+      occurredAt: new Date(Date.now() - 3_600_000).toISOString(),
+      note: "Flat white at the corner place",
+      customLabel: "Bouldering",
+      customIcon: "climb",
+    });
+
+    expect(edit.customLabel).toBeNull();
+    expect(edit.customIcon).toBeNull();
   });
 
   it("validates and counts only versioned import payloads", () => {
