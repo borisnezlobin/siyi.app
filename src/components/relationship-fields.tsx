@@ -107,7 +107,7 @@ export function RelationshipFields({
             <p className="mt-1 text-[11px] leading-4 text-ink-muted">
               {remindersEnabled
                 ? "We nudge you when it has been a while."
-                : `No nudges about ${who}. Birthdays and follow-ups still come through.`}
+                : `No nudges about ${who}. Birthdays and reminders still come through.`}
             </p>
           </div>
           <button

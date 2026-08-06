@@ -739,7 +739,7 @@ export async function getPeople() {
 
 export async function getFollowUps() {
   const userId = await currentUserId();
-  if (!userId) throw new Error("Sign in to see your follow-ups.");
+  if (!userId) throw new Error("Sign in to see your reminders.");
   const snapshot = await getOfflineSnapshot(userId);
 
   if (!(await isOnline())) return snapshot.followUps;
@@ -1024,7 +1024,7 @@ export async function createFollowUp(userId: string, input: FollowUpInput) {
 
   await enqueueOfflineMutation({
     id: mutationId,
-    kind: "create-follow-up",
+    kind: "create-reminder",
     userId,
     createdAt,
     followUpId,
@@ -1523,11 +1523,11 @@ export async function setFollowUpComplete(
   complete: boolean,
 ) {
   const userId = await currentUserId();
-  if (!userId) throw new Error("Sign in to update this follow-up.");
+  if (!userId) throw new Error("Sign in to update this reminder.");
   const completedAt = complete ? new Date().toISOString() : null;
   await enqueueOfflineMutation({
     id: Crypto.randomUUID(),
-    kind: "set-follow-up-complete",
+    kind: "set-reminder-complete",
     userId,
     createdAt: new Date().toISOString(),
     followUpId,
@@ -2444,7 +2444,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     return;
   }
 
-  if (mutation.kind === "create-follow-up") {
+  if (mutation.kind === "create-reminder") {
     const { error } = await supabase.from("follow_ups").upsert(
       {
         id: mutation.followUpId,
@@ -2545,7 +2545,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     return;
   }
 
-  if (mutation.kind === "set-follow-up-complete") {
+  if (mutation.kind === "set-reminder-complete") {
     const { error } = await supabase
       .from("follow_ups")
       .update({ completed_at: mutation.completedAt })

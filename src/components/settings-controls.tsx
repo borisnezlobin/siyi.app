@@ -649,7 +649,7 @@ export function SettingsControls({
             <p className="mt-1 text-[11px] leading-5">
               Ready to add {importPreview.counts.people} people,{" "}
               {importPreview.counts.interactions} interactions,{" "}
-              {importPreview.counts.followUps} follow-ups, and{" "}
+              {importPreview.counts.followUps} reminders, and{" "}
               {importPreview.counts.tags} tags.
             </p>
             <button
@@ -679,7 +679,7 @@ export function SettingsControls({
         <h2 className="text-sm font-bold">Delete account</h2>
         <p className="mt-1 text-xs leading-5">
           Permanently removes your account, people, notes, photos, interactions,
-          follow-ups, and push subscriptions.
+          reminders, and push subscriptions.
         </p>
         {!deleteOpen ? (
           <button

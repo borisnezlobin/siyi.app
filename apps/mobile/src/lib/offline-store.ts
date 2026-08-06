@@ -106,7 +106,7 @@ export type OfflineMutation =
     }
   | {
       id: string;
-      kind: "create-follow-up";
+      kind: "create-reminder";
       userId: string;
       createdAt: string;
       followUpId: string;
@@ -165,7 +165,7 @@ export type OfflineMutation =
     }
   | {
       id: string;
-      kind: "set-follow-up-complete";
+      kind: "set-reminder-complete";
       userId: string;
       createdAt: string;
       followUpId: string;

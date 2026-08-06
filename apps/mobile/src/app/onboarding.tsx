@@ -116,7 +116,7 @@ export default function OnboardingScreen() {
         <View style={styles.timezoneCopy}>
           <AppText variant="label">Your local time</AppText>
           <AppText variant="caption">
-            Used for birthdays, follow-ups, and reminder timing.
+            Used for birthdays, reminders, and reminder timing.
           </AppText>
         </View>
         <TimezonePicker
@@ -129,7 +129,7 @@ export default function OnboardingScreen() {
       <View style={styles.notificationCopy}>
         <AppText variant="heading">Gentle reminders, on your terms</AppText>
         <AppText style={styles.muted}>
-          {`${brand.name} can surface due follow-ups, birthdays, and people you meant to check in with. We will only ask your device for permission after you tap “Set up notifications.”`}
+          {`${brand.name} can surface due reminders, birthdays, and people you meant to check in with. We will only ask your device for permission after you tap “Set up notifications.”`}
         </AppText>
         <AppText style={styles.muted} variant="caption">
           Notification categories and quiet timing stay under your control.

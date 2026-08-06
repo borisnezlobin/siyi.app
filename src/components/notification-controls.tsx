@@ -355,8 +355,8 @@ export function NotificationControls({
           <SwitchControl
             checked={followUpEnabled}
             onChange={setFollowUpEnabled}
-            label="Follow-ups"
-            description="For follow-ups that are due or overdue."
+            label="Reminders"
+            description="For reminders that are due or overdue."
           />
         </div>
       </section>

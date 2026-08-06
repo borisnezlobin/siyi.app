@@ -20,7 +20,7 @@ const sections = [
         <p>
           Content you choose to save may include names, contact details,
           birthdays, photos, social usernames, education details, notes,
-          interactions, tags, and follow-ups about people you know. You decide
+          interactions, tags, and reminders about people you know. You decide
           what to add and are responsible for having an appropriate reason to
           store it.
         </p>
@@ -45,7 +45,7 @@ const sections = [
     content: (
       <ul>
         <li>Provide, synchronize, and secure your account.</li>
-        <li>Show your people, updates, reminders, and follow-ups.</li>
+        <li>Show your people, updates, reminders, and reminders.</li>
         <li>Send notifications only for the categories you enable.</li>
         <li>Respond to support requests and investigate technical problems.</li>
         <li>Prevent fraud, misuse, and unauthorized access.</li>

@@ -310,9 +310,9 @@ export default function NotificationsScreen() {
             value={preferences.birthdayEnabled}
           />
           <PreferenceSwitch
-            body="A follow-up is due or overdue."
+            body="A reminder is due or overdue."
             icon={ClockCountdown}
-            label="Follow-ups"
+            label="Reminders"
             onChange={(enabled) =>
               setDraft({ ...preferences, followUpEnabled: enabled })
             }

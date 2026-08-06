@@ -581,7 +581,7 @@ export function PersonForm({
                   <AppText variant="caption">
                     {remindersEnabled
                       ? "We nudge you when it has been a while."
-                      : "No nudges about them. Birthdays and follow-ups still come through."}
+                      : "No nudges about them. Birthdays and reminders still come through."}
                   </AppText>
                 </View>
                 <Switch

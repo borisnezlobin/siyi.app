@@ -25,7 +25,8 @@ type AppTabBarProps = Parameters<TabBarRenderer>[0];
 const tabDetails: Record<string, { label: string; icon: Icon }> = {
   today: { label: "Today", icon: House },
   people: { label: "People", icon: UsersThree },
-  "follow-ups": { label: "Follow-ups", icon: ClockCountdown },
+  // Keyed by route name, which is still follow-ups on disk.
+  "follow-ups": { label: "Reminders", icon: ClockCountdown },
   settings: { label: "Settings", icon: GearSix },
 };
 

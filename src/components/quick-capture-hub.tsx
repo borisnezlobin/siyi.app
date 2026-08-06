@@ -36,7 +36,7 @@ type QuickPerson = Pick<
  * point: an interaction says you saw someone, an update says you learned
  * something about them.
  */
-type CaptureMode = "follow-up" | "interaction" | "update";
+type CaptureMode = "reminder" | "interaction" | "update";
 
 const quickCaptureEvent = "siyi:quick-capture";
 
@@ -49,10 +49,10 @@ const modeCopy: Record<
   CaptureMode,
   { eyebrow: string; title: string; save: string }
 > = {
-  "follow-up": {
+  "reminder": {
     eyebrow: "Keep a promise",
     title: "What needs following up?",
-    save: "Save follow-up",
+    save: "Save reminder",
   },
   interaction: {
     eyebrow: "Log time together",
@@ -78,7 +78,7 @@ export function QuickCaptureTrigger({
   surface?: "default" | "sidebar" | "quiet";
 }) {
   const Icon =
-    mode === "follow-up"
+    mode === "reminder"
       ? ClockCountdown
       : mode === "interaction"
         ? UsersThree
@@ -231,7 +231,7 @@ export function QuickCaptureHub({
       return;
     }
 
-    const response = await fetch("/api/follow-ups", {
+    const response = await fetch("/api/reminders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -243,7 +243,7 @@ export function QuickCaptureHub({
 
     if (!response.ok) {
       setError(
-        await getApiResponseError(response, "The follow-up could not be saved."),
+        await getApiResponseError(response, "The reminder could not be saved."),
       );
       setSaving(false);
       return;
@@ -368,7 +368,7 @@ export function QuickCaptureHub({
           type="button"
           onClick={() => {
             onMenuOpenChange(false);
-            window.setTimeout(() => openCapture("follow-up"), 130);
+            window.setTimeout(() => openCapture("reminder"), 130);
           }}
           className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
@@ -378,7 +378,7 @@ export function QuickCaptureHub({
             aria-hidden="true"
           />
           <span className="min-w-0">
-            <span className="block text-sm font-semibold">Add a follow-up</span>
+            <span className="block text-sm font-semibold">Add a reminder</span>
             <span className="block text-[11px] text-ink-muted">
               Something to do before you forget
             </span>
@@ -436,10 +436,10 @@ export function QuickCaptureHub({
                 />
               )}
 
-              {mode === "follow-up" ? (
+              {mode === "reminder" ? (
                 <>
                   <label className="mt-4 block text-xs font-semibold text-ink-muted">
-                    Follow-up
+                    Reminder
                     <input
                       value={followUpText}
                       onChange={(event) => setFollowUpText(event.target.value)}
@@ -532,7 +532,7 @@ export function QuickCaptureHub({
               <button
                 type="button"
                 onClick={
-                  mode === "follow-up"
+                  mode === "reminder"
                     ? saveFollowUp
                     : mode === "update"
                       ? savePersonUpdate
@@ -564,7 +564,7 @@ export function QuickCaptureHub({
             <div className="mt-6 rounded-2xl bg-porcelain p-5 text-center">
               <p className="text-sm font-semibold">Add someone first.</p>
               <p className="mt-1 text-xs leading-5 text-ink-muted">
-                Interactions, updates and follow-ups all need a person to belong
+                Interactions, updates and reminders all need a person to belong
                 to.
               </p>
               <Link
