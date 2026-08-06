@@ -46,6 +46,46 @@ export function isAdminEmail(
   return allowlist.includes(normalizeEmail(email));
 }
 
+export type AdminIdentity = {
+  id: string;
+  email: string | null | undefined;
+  emailConfirmedAt: string | null | undefined;
+};
+
+export function parseAdminUserIds(raw: string | undefined | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
+/**
+ * Signup is open, so an email allowlist alone only holds while Supabase is
+ * confirming addresses — turn confirmations off and anyone could register the
+ * admin address and claim the account. Auth user ids cannot be claimed that
+ * way, so when ADMIN_USER_IDS is set it decides on its own. Falling back to
+ * email additionally requires the address to have been confirmed.
+ */
+export function isAdminUser(
+  user: AdminIdentity | null | undefined,
+  env: {
+    adminUserIds?: string | null;
+    adminEmails?: string | null;
+  } = {
+    adminUserIds: process.env.ADMIN_USER_IDS,
+    adminEmails: process.env.ADMIN_EMAILS,
+  },
+): boolean {
+  if (!user) return false;
+
+  const allowedIds = parseAdminUserIds(env.adminUserIds);
+  if (allowedIds.length > 0) return allowedIds.includes(user.id);
+
+  if (!user.emailConfirmedAt) return false;
+  return isAdminEmail(user.email, env.adminEmails);
+}
+
 export function daysSince(iso: string | null, now: Date): number | null {
   if (!iso) return null;
   const then = new Date(iso).getTime();
