@@ -55,20 +55,46 @@ function getPushStatusCode(error: unknown) {
   return null;
 }
 
+const emptyResult = (): PushSendResult => ({
+  delivered: 0,
+  failed: 0,
+  revoked: 0,
+});
+
+/**
+ * Browser and phone deliveries are independent, so one failing must never take
+ * the other down with it. Before this, a project without the native table made
+ * every browser notification fail with "Could not find the table
+ * 'public.native_push_subscriptions'" even though web push was working.
+ */
 export async function sendPushToUser(
   admin: SupabaseClient,
   userId: string,
   payload: PushPayload,
 ): Promise<PushSendResult> {
-  const [webResult, nativeResult] = await Promise.all([
+  const [webResult, nativeResult] = await Promise.allSettled([
     sendWebPushToUser(admin, userId, payload),
     sendNativePushToUser(admin, userId, payload),
   ]);
+
+  if (webResult.status === "rejected") {
+    throw webResult.reason;
+  }
+  if (nativeResult.status === "rejected") {
+    console.error("Native push failed", nativeResult.reason);
+  }
+
+  const native =
+    nativeResult.status === "fulfilled" ? nativeResult.value : emptyResult();
   return {
-    delivered: webResult.delivered + nativeResult.delivered,
-    failed: webResult.failed + nativeResult.failed,
-    revoked: webResult.revoked + nativeResult.revoked,
+    delivered: webResult.value.delivered + native.delivered,
+    failed: webResult.value.failed + native.failed,
+    revoked: webResult.value.revoked + native.revoked,
   };
+}
+
+function isMissingTable(code: string | undefined) {
+  return ["42P01", "PGRST205"].includes(code || "");
 }
 
 async function sendWebPushToUser(
@@ -189,6 +215,9 @@ async function sendNativePushToUser(
     )
     .eq("user_id", userId)
     .is("revoked_at", null);
+  // The phone app's table only exists once its migration has run. A project
+  // that is web-only is a normal state, not an error.
+  if (error && isMissingTable(error.code)) return emptyResult();
   if (error) throw new Error(error.message);
 
   const result: PushSendResult = { delivered: 0, failed: 0, revoked: 0 };

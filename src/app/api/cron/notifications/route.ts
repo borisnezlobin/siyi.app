@@ -121,15 +121,24 @@ export async function GET(request: NextRequest) {
     const eligibleUserIds = eligiblePreferences.map(
       (preference) => preference.user_id,
     );
-    const [peopleResult, interactionsResult, followUpsResult] =
-      await Promise.all([
+    // Reminders are opt-out, so a database still waiting on migration 0008 has
+    // no opt-out column and every person is simply included.
+    const selectPeople = (columns: string) =>
       admin
         .from("people")
-        .select(
-          "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminders_enabled,reminder_interval_days,first_met_at",
-        )
+        .select(columns)
         .eq("status", "active")
-        .in("user_id", eligibleUserIds),
+        .in("user_id", eligibleUserIds);
+    const peopleColumns =
+      "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminder_interval_days,first_met_at";
+
+    const [peopleResult, interactionsResult, followUpsResult] =
+      await Promise.all([
+      selectPeople(`${peopleColumns},reminders_enabled`).then((result) =>
+        result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")
+          ? selectPeople(peopleColumns)
+          : result,
+      ),
       admin
         .from("interactions")
         .select("person_id,occurred_at")
@@ -152,7 +161,7 @@ export async function GET(request: NextRequest) {
       return apiError(firstError.message, 500);
     }
 
-    const people = peopleResult.data as PersonRow[];
+    const people = peopleResult.data as unknown as PersonRow[];
     const interactions = interactionsResult.data as InteractionRow[];
     const followUps = followUpsResult.data as FollowUpRow[];
 
