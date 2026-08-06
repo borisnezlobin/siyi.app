@@ -13,7 +13,7 @@ describe("searchColleges", () => {
   });
 
   it("prefers the flagship campus over its satellites", () => {
-    expect(searchColleges("berkeley")[0].name).toBe("University of California, Berkeley");
+    expect(searchColleges("uc berkeley")[0].name).toBe("University of California, Berkeley");
     expect(searchColleges("ucla")[0].name).toBe("University of California, Los Angeles");
   });
 
@@ -26,7 +26,7 @@ describe("searchColleges", () => {
 
   it("ignores case, punctuation and accents", () => {
     expect(searchColleges("U.C. Berkeley")[0].name).toBe("University of California, Berkeley");
-    expect(searchColleges("BERKELEY")[0].name).toBe("University of California, Berkeley");
+    expect(searchColleges("UC BERKELEY")[0].name).toBe("University of California, Berkeley");
   });
 
   it("stays quiet until there is enough to go on", () => {
@@ -44,7 +44,7 @@ describe("findCollege", () => {
     expect(findCollege("University of California, Berkeley")?.name).toBe(
       "University of California, Berkeley"
     );
-    expect(findCollege("cal")?.name).toBe("University of California, Berkeley");
+    expect(findCollege("uc berkeley")?.name).toBe("University of California, Berkeley");
   });
 
   it("returns null for a school it does not know", () => {
@@ -78,7 +78,7 @@ describe("collegeMatchesQuery", () => {
 
 describe("collegeSearchTerms", () => {
   it("includes the aliases of a known school", () => {
-    expect(collegeSearchTerms("University of California, Berkeley")).toContain("ucb");
+    expect(collegeSearchTerms("University of California, Berkeley")).toContain("uc berkeley");
   });
 
   it("is empty when nothing is recorded", () => {

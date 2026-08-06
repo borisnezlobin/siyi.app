@@ -1,5 +1,6 @@
 import {
   Cake,
+  CaretRight,
   ClockCountdown,
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
@@ -285,6 +286,19 @@ export default async function TodayPage() {
           )}
         </div>
       </section>
+
+      <Link
+        href="/check-in"
+        className="mt-9 flex items-center justify-between gap-4 rounded-2xl bg-white p-4 transition-colors hover:bg-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        <span>
+          <span className="block text-sm font-bold">Who did you talk to today?</span>
+          <span className="mt-0.5 block text-xs text-ink-muted">
+            One pass, one tap each — log everyone you saw.
+          </span>
+        </span>
+        <CaretRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-ink-muted" />
+      </Link>
 
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">

@@ -9,6 +9,9 @@ export type College = {
   place: string;
   latitude: number | null;
   longitude: number | null;
+  /** Enrolled students, where the source knows. Breaks ties between schools
+   * whose names match equally well: the one people mean is the bigger one. */
+  size: number;
 };
 
 export function normalizeCollegeText(value: string): string {
@@ -26,7 +29,7 @@ let aliasIndex: Map<string, College> | null = null;
 function allColleges(): College[] {
   if (parsed) return parsed;
   parsed = collegeTable.split("\n").map((line) => {
-    const [name, country = "", region = "", aliases = "", place = "", lat = "", lon = ""] =
+    const [name, country = "", region = "", aliases = "", place = "", lat = "", lon = "", size = ""] =
       line.split("\t");
     return {
       name,
@@ -36,6 +39,7 @@ function allColleges(): College[] {
       place,
       latitude: lat ? Number(lat) : null,
       longitude: lon ? Number(lon) : null,
+      size: size ? Number(size) : 0,
     };
   });
   return parsed;
@@ -91,6 +95,7 @@ export function searchColleges(rawQuery: string, limit = 8): College[] {
     .sort(
       (left, right) =>
         left.rank - right.rank ||
+        right.college.size - left.college.size ||
         left.college.name.length - right.college.name.length ||
         left.college.name.localeCompare(right.college.name)
     )

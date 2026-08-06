@@ -1,6 +1,8 @@
 import {
   ArrowsDownUp,
+  Cake,
   MagnifyingGlass,
+  MapPin,
   SlidersHorizontal,
   UsersThree,
   XCircle,
@@ -166,6 +168,25 @@ export default function PeopleScreen() {
       subtitle="Search by name, school, hometown, note, major, dorm, or tag."
       title="People"
     >
+      <View style={styles.shortcuts}>
+        {(
+          [
+            ["/birthdays", "Birthdays", Cake],
+            ["/map", "Map", MapPin],
+          ] as const
+        ).map(([href, label, Icon]) => (
+          <Pressable
+            accessibilityRole="button"
+            key={href}
+            onPress={() => router.push(href)}
+            style={styles.shortcut}
+          >
+            <Icon color={colors.ink} size={17} />
+            <AppText variant="caption">{label}</AppText>
+          </Pressable>
+        ))}
+      </View>
+
       <View style={styles.searchRow}>
         <View style={styles.search}>
           <MagnifyingGlass color={colors.inkMuted} size={20} />
@@ -472,6 +493,20 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 9,
+  },
+  shortcuts: {
+    flexDirection: "row",
+    gap: 9,
+  },
+  shortcut: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.medium,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    paddingVertical: 13,
   },
   sections: {
     gap: 20,
