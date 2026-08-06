@@ -50,10 +50,25 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 - [ ] **Multiple emails / phones / Instagram handles per person.** Schema
       change: child tables or JSONB. Touches import/export, vCard, contact
       sync, and search.
-- [ ] **Notes field feels cramped.** Owner wants to write a paragraph on day
-      one but the small textarea discourages it. Try affordance first: taller
-      auto-growing field and an inviting prompt. Only consider structure
-      (multiple named notes) if that is not enough. Markdown was rejected.
+- [ ] **Named note sections** (supersedes the "bigger textarea" idea, which
+      the owner correctly rejected). The real need: the same headings reused
+      across many people — "Interests", "Things we've done together",
+      "Things mentioned".
+      Schema: `person_notes` (id, user_id, person_id, heading, body, position).
+      No separate templates table — instead suggest headings this user has
+      already used, which gives reuse for free. Keep `people.general_notes`
+      as an untitled first section; do not migrate or drop it.
+      Markdown and per-person custom *fields* both rejected.
+
+- [ ] **Edit Person page is far too long.** Group it, do not just reorder:
+      - "Who they are" — photo, name, preferred name
+      - "How to reach them" — phone, email, Instagram
+      - "About them" — hometown, major, graduation year, dorm
+      - "How you met" — first met date and location
+      - "Notes" — the named sections above
+      - "Reminders" — relationship label and the reminder switch
+      Collapsed by default except the section being edited. Avoid the phrase
+      "basic info" — the owner dislikes it.
 - [ ] **Map of hometowns / locations.** Needs geocoding. Possible paid tier.
 - [ ] **Cleaner person URLs** — `/people/boris-nezlobin` instead of a uuid.
       ALWAYS append the suffix, never only on collision: a conditional suffix
