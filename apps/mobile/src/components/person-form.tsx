@@ -10,7 +10,7 @@ import {
   ImageSquare,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -23,9 +23,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
+import { ContactMethodField } from "@/components/contact-method-field";
 import { FormField } from "@/components/form-field";
+import { PersonNoteSections } from "@/components/person-note-sections";
 import { Screen } from "@/components/screen";
 import { colors, floatShadow, radii } from "@/constants/theme";
+import {
+  contactFormValues,
+  emptyContactDrafts,
+  initialContactDrafts,
+  type ContactMethodDraft,
+} from "@/lib/contact-methods";
 import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
 import {
   isFutureDateInput,
@@ -34,15 +42,17 @@ import {
   toDateInputValue,
 } from "@/lib/date-input";
 import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
-import { formatPhoneNumberInput } from "@/lib/phone-format";
-import { createPerson, updatePerson } from "@/lib/data";
-import { normalizeInstagramUsername } from "@/lib/instagram";
+import { createPerson, getUsedNoteHeadings, updatePerson } from "@/lib/data";
 import {
   isDefaultRelationshipLabel,
   maxRelationshipLabelLength,
   relationshipTierLabels,
 } from "@/lib/relationship-labels";
-import type { Person, RelationshipStrength } from "@/lib/types";
+import type {
+  Person,
+  PersonNoteSections as PersonNoteSectionsData,
+  RelationshipStrength,
+} from "@/lib/types";
 import type { PersonInput } from "@/lib/validation";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -52,15 +62,30 @@ type PhotoAsset = {
   mimeType?: string | null;
 };
 
-export function PersonForm({ person }: { person?: Person }) {
+export function PersonForm({
+  person,
+  noteSections,
+}: {
+  person?: Person;
+  noteSections?: PersonNoteSectionsData;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const userId = session?.user.id;
   const [fullName, setFullName] = useState(person?.fullName || "");
-  const [instagramUsername, setInstagramUsername] = useState(
-    person?.instagramUsername || "",
+  const [contactDrafts, setContactDrafts] = useState<ContactMethodDraft[]>(() =>
+    person ? initialContactDrafts(person) : emptyContactDrafts(),
   );
-  const [phoneNumber, setPhoneNumber] = useState(person?.phoneNumber || "");
+  // The rows the form opened with. A replay deletes only these, so a number
+  // added on the web meanwhile is not swept away.
+  const knownContactMethods = useMemo(
+    () => (person ? initialContactDrafts(person) : []),
+    [person],
+  );
+  const [headingsUsedElsewhere, setHeadingsUsedElsewhere] = useState<string[]>(
+    [],
+  );
   const [firstMetLocation, setFirstMetLocation] = useState(
     person?.firstMetLocation || "",
   );
@@ -68,7 +93,6 @@ export function PersonForm({ person }: { person?: Person }) {
   const [preferredName, setPreferredName] = useState(
     person?.preferredName || "",
   );
-  const [email, setEmail] = useState(person?.email || "");
   const [birthday, setBirthday] = useState(person?.birthday || "");
   const [hometown, setHometown] = useState(person?.hometown || "");
   const [dormOrResidence, setDormOrResidence] = useState(
@@ -117,14 +141,27 @@ export function PersonForm({ person }: { person?: Person }) {
     void Haptics.selectionAsync();
   }
 
+  useEffect(() => {
+    if (!userId) return;
+    let stillMounted = true;
+    void getUsedNoteHeadings(userId, person?.id).then((headings) => {
+      if (stillMounted) setHeadingsUsedElsewhere(headings);
+    });
+    return () => {
+      stillMounted = false;
+    };
+  }, [person?.id, userId]);
+
+  const contactValues = contactFormValues(contactDrafts);
   const currentValues: FormValues = {
     fullName,
-    instagramUsername,
-    phoneNumber,
+    instagramUsername: contactValues.instagramUsername,
+    phoneNumber: contactValues.phoneNumber,
+    contactMethods: contactValues.contactMethods,
     firstMetLocation,
     generalNotes,
     preferredName,
-    email,
+    email: contactValues.email,
     birthday,
     hometown,
     dormOrResidence,
@@ -137,15 +174,19 @@ export function PersonForm({ person }: { person?: Person }) {
     firstMetOn,
     photoUri: photo?.uri ?? "",
   };
-  const initialValues = useMemo<FormValues>(
-    () => ({
+  const initialValues = useMemo<FormValues>(() => {
+    const initialContacts = contactFormValues(
+      person ? initialContactDrafts(person) : emptyContactDrafts(),
+    );
+    return {
       fullName: person?.fullName || "",
-      instagramUsername: person?.instagramUsername || "",
-      phoneNumber: person?.phoneNumber || "",
+      instagramUsername: initialContacts.instagramUsername,
+      phoneNumber: initialContacts.phoneNumber,
+      contactMethods: initialContacts.contactMethods,
       firstMetLocation: person?.firstMetLocation || "",
       generalNotes: person?.generalNotes || "",
       preferredName: person?.preferredName || "",
-      email: person?.email || "",
+      email: initialContacts.email,
       birthday: person?.birthday || "",
       hometown: person?.hometown || "",
       dormOrResidence: person?.dormOrResidence || "",
@@ -165,9 +206,8 @@ export function PersonForm({ person }: { person?: Person }) {
         : "",
       firstMetOn: toDateInputValue(person?.firstMetAt),
       photoUri: "",
-    }),
-    [person],
-  );
+    };
+  }, [person]);
   const dirty = hasUnsavedChanges(initialValues, currentValues);
   const usingCustomLabel = relationshipLabel.trim().length > 0;
 
@@ -198,12 +238,14 @@ export function PersonForm({ person }: { person?: Person }) {
       firstMetOn !== initialValues.firstMetOn && isValidDateInput(firstMetOn);
     return {
       fullName,
-      instagramUsername,
-      phoneNumber,
+      // The primary of each kind keeps the field it has always had, so
+      // everything that reads a person still finds one number and one email.
+      instagramUsername: contactValues.instagramUsername,
+      phoneNumber: contactValues.phoneNumber,
       firstMetLocation,
       generalNotes,
       preferredName,
-      email,
+      email: contactValues.email,
       birthday,
       hometown,
       dormOrResidence,
@@ -244,6 +286,8 @@ export function PersonForm({ person }: { person?: Person }) {
           buildInput(),
           photo || undefined,
           person.profilePhotoPath,
+          contactDrafts,
+          knownContactMethods,
         );
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
@@ -255,6 +299,7 @@ export function PersonForm({ person }: { person?: Person }) {
           session.user.id,
           buildInput(),
           photo || undefined,
+          contactDrafts,
         );
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
@@ -350,28 +395,15 @@ export function PersonForm({ person }: { person?: Person }) {
             placeholder="Jordan Lee"
             value={fullName}
           />
-          <FormField
-            autoCapitalize="none"
-            autoCorrect={false}
-            label="Instagram"
-            onBlur={() =>
-              setInstagramUsername(
-                normalizeInstagramUsername(instagramUsername),
-              )
-            }
-            onChangeText={setInstagramUsername}
-            placeholder="@username or profile link"
-            value={instagramUsername}
+          <ContactMethodField
+            drafts={contactDrafts}
+            kind="instagram"
+            onChange={setContactDrafts}
           />
-          <FormField
-            autoComplete="tel"
-            keyboardType="phone-pad"
-            label="Phone"
-            onChangeText={(value) =>
-              setPhoneNumber(formatPhoneNumberInput(value))
-            }
-            placeholder="(555) 555-0123"
-            value={phoneNumber}
+          <ContactMethodField
+            drafts={contactDrafts}
+            kind="phone"
+            onChange={setContactDrafts}
           />
           <FormField
             autoCapitalize="sentences"
@@ -388,6 +420,15 @@ export function PersonForm({ person }: { person?: Person }) {
             placeholder="What were you talking about?"
             value={generalNotes}
           />
+          {person && userId ? (
+            <PersonNoteSections
+              available={noteSections?.available ?? false}
+              headingsUsedElsewhere={headingsUsedElsewhere}
+              initialSections={noteSections?.sections ?? []}
+              personId={person.id}
+              userId={userId}
+            />
+          ) : null}
         </View>
 
         <Pressable
@@ -420,13 +461,10 @@ export function PersonForm({ person }: { person?: Person }) {
               onChangeText={setPreferredName}
               value={preferredName}
             />
-            <FormField
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              label="Email"
-              onChangeText={setEmail}
-              value={email}
+            <ContactMethodField
+              drafts={contactDrafts}
+              kind="email"
+              onChange={setContactDrafts}
             />
             <FormField
               hint="Use YYYY-MM-DD. The year can be approximate if needed."

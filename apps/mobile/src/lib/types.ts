@@ -103,6 +103,29 @@ export type PersonUpdate = {
   personIds: string[];
 };
 
+export type PersonNote = {
+  id: string;
+  personId: string;
+  userId: string;
+  heading: string;
+  body: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Empty and unavailable are different: the sections feature stays hidden
+ * until migration 0010 has run. */
+export type PersonNoteSections = {
+  available: boolean;
+  sections: PersonNote[];
+};
+
+export const unavailableNoteSections: PersonNoteSections = {
+  available: false,
+  sections: [],
+};
+
 export type FollowUp = {
   id: string;
   personId: string;
