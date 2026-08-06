@@ -13,11 +13,20 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PersonRow } from "@/components/person-row";
 import { contactDraftsOf } from "@/lib/contact-methods";
+import {
+  type MissingDetail,
+  isMissingDetail,
+  matchesPeopleQuery,
+  missingDetailLabels,
+  sectionPeopleAlphabetically,
+} from "@/lib/people-filters";
 import { getContactReminderState } from "@/lib/reminders";
 import type { Person, RelationshipStrength } from "@/lib/types";
 
 type SortOption = "recently-contacted" | "least-recent" | "name" | "newest";
 type FilterOption = "all" | "overdue" | "recent";
+
+const missingDetailOptions: MissingDetail[] = ["birthday", "email", "phone"];
 
 export function PeopleDirectory({
   people,
@@ -31,6 +40,7 @@ export function PeopleDirectory({
   const [strength, setStrength] = useState<RelationshipStrength | "all">("all");
   const [tag, setTag] = useState("all");
   const [sort, setSort] = useState<SortOption>("recently-contacted");
+  const [missing, setMissing] = useState<MissingDetail[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(initialFilter !== "all");
 
   const allTags = useMemo(
@@ -42,32 +52,21 @@ export function PeopleDirectory({
   );
 
   const filteredPeople = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
     const now = new Date();
 
     return people
       .filter((person) => {
-        const searchableText = [
-          person.fullName,
-          person.preferredName,
-          // Every number, address and handle, not only the primary — searching
-          // for the old number of someone who changed it still finds them.
-          ...contactDraftsOf(person).flatMap((method) => [
-            method.value,
-            method.label,
-          ]),
-          person.email,
-          person.generalNotes,
-          person.university,
-          person.major,
-          person.dormOrResidence,
-          ...(person.tags?.map(({ name }) => name) ?? []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+        // Every number, address and handle, not only the primary — searching
+        // for the old number of someone who changed it still finds them.
+        const searchable = {
+          ...person,
+          contactMethods: contactDraftsOf(person),
+        };
 
-        if (normalizedSearch && !searchableText.includes(normalizedSearch)) {
+        if (!matchesPeopleQuery(searchable, search)) {
+          return false;
+        }
+        if (missing.some((detail) => !isMissingDetail(person, detail))) {
           return false;
         }
         if (strength !== "all" && person.relationshipStrength !== strength) {
@@ -108,15 +107,24 @@ export function PeopleDirectory({
           ? firstContact - secondContact
           : secondContact - firstContact;
       });
-  }, [filter, people, search, sort, strength, tag]);
+  }, [filter, missing, people, search, sort, strength, tag]);
+
+  const sections = useMemo(
+    () => (sort === "name" ? sectionPeopleAlphabetically(filteredPeople) : []),
+    [filteredPeople, sort],
+  );
 
   const activeFilterCount =
-    Number(filter !== "all") + Number(strength !== "all") + Number(tag !== "all");
+    Number(filter !== "all") +
+    Number(strength !== "all") +
+    Number(tag !== "all") +
+    missing.length;
 
   function clearFilters() {
     setFilter("all");
     setStrength("all");
     setTag("all");
+    setMissing([]);
   }
 
   return (
@@ -246,6 +254,38 @@ export function PeopleDirectory({
                 />
               </span>
             </label>
+            <fieldset className="sm:col-span-2">
+              <legend className="text-xs font-semibold text-ink-muted">
+                Missing details
+              </legend>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {missingDetailOptions.map((detail) => {
+                  const selected = missing.includes(detail);
+                  return (
+                    <button
+                      key={detail}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setMissing((current) =>
+                          current.includes(detail)
+                            ? current.filter((entry) => entry !== detail)
+                            : [...current, detail],
+                        )
+                      }
+                      className={clsx(
+                        "rounded-xl px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                        selected
+                          ? "bg-ink text-white"
+                          : "bg-ink/[0.06] text-ink-muted hover:bg-ink/10",
+                      )}
+                    >
+                      {missingDetailLabels[detail]}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
           </div>
         </div>
       ) : null}
@@ -271,13 +311,32 @@ export function PeopleDirectory({
 
       <div className="mt-3 divide-y divide-ink/[0.07]">
         {filteredPeople.length ? (
-          filteredPeople.map((person) => (
-            <PersonRow
-              key={person.id}
-              person={person}
-              showOverdue={filter === "overdue"}
-            />
-          ))
+          sections.length ? (
+            sections.map((section) => (
+              <section key={section.letter}>
+                <h2 className="sticky top-0 z-10 bg-porcelain/95 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted backdrop-blur">
+                  {section.letter}
+                </h2>
+                <div className="divide-y divide-ink/[0.07]">
+                  {section.people.map((person) => (
+                    <PersonRow
+                      key={person.id}
+                      person={person}
+                      showOverdue={filter === "overdue"}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            filteredPeople.map((person) => (
+              <PersonRow
+                key={person.id}
+                person={person}
+                showOverdue={filter === "overdue"}
+              />
+            ))
+          )
         ) : (
           <div className="px-6 py-14 text-center">
             <p className="font-display text-2xl">No one matches that yet.</p>
