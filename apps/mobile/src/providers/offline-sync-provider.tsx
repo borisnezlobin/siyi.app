@@ -1,6 +1,6 @@
 import NetInfo from "@react-native-community/netinfo";
 import { useFocusEffect } from "expo-router";
-import { CloudArrowUp, WarningCircle, WifiSlash } from "phosphor-react-native";
+import { CloudArrowUp, WarningCircle, WifiSlash, X } from "phosphor-react-native";
 import {
   createContext,
   useCallback,
@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AppState, StyleSheet, View } from "react-native";
+import { AppState, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
 import { colors, floatShadow, radii } from "@/constants/theme";
@@ -99,37 +99,87 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Long enough to finish reading before it goes. A message that flashes for
+// half a second may as well not have been shown.
+const minimumVisibleMilliseconds = 5000;
+
 function OfflineStatus() {
   const insets = useSafeAreaInsets();
   const context = useContext(OfflineSyncContext);
-  if (!context) return null;
-  if (context.online && context.pendingCount === 0) return null;
+  const [dismissed, setDismissed] = useState(false);
+  const online = context?.online ?? true;
+  const pendingCount = context?.pendingCount ?? 0;
+  const syncing = context?.syncing ?? false;
+  const active = !online || pendingCount > 0;
+  // Retries that keep failing are the one thing worth interrupting for, so
+  // that message waits for a tap instead of a timer.
+  const needsAttention = online && !syncing && pendingCount > 0;
+  const [lingering, setLingering] = useState(false);
 
-  const Icon = context.online
-    ? context.syncing
+  useEffect(() => {
+    if (active) {
+      setDismissed(false);
+      setLingering(true);
+      return;
+    }
+    if (!lingering) return;
+    const timer = setTimeout(
+      () => setLingering(false),
+      minimumVisibleMilliseconds,
+    );
+    return () => clearTimeout(timer);
+  }, [active, lingering]);
+
+  if (!context) return null;
+  if (dismissed) return null;
+  if (!active && !lingering) return null;
+
+  const Icon = !online
+    ? WifiSlash
+    : syncing || !active
       ? CloudArrowUp
-      : WarningCircle
-    : WifiSlash;
-  const message = context.online
-    ? context.syncing
-      ? `Syncing ${context.pendingCount} ${context.pendingCount === 1 ? "change" : "changes"}`
-      : `${context.pendingCount} ${context.pendingCount === 1 ? "change needs" : "changes need"} another try`
-    : context.pendingCount > 0
-      ? `${context.pendingCount} ${context.pendingCount === 1 ? "change is" : "changes are"} saved on this phone`
-      : "Offline · showing saved people";
+      : WarningCircle;
+  const changes = `${pendingCount} ${pendingCount === 1 ? "change" : "changes"}`;
+  const message = !online
+    ? pendingCount > 0
+      ? `Offline. ${changes} saved on this phone, and will go up when you are back.`
+      : "Offline. Showing the people saved on this phone."
+    : !active
+      ? "Saved and synced."
+      : syncing
+        ? `Saving ${changes}…`
+        : `${changes} ${pendingCount === 1 ? "has" : "have"} not saved yet. Tap to try again.`;
 
   return (
     <View
       accessibilityLiveRegion="polite"
-      pointerEvents="none"
+      pointerEvents={needsAttention ? "box-none" : "none"}
       style={[styles.position, { top: insets.top + 8 }]}
     >
-      <View style={styles.pill}>
+      <Pressable
+        accessibilityHint={
+          needsAttention ? "Retries the changes waiting to save" : undefined
+        }
+        accessibilityRole={needsAttention ? "button" : undefined}
+        disabled={!needsAttention}
+        onPress={() => void context.syncNow()}
+        style={styles.pill}
+      >
         <Icon color={colors.paper} size={16} weight="bold" />
         <AppText style={styles.text} variant="caption">
           {message}
         </AppText>
-      </View>
+        {needsAttention ? (
+          <Pressable
+            accessibilityLabel="Dismiss"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => setDismissed(true)}
+          >
+            <X color={colors.paper} size={15} weight="bold" />
+          </Pressable>
+        ) : null}
+      </Pressable>
     </View>
   );
 }
@@ -150,9 +200,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink,
     borderRadius: radii.small,
     flexDirection: "row",
-    gap: 7,
+    gap: 9,
     minHeight: 34,
     paddingHorizontal: 12,
+    paddingVertical: 7,
     ...floatShadow,
   },
   position: {
@@ -164,5 +215,6 @@ const styles = StyleSheet.create({
   },
   text: {
     color: colors.paper,
+    flexShrink: 1,
   },
 });

@@ -4,10 +4,12 @@ import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
+import {
+  KeyboardAwareForm,
+  useFieldChain,
+} from "@/components/keyboard-aware-form";
 import { LoadingState } from "@/components/load-state";
-import { Screen } from "@/components/screen";
-import { Card } from "@/components/surface";
-import { colors, radii } from "@/constants/theme";
+import { colors } from "@/constants/theme";
 import { updatePassword } from "@/lib/data";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -18,19 +20,25 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const fieldProps = useFieldChain(
+    ["password", "confirmPassword"],
+    () => void save(),
+  );
 
   if (auth.loading) return <LoadingState />;
   if (!auth.session) return <Redirect href="/auth" />;
 
   async function save() {
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Those passwords do not match.");
-      return;
-    }
+    setPasswordError(password.length < 8 ? "Use at least 8 characters." : null);
+    setConfirmError(
+      password && password !== confirmPassword
+        ? "This doesn’t match the password above."
+        : null,
+    );
+    if (password.length < 8 || password !== confirmPassword) return;
+
     setSaving(true);
     setError(null);
     try {
@@ -48,52 +56,62 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <Screen
-      bottomInset={40}
-      maxContentWidth={620}
-      subtitle="Choose something memorable and unique to this account."
-      title="Set a new password"
-    >
-      <Card style={styles.card}>
-        <FormField
-          autoCapitalize="none"
-          label="New password"
-          onChangeText={setPassword}
-          secureTextEntry
-          value={password}
-        />
-        <FormField
-          autoCapitalize="none"
-          label="Confirm password"
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          value={confirmPassword}
-        />
-        {error ? (
-          <View style={styles.error}>
-            <AppText style={styles.errorText} variant="caption">
-              {error}
-            </AppText>
-          </View>
-        ) : null}
+    <KeyboardAwareForm
+      footer={
         <Button
           label="Save password"
           loading={saving}
           onPress={() => void save()}
         />
-      </Card>
-    </Screen>
+      }
+      maxContentWidth={620}
+    >
+      <View style={styles.intro}>
+        <AppText variant="display">Set a new password</AppText>
+        <AppText style={styles.muted}>
+          Choose something memorable and unique to this account.
+        </AppText>
+      </View>
+
+      <FormField
+        autoCapitalize="none"
+        autoComplete="new-password"
+        error={passwordError ?? undefined}
+        label="New password"
+        onChangeText={setPassword}
+        secureTextEntry
+        value={password}
+        {...fieldProps("password")}
+      />
+      <FormField
+        autoCapitalize="none"
+        autoComplete="new-password"
+        error={confirmError ?? undefined}
+        label="Confirm password"
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+        value={confirmPassword}
+        {...fieldProps("confirmPassword")}
+      />
+      {error ? (
+        <AppText
+          accessibilityLiveRegion="polite"
+          style={styles.errorText}
+          variant="caption"
+        >
+          {error}
+        </AppText>
+      ) : null}
+    </KeyboardAwareForm>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    gap: 16,
+  intro: {
+    gap: 8,
   },
-  error: {
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.medium,
-    padding: 12,
+  muted: {
+    color: colors.inkMuted,
   },
   errorText: {
     color: colors.coralStrong,

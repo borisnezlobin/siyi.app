@@ -1,29 +1,33 @@
-import { AppleLogo, Envelope, Eye, EyeSlash, GoogleLogo, LockKey, Sparkle } from "phosphor-react-native";
+import { AppleLogo, Eye, EyeSlash, GoogleLogo } from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
+import {
+  KeyboardAwareForm,
+  useFieldChain,
+} from "@/components/keyboard-aware-form";
 import { LoadingState } from "@/components/load-state";
-import { Screen } from "@/components/screen";
-import { brand } from "@/config/brand";
-import { colors, fontFamilies, radii } from "@/constants/theme";
+import { colors, fontFamilies } from "@/constants/theme";
 import { useAuth } from "@/providers/auth-provider";
 
 type AuthMode = "sign-in" | "sign-up";
+/** Password and emailed link are separate ways in, never both at once. */
+type EmailMethod = "password" | "link";
+
+type FieldErrors = {
+  displayName?: string;
+  email?: string;
+  password?: string;
+};
 
 export default function AuthScreen() {
   const router = useRouter();
   const auth = useAuth();
   const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [method, setMethod] = useState<EmailMethod>("password");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,14 +35,23 @@ export default function AuthScreen() {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const usingPassword = method === "password";
+  const fieldProps = useFieldChain(
+    [
+      ...(usingPassword && mode === "sign-up" ? ["displayName"] : []),
+      "email",
+      ...(usingPassword ? ["password"] : []),
+    ],
+    () => void submit(),
+  );
 
   if (auth.loading) return <LoadingState />;
   if (auth.session) {
     return (
       <Redirect
-        href={
-          auth.profile?.onboardingCompletedAt ? "/today" : "/onboarding"
-        }
+        href={auth.profile?.onboardingCompletedAt ? "/today" : "/onboarding"}
       />
     );
   }
@@ -60,70 +73,78 @@ export default function AuthScreen() {
     }
   }
 
-  async function submitPassword() {
-    if (!email.trim() || password.length < 8) {
-      setError("Add your email and a password of at least 8 characters.");
+  function missingFields(): FieldErrors {
+    const missing: FieldErrors = {};
+    if (!email.trim()) missing.email = "Add your email address.";
+    if (usingPassword) {
+      if (!password) {
+        missing.password = "Add your password.";
+      } else if (password.length < 8) {
+        missing.password = "Use at least 8 characters.";
+      }
+      if (mode === "sign-up" && !displayName.trim()) {
+        missing.displayName = "Add the name we should call you.";
+      }
+    }
+    return missing;
+  }
+
+  async function submit() {
+    const missing = missingFields();
+    setFieldErrors(missing);
+    if (Object.keys(missing).length > 0) {
+      setMessage(null);
+      setError(null);
       return;
     }
-    if (mode === "sign-up" && !displayName.trim()) {
-      setError("Add the name you would like us to use.");
+
+    if (!usingPassword) {
+      await runAction("magic", async () => {
+        await auth.sendMagicLink(email);
+        setMessage(
+          `We sent a sign-in link to ${email.trim()}. Open it on this phone.`,
+        );
+      });
       return;
     }
 
     await runAction("password", async () => {
       if (mode === "sign-in") {
         await auth.signInWithPassword(email, password);
-      } else {
-        const result = await auth.signUpWithPassword(
-          email,
-          password,
-          displayName,
+        return;
+      }
+      const result = await auth.signUpWithPassword(email, password, displayName);
+      if (result === "confirmation-sent") {
+        setMessage(
+          "Check your email to confirm your account, then come back here.",
         );
-        if (result === "confirmation-sent") {
-          setMessage(
-            "Check your email to confirm your account, then come back here.",
-          );
-        }
       }
     });
   }
 
-  async function sendMagicLink() {
-    if (!email.trim()) {
-      setError("Add the email address where we should send the link.");
-      return;
-    }
-    await runAction("magic", async () => {
-      await auth.sendMagicLink(email);
-      setMessage(
-        "Your sign-in link is on its way. Open it on this device and in the same browser session.",
-      );
-    });
+  function switchMethod(next: EmailMethod) {
+    setMethod(next);
+    setFieldErrors({});
+    setError(null);
+    setMessage(null);
   }
 
+  const primaryLabel = !usingPassword
+    ? "Email me a sign-in link"
+    : mode === "sign-in"
+      ? "Sign in"
+      : "Create account";
+
   return (
-    <Screen bottomInset={44} contentContainerStyle={styles.screen}>
-      <View style={styles.brandRow}>
-        <View style={styles.mark}>
-          <AppText style={styles.markLetter} variant="title">
-            {brand.name.slice(0, 1)}
-          </AppText>
-        </View>
-        <AppText variant="heading">{brand.name}</AppText>
-      </View>
+    <KeyboardAwareForm
+      bottomInset={40}
+      contentStyle={styles.stack}
+      maxContentWidth={520}
+    >
+      <AppText variant="display">Remember the people who matter.</AppText>
 
-      <View style={styles.hero}>
-        <View style={styles.sparkle}>
-          <Sparkle color={colors.coralStrong} size={20} weight="duotone" />
-        </View>
-        <AppText variant="display">Remember the people who matter.</AppText>
-        <AppText style={styles.intro}>
-          Keep names, context, and thoughtful follow-ups in one private place.
-        </AppText>
-      </View>
-
-      <View style={styles.authCard}>
-        <View style={styles.segmented}>
+      {usingPassword ? (
+        <View style={styles.modeRow}>
           {(["sign-in", "sign-up"] as const).map((option) => (
             <Pressable
               accessibilityRole="tab"
@@ -131,99 +152,63 @@ export default function AuthScreen() {
               key={option}
               onPress={() => {
                 setMode(option);
+                setFieldErrors({});
                 setError(null);
                 setMessage(null);
               }}
-              style={[
-                styles.segment,
-                mode === option && styles.segmentSelected,
-              ]}
+              style={styles.modeTab}
             >
               <AppText
-                style={
-                  mode === option ? styles.segmentTextSelected : undefined
-                }
+                style={mode === option ? styles.modeSelected : styles.modeIdle}
                 variant="label"
               >
                 {option === "sign-in" ? "Sign in" : "Create account"}
               </AppText>
+              <View
+                style={[
+                  styles.modeUnderline,
+                  mode === option && styles.modeUnderlineSelected,
+                ]}
+              />
             </Pressable>
           ))}
         </View>
+      ) : (
+        <AppText style={styles.muted}>
+          Enter your email and we&apos;ll send a link that signs you in. No
+          password needed.
+        </AppText>
+      )}
 
-        <View style={styles.providerStack}>
-          {Platform.OS === "ios" && brand.iosProtectedCapabilitiesEnabled ? (
-            <Button
-              icon={AppleLogo}
-              label="Continue with Apple"
-              loading={loadingAction === "apple"}
-              onPress={() =>
-                void runAction("apple", auth.signInWithApple)
-              }
-              variant="dark"
-            />
-          ) : null}
-          <Button
-            icon={GoogleLogo}
-            label="Continue with Google"
-            loading={loadingAction === "google"}
-            onPress={() =>
-              void runAction("google", auth.signInWithGoogle)
-            }
-            variant="secondary"
-          />
-        </View>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <AppText variant="caption">or use email</AppText>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.form}>
-          {mode === "sign-up" ? (
-            <FormField
-              autoCapitalize="words"
-              autoComplete="name"
-              label="Your name"
-              onChangeText={setDisplayName}
-              placeholder="How should we greet you?"
-              textContentType="name"
-              value={displayName}
-            />
-          ) : null}
+      <View style={styles.form}>
+        {usingPassword && mode === "sign-up" ? (
           <FormField
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            label="Email"
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            textContentType="emailAddress"
-            value={email}
+            autoCapitalize="words"
+            autoComplete="name"
+            error={fieldErrors.displayName}
+            label="Your name"
+            onChangeText={setDisplayName}
+            placeholder="How should we greet you?"
+            textContentType="name"
+            value={displayName}
+            {...fieldProps("displayName")}
           />
-          <View style={styles.passwordGroup}>
-            <AppText variant="label">Password</AppText>
-            <View style={styles.passwordInput}>
-              <LockKey color={colors.inkMuted} size={18} />
-              <TextInput
-                accessibilityLabel="Password"
-                autoCapitalize="none"
-                autoComplete={
-                  mode === "sign-up" ? "new-password" : "current-password"
-                }
-                onChangeText={setPassword}
-                onSubmitEditing={() => void submitPassword()}
-                placeholder="At least 8 characters"
-                placeholderTextColor={colors.inkMuted}
-                secureTextEntry={!showPassword}
-                selectionColor={colors.coral}
-                style={styles.passwordText}
-                textContentType={
-                  mode === "sign-up" ? "newPassword" : "password"
-                }
-                value={password}
-              />
+        ) : null}
+        <FormField
+          autoCapitalize="none"
+          autoComplete="email"
+          error={fieldErrors.email}
+          keyboardType="email-address"
+          label="Email"
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          textContentType="emailAddress"
+          value={email}
+          {...fieldProps("email")}
+        />
+        {usingPassword ? (
+          <FormField
+            accessory={
               <Pressable
                 accessibilityLabel={
                   showPassword ? "Hide password" : "Show password"
@@ -238,56 +223,96 @@ export default function AuthScreen() {
                   <Eye color={colors.inkMuted} size={19} />
                 )}
               </Pressable>
-            </View>
-          </View>
-          <Button
-            label={mode === "sign-in" ? "Sign in" : "Create account"}
-            loading={loadingAction === "password"}
-            onPress={() => void submitPassword()}
+            }
+            autoCapitalize="none"
+            autoComplete={
+              mode === "sign-up" ? "new-password" : "current-password"
+            }
+            error={fieldErrors.password}
+            label="Password"
+            onChangeText={setPassword}
+            placeholder="At least 8 characters"
+            secureTextEntry={!showPassword}
+            textContentType={mode === "sign-up" ? "newPassword" : "password"}
+            value={password}
+            {...fieldProps("password")}
           />
-          <Button
-            icon={Envelope}
-            label="Email me a sign-in link"
-            loading={loadingAction === "magic"}
-            onPress={() => void sendMagicLink()}
-            variant="quiet"
-          />
-          {mode === "sign-in" ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                if (!email.trim()) {
-                  setError("Add your email first, then try again.");
-                  return;
-                }
-                void runAction("reset", async () => {
-                  await auth.sendPasswordReset(email);
-                  setMessage("We sent a password-reset link to your email.");
-                });
-              }}
-            >
-              <AppText style={styles.link} variant="caption">
-                Forgot your password?
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-
-        {auth.configurationError || error ? (
-          <View style={styles.errorBox}>
-            <AppText style={styles.errorText} variant="caption">
-              {auth.configurationError || error}
-            </AppText>
-          </View>
         ) : null}
-        {message ? (
-          <View style={styles.successBox}>
-            <AppText style={styles.successText} variant="caption">
-              {message}
+
+        <Button
+          label={primaryLabel}
+          loading={
+            loadingAction === (usingPassword ? "password" : "magic")
+          }
+          onPress={() => void submit()}
+        />
+
+        {usingPassword && mode === "sign-in" ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              if (!email.trim()) {
+                setFieldErrors({ email: "Add your email address." });
+                return;
+              }
+              void runAction("reset", async () => {
+                await auth.sendPasswordReset(email);
+                setMessage("We sent a password-reset link to your email.");
+              });
+            }}
+            style={styles.inlineLink}
+          >
+            <AppText style={styles.link} variant="caption">
+              Forgot your password?
             </AppText>
-          </View>
+          </Pressable>
         ) : null}
       </View>
+
+      {auth.configurationError || error ? (
+        <AppText
+          accessibilityLiveRegion="polite"
+          style={styles.errorText}
+          variant="caption"
+        >
+          {auth.configurationError || error}
+        </AppText>
+      ) : null}
+      {message ? (
+        <AppText
+          accessibilityLiveRegion="polite"
+          style={styles.successText}
+          variant="caption"
+        >
+          {message}
+        </AppText>
+      ) : null}
+
+      <View style={styles.providers}>
+        <Button
+          disabled
+          icon={AppleLogo}
+          label="Continue with Apple"
+          variant="secondary"
+        />
+        <Button
+          disabled
+          icon={GoogleLogo}
+          label="Continue with Google"
+          variant="secondary"
+        />
+        <AppText style={styles.providerNote} variant="caption">
+          Apple and Google sign-in are coming soon.
+        </AppText>
+      </View>
+
+      <Button
+        label={
+          usingPassword ? "Email me a sign-in link" : "Use my password instead"
+        }
+        onPress={() => switchMethod(usingPassword ? "link" : "password")}
+        variant="quiet"
+      />
 
       <AppText style={styles.legal} variant="caption">
         By continuing, you agree to our{" "}
@@ -308,153 +333,69 @@ export default function AuthScreen() {
         </AppText>
         .
       </AppText>
-      <Pressable
-        accessibilityRole="link"
-        onPress={() => void WebBrowser.openBrowserAsync(brand.webUrl)}
-      >
-        <AppText style={styles.websiteLink} variant="caption">
-          Learn more about {brand.name}
-        </AppText>
-      </Pressable>
-    </Screen>
+    </KeyboardAwareForm>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    alignSelf: "center",
-    maxWidth: 560,
-    width: "100%",
+  stack: {
+    gap: 24,
   },
-  brandRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  mark: {
-    alignItems: "center",
-    backgroundColor: colors.ink,
-    borderRadius: radii.medium,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
-  markLetter: {
-    color: colors.paper,
-    fontSize: 27,
-    lineHeight: 30,
-  },
-  hero: {
-    gap: 12,
-  },
-  sparkle: {
-    alignItems: "center",
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.round,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
-  intro: {
+  muted: {
     color: colors.inkMuted,
-    fontSize: 17,
-    lineHeight: 25,
   },
-  authCard: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.xlarge,
-    gap: 20,
-    padding: 18,
-  },
-  segmented: {
-    backgroundColor: colors.mist,
-    borderRadius: radii.small,
+  modeRow: {
     flexDirection: "row",
-    padding: 4,
+    gap: 22,
   },
-  segment: {
-    alignItems: "center",
-    borderRadius: 8,
-    flex: 1,
-    minHeight: 42,
-    justifyContent: "center",
+  modeTab: {
+    gap: 8,
   },
-  segmentSelected: {
+  modeIdle: {
+    color: colors.inkMuted,
+  },
+  modeSelected: {
+    color: colors.ink,
+  },
+  modeUnderline: {
+    backgroundColor: colors.transparent,
+    height: 2,
+  },
+  modeUnderlineSelected: {
     backgroundColor: colors.ink,
-  },
-  segmentTextSelected: {
-    color: colors.paper,
-  },
-  providerStack: {
-    gap: 10,
-  },
-  divider: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  dividerLine: {
-    backgroundColor: colors.mist,
-    flex: 1,
-    height: 1,
   },
   form: {
-    gap: 15,
-  },
-  passwordGroup: {
-    gap: 7,
-  },
-  passwordInput: {
-    alignItems: "center",
-    backgroundColor: colors.paper,
-    borderColor: colors.mist,
-    borderRadius: radii.medium,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 9,
-    minHeight: 52,
-    paddingHorizontal: 15,
-  },
-  passwordText: {
-    color: colors.ink,
-    flex: 1,
-    fontFamily: fontFamilies.body,
-    fontSize: 16,
+    gap: 16,
   },
   eyeButton: {
     alignItems: "center",
-    height: 40,
+    height: 44,
     justifyContent: "center",
-    width: 34,
+    width: 40,
+  },
+  inlineLink: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
   },
   link: {
     color: colors.sageStrong,
     fontFamily: fontFamilies.bodySemibold,
-    textDecorationLine: "underline",
-  },
-  errorBox: {
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.medium,
-    padding: 12,
   },
   errorText: {
     color: colors.coralStrong,
   },
-  successBox: {
-    backgroundColor: colors.sage,
-    borderRadius: radii.medium,
-    padding: 12,
-  },
   successText: {
     color: colors.sageStrong,
   },
-  legal: {
+  providers: {
+    gap: 10,
+  },
+  providerNote: {
     color: colors.inkMuted,
-    paddingHorizontal: 8,
     textAlign: "center",
   },
-  websiteLink: {
-    color: colors.sageStrong,
+  legal: {
+    color: colors.inkMuted,
     textAlign: "center",
   },
 });

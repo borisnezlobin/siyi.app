@@ -7,7 +7,7 @@ import {
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
@@ -126,8 +126,10 @@ export default function FollowUpsScreen() {
           <TextInput
             accessibilityLabel="Filter follow-ups"
             onChangeText={setQuery}
+            onSubmitEditing={() => Keyboard.dismiss()}
             placeholder="Person or follow-up"
             placeholderTextColor={colors.inkMuted}
+            returnKeyType="search"
             selectionColor={colors.coral}
             style={styles.searchInput}
             value={query}

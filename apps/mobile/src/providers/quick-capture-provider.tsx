@@ -42,6 +42,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -253,10 +254,13 @@ function PersonPicker({
           accessibilityLabel="Search people"
           autoCapitalize="words"
           onChangeText={setQuery}
+          onSubmitEditing={() => Keyboard.dismiss()}
           placeholder="Search…"
           placeholderTextColor={colors.inkMuted}
+          returnKeyType="search"
           selectionColor={colors.coral}
           style={styles.searchInput}
+          submitBehavior="blurAndSubmit"
           value={query}
         />
       </View>
@@ -851,6 +855,7 @@ export function QuickCaptureProvider({
               styles.sheetContent,
               { paddingBottom: Math.max(insets.bottom + 24, 36) },
             ]}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.sheetHeader}>
@@ -1092,6 +1097,7 @@ export function QuickCaptureProvider({
               styles.sheetContent,
               { paddingBottom: Math.max(insets.bottom + 24, 36) },
             ]}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.sheetHeader}>
