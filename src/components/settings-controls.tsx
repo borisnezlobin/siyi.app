@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ArrowSquareOut,
+  CaretRight,
   BellSimple,
   CheckCircle,
   CloudArrowDown,
@@ -49,11 +49,19 @@ function downloadFile(fileName: string, content: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
+const strengthLabels: Record<RelationshipStrength, string> = {
+  1: "Acquaintance",
+  2: "Getting to know",
+  3: "Close",
+  4: "Very close",
+};
+
 export function SettingsControls({
   people,
   interactions,
   followUps,
   authMethods,
+  accountEmail,
   initialTimezone,
   initialIntervals,
 }: {
@@ -61,6 +69,7 @@ export function SettingsControls({
   interactions: Interaction[];
   followUps: FollowUp[];
   authMethods: string[];
+  accountEmail: string;
   initialTimezone: string;
   initialIntervals: Record<RelationshipStrength, number>;
 }) {
@@ -326,14 +335,15 @@ export function SettingsControls({
   return (
     <div className="mt-7 space-y-4">
       <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-sm font-bold">Reminder rhythm</h2>
+        <h2 className="text-sm font-bold">How often to check in</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
-          These defaults apply unless a person has their own interval.
+          After this many days without an update, a person shows up as due. Any
+          person can override this on their own profile.
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {([1, 2, 3, 4] as RelationshipStrength[]).map((strength) => (
             <label key={strength} className="text-[11px] font-semibold text-ink-muted">
-              Strength {strength}
+              {strengthLabels[strength]}
               <span className="relative mt-1.5 block">
                 <input
                   type="number"
@@ -354,9 +364,6 @@ export function SettingsControls({
               </span>
             </label>
           ))}
-        </div>
-        <div className="mt-4 rounded-2xl bg-porcelain px-4 py-3 text-[11px] leading-5 text-ink-muted">
-          Acquaintance: 90 · Getting to know: 45 · Close: 30 · Very close: 14
         </div>
       </section>
 
@@ -387,9 +394,111 @@ export function SettingsControls({
             <BellSimple size={17} className="text-coral" aria-hidden="true" />
             Notification preferences
           </span>
-          <ArrowSquareOut size={15} className="text-ink-muted" aria-hidden="true" />
+          <CaretRight size={15} className="text-ink-muted" aria-hidden="true" />
         </Link>
       </section>
+
+
+
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
+            <LockKey size={19} weight="fill" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-sm font-bold">Your account</h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              {accountEmail || "Preview mode"}
+              {authMethods.length ? ` · signs in with ${authMethods.join(" and ").toLowerCase()}` : ""}
+            </p>
+          </div>
+        </div>
+        <form onSubmit={savePassword} className="mt-5">
+          <h3 className="text-xs font-bold">Change your password</h3>
+          <p className="mt-1 text-[11px] leading-5 text-ink-muted">
+            You&apos;re already signed in, so this takes effect right away.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-[11px] font-semibold text-ink-muted">
+              New password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                maxLength={72}
+                required
+                autoComplete="new-password"
+                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+              />
+            </label>
+            <label className="text-[11px] font-semibold text-ink-muted">
+              Confirm password
+              <input
+                type="password"
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                minLength={8}
+                maxLength={72}
+                required
+                autoComplete="new-password"
+                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+              />
+            </label>
+          </div>
+          {passwordError ? (
+            <p role="alert" className="mt-3 text-[11px] font-semibold text-coral-strong">
+              {passwordError}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={working === "password"}
+            className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            {working === "password" ? (
+              <SpinnerGap size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <LockKey size={16} weight="fill" aria-hidden="true" />
+            )}
+            Save password
+          </button>
+        </form>
+        <form
+          action="/auth/signout"
+          method="post"
+          className="mt-5 flex items-center justify-between gap-3 border-t border-black/[0.06] pt-4"
+        >
+          <p className="text-[11px] leading-5 text-ink-muted">
+            Signed in on this browser.
+          </p>
+          <button
+            type="submit"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-ink-muted transition-colors hover:bg-porcelain hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            <SignOut size={16} aria-hidden="true" />
+            Sign out
+          </button>
+        </form>
+      </section>
+
+      {message ? (
+        <p role="status" className="rounded-2xl bg-sage px-4 py-3 text-xs font-semibold text-sage-strong">
+          {message}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={saveSettings}
+        disabled={working === "save"}
+        className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+      >
+        {working === "save" ? (
+          <SpinnerGap size={18} className="animate-spin" aria-hidden="true" />
+        ) : null}
+        Save settings
+      </button>
 
       <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
         <div className="flex items-center gap-3">
@@ -428,7 +537,6 @@ export function SettingsControls({
           </button>
         </div>
       </section>
-
       <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -489,99 +597,6 @@ export function SettingsControls({
           </p>
         ) : null}
       </section>
-
-      <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
-            <LockKey size={19} weight="fill" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold">Sign-in methods</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              {authMethods.join(" and ")}
-            </p>
-          </div>
-        </div>
-        <form onSubmit={savePassword} className="mt-5 rounded-2xl bg-porcelain p-4">
-          <h3 className="text-xs font-bold">Create or change your password</h3>
-          <p className="mt-1 text-[11px] leading-5 text-ink-muted">
-            Since you are already signed in, this does not need an email link.
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-[11px] font-semibold text-ink-muted">
-              New password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
-                maxLength={72}
-                required
-                autoComplete="new-password"
-                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-              />
-            </label>
-            <label className="text-[11px] font-semibold text-ink-muted">
-              Confirm password
-              <input
-                type="password"
-                value={passwordConfirmation}
-                onChange={(event) => setPasswordConfirmation(event.target.value)}
-                minLength={8}
-                maxLength={72}
-                required
-                autoComplete="new-password"
-                className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-              />
-            </label>
-          </div>
-          {passwordError ? (
-            <p role="alert" className="mt-3 text-[11px] font-semibold text-coral-strong">
-              {passwordError}
-            </p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={working === "password"}
-            className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-          >
-            {working === "password" ? (
-              <SpinnerGap size={16} className="animate-spin" aria-hidden="true" />
-            ) : (
-              <LockKey size={16} weight="fill" aria-hidden="true" />
-            )}
-            Save password
-          </button>
-        </form>
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-porcelain px-4 py-3 text-xs font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-          >
-            <SignOut size={17} aria-hidden="true" />
-            Sign out
-          </button>
-        </form>
-      </section>
-
-      {message ? (
-        <p role="status" className="rounded-2xl bg-sage px-4 py-3 text-xs font-semibold text-sage-strong">
-          {message}
-        </p>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={saveSettings}
-        disabled={working === "save"}
-        className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-      >
-        {working === "save" ? (
-          <SpinnerGap size={18} className="animate-spin" aria-hidden="true" />
-        ) : null}
-        Save settings
-      </button>
-
       <section className="rounded-[1.75rem] bg-[#fbe5e0] p-5 text-coral-strong">
         <h2 className="text-sm font-bold">Delete account</h2>
         <p className="mt-1 text-xs leading-5">

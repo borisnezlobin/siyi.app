@@ -17,6 +17,7 @@ import {
   QuickCaptureTrigger,
 } from "@/components/quick-capture-hub";
 import { brand } from "@/config/brand";
+import { InstallPrompt } from "@/components/install-prompt";
 import type { Person } from "@/lib/types";
 
 const primaryNavigation = [
@@ -61,6 +62,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-porcelain">
+      <InstallPrompt />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-ink px-5 py-6 text-white lg:flex">
         <Link
           href="/today"

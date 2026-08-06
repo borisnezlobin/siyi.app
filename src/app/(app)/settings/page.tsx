@@ -62,13 +62,14 @@ export default async function SettingsPage() {
       <PageHeader
         eyebrow="Make it yours"
         title="Settings"
-        description="Your reminder rhythm, account choices, and a full copy of your data."
+        description="How often to check in, your account, and a full copy of your data."
       />
       <SettingsControls
         people={people}
         interactions={interactions}
         followUps={followUps}
         authMethods={authMethods}
+        accountEmail={user?.email ?? ""}
         initialTimezone={initialTimezone}
         initialIntervals={initialIntervals}
       />
