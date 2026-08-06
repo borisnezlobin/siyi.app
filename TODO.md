@@ -1,5 +1,13 @@
 # Siyi backlog
 
+> **HOLD: one commit is committed locally but deliberately NOT pushed.**
+> `11a954b` (relationship labels + reminder opt-out) writes to
+> `people.relationship_label` and `people.reminders_enabled`. Those columns do
+> not exist until `0008_relationship_labels.sql` runs. Pushing first would make
+> every profile save fail and stop the reminder cron.
+>
+> Order: run 0008 in Supabase, then `git push origin main`.
+
 Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## Done (shipped and live)
