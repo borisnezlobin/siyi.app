@@ -47,10 +47,10 @@ test("the mobile add button opens an animated quick-action tray", async ({
   await expect(
     page.getByRole("button", { name: "Follow-up", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Interaction", exact: true }).click();
+  await page.getByRole("button", { name: "Update", exact: true }).click();
   await page.getByLabel("Person").selectOption({ label: "Luis" });
   await page.getByRole("button", { name: "Coffee" }).click();
-  await page.getByRole("button", { name: "Save interaction" }).click();
+  await page.getByRole("button", { name: "Save update" }).click();
 
   await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
 });
