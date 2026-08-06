@@ -4,6 +4,12 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## Done (shipped and live)
 
+- [x] Marketing consent, signed unsubscribe token, one-click unsubscribe
+- [x] Discard-changes confirmation on edited profiles (web + mobile)
+- [x] Editable "first met" date; backdateable updates
+- [x] Updates card owns the add action; compact reminder box moved right
+- [x] www.siyi.app canonical in code
+
 - [x] Signup crash: `notification_preferences_user_id_key` duplicate key
 - [x] Test notification collapsed every failure into an opaque 500
 - [x] Notification status message stranded at the bottom of the page
@@ -22,30 +28,18 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## P0 — before launch
 
-- [ ] **Marketing email consent + unsubscribe.** `marketing_opt_in` column
-      (default false), settings toggle, `/api/unsubscribe` with a signed
-      token, List-Unsubscribe header. Postal address for the footer:
-      110 Sproul Hall, Berkeley, CA 94720, care of Boris Nezlobin.
 - [ ] **Push notifications failing for real users.** Root cause still
       unconfirmed; new error messages ship the diagnosis. Collect one real
       failure message before guessing further.
-- [ ] **Discard-changes confirmation** when leaving an edited profile.
 - [ ] **Edit an update after saving it** (currently write-once).
-- [ ] **Editable "first met" date** on the person form.
-- [ ] **Editable date on an update** (defaults to now, no way to backdate).
 
 ## P1 — UX that users tripped on
 
-- [ ] **Updates page layout.** Move "Add update" into the Updates card
-      header; move "Next reminder" into the right column above Quick facts;
-      make the duplicate message icon a plus, or remove it.
 - [ ] **Person picker does not scale.** A plain dropdown breaks past ~100
       contacts. Needs a search/typeahead.
-- [ ] **Turning reminders off.** No opt-out today. See relationship rework.
-- [ ] **Relationship rework.** Replace the 1-4 strength numbers with
-      something human. Consider: named tiers, a custom label per person, or
-      dropping the concept and letting people opt into reminders per person.
-      Reminders should probably be opt-out at the person level.
+- [~] **Relationship rework + reminder opt-out** — IN PROGRESS. Free-text
+      labels seeded with the four current tiers; reminders opt-out, on by
+      default. Migration 0008.
 - [ ] **Custom "Other" update type** with a user-supplied label and emoji.
 
 ## P2 — features requested
@@ -56,11 +50,15 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 - [ ] **Multiple emails / phones / Instagram handles per person.** Schema
       change: child tables or JSONB. Touches import/export, vCard, contact
       sync, and search.
-- [ ] **Richer notes.** Markdown or a small rich-text control, or custom
-      fields per person. See the note in the recommendations below.
+- [ ] **Notes field feels cramped.** Owner wants to write a paragraph on day
+      one but the small textarea discourages it. Try affordance first: taller
+      auto-growing field and an inviting prompt. Only consider structure
+      (multiple named notes) if that is not enough. Markdown was rejected.
 - [ ] **Map of hometowns / locations.** Needs geocoding. Possible paid tier.
 - [ ] **Cleaner person URLs** — `/people/boris-nezlobin` instead of a uuid.
-      Slug plus short suffix on collision, with the uuid still resolving.
+      ALWAYS append the suffix, never only on collision: a conditional suffix
+      leaks whether another user already has a person by that name. Keep the
+      uuid resolving forever.
 
 ## Ops / not code
 
@@ -72,3 +70,12 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 - [ ] Set `APPLE_TEAM_ID` so universal links resolve.
 - [ ] Resend: verify a sending subdomain for marketing mail.
 - [ ] iOS build needs an Apple Developer account (18+). Blocked.
+
+## Applied migrations
+
+Nothing in this repo applies migrations automatically. Run these in order
+against production; both are additive and touch no existing data:
+
+- `0007_marketing_consent.sql` — NOT YET APPLIED. The settings toggle errors
+  until it is.
+- `0008_relationship_labels.sql` — pending the in-progress rework.
