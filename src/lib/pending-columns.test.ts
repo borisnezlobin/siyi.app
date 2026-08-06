@@ -75,7 +75,7 @@ describe("saving while a migration is still pending", () => {
     ).toEqual({ full_name: "Amelia" });
   });
 
-  it("drops the university while migration 0016 is still pending", () => {
+  it("drops the university while migration 0014 is still pending", () => {
     expect(
       droppingPendingColumns({
         full_name: "Amelia",

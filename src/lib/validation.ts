@@ -19,7 +19,7 @@ import {
   relationshipStrengths,
 } from "@/lib/types";
 
-/** Matches the column check added in migration 0016. */
+/** Matches the column check added in migration 0014. */
 export const maxUniversityLength = 120;
 
 const optionalText = z

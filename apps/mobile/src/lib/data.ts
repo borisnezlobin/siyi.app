@@ -103,7 +103,7 @@ type PersonRow = {
   birthday: string | null;
   hometown: string | null;
   dorm_or_residence: string | null;
-  // Absent from every read until migration 0016 has run.
+  // Absent from every read until migration 0014 has run.
   university?: string | null;
   major: string | null;
   graduation_year: number | null;

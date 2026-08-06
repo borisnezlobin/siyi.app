@@ -589,7 +589,7 @@ describe("before the migrations have been applied", () => {
     expect(database.rows("person_contact_methods")).toEqual([]);
   });
 
-  it("still saves a person when migration 0016 has not added the university", async () => {
+  it("still saves a person when migration 0014 has not added the university", async () => {
     database.missingColumns.add("university");
     database.seed("people", [{ id: personId, user_id: userId }]);
     await seedSnapshot();

@@ -15,7 +15,7 @@ const columnsAwaitingMigration = [
   "custom_icon",
   // 0012_person_slugs.sql
   "slug",
-  // 0016_person_university.sql
+  // 0014_person_university.sql
   "university",
 ];
 

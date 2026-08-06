@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
           birthday: person.birthday,
           hometown: person.hometown,
           dorm_or_residence: person.dormOrResidence,
-          // Ignored by the database until migration 0016 has run.
+          // Ignored by the database until migration 0014 has run.
           university: person.university,
           major: person.major,
           graduation_year: person.graduationYear,
