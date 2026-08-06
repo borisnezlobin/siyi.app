@@ -33,7 +33,7 @@ After the production web deployment exists, create these secrets in Supabase
 Vault:
 
 - `siyi_notification_cron_url`:
-  `https://siyi.app/api/cron/notifications`
+  `https://www.siyi.app/api/cron/notifications`
 - `siyi_notification_cron_secret`: the same strong value used for
   `CRON_SECRET` by the web deployment
 
@@ -42,12 +42,12 @@ Integrations → Cron.
 
 ### Auth configuration
 
-Under Authentication → URL Configuration, set the Site URL to `https://siyi.app`
+Under Authentication → URL Configuration, set the Site URL to `https://www.siyi.app`
 and allow these redirect URLs:
 
 ```
-https://siyi.app/auth/callback
-https://siyi.app/auth/confirm
+https://www.siyi.app/auth/callback
+https://www.siyi.app/auth/confirm
 siyi://auth/callback
 ```
 

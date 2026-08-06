@@ -20,6 +20,6 @@ export default function robots(): MetadataRoute.Robots {
         "/onboarding",
       ],
     },
-    sitemap: "https://siyi.app/sitemap.xml",
+    sitemap: "https://www.siyi.app/sitemap.xml",
   };
 }

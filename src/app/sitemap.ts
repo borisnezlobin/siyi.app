@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-  "https://siyi.app";
+  "https://www.siyi.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return ["", "/privacy", "/terms", "/support"].map((path) => ({
