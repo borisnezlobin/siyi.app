@@ -16,6 +16,7 @@ import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
+import { collegeSearchTerms } from "@/lib/colleges";
 import { getAccountSettings, getPeople } from "@/lib/data";
 import {
   type MissingDetail,
@@ -93,7 +94,8 @@ export default function PeopleScreen() {
     const thirtyDaysAgo = now.getTime() - 30 * 86_400_000;
     const filtered = people.filter((person) => {
       if (person.status === "archived") return false;
-      if (!matchesPeopleQuery(person, query)) return false;
+      // The whole table is already on the device, so acronym search is free here.
+      if (!matchesPeopleQuery(person, query, collegeSearchTerms)) return false;
       if (missing.some((detail) => !isMissingDetail(person, detail))) return false;
       if (strength && person.relationshipStrength !== strength) return false;
       if (tagId && !person.tags.some((tag) => tag.id === tagId)) return false;

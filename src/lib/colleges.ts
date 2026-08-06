@@ -1,4 +1,13 @@
 import { collegeTable } from "@/lib/colleges-data";
+import { normalizeCollegeText } from "@/lib/college-text";
+
+export { normalizeCollegeText };
+
+/**
+ * The table is nearly a megabyte of text. Everything below reads it through
+ * `allColleges()`, which parses on first use, so a screen that never searches a
+ * school never pays to build the index — only to ship it.
+ */
 
 export type College = {
   name: string;
@@ -14,14 +23,6 @@ export type College = {
   size: number;
 };
 
-export function normalizeCollegeText(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9&]+/g, " ")
-    .trim();
-}
 
 let parsed: College[] | null = null;
 let aliasIndex: Map<string, College> | null = null;

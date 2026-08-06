@@ -1,3 +1,4 @@
+import { collegeSearchTerms } from "@/lib/colleges";
 import {
   type FilterablePerson,
   isMissingDetail,
@@ -37,10 +38,16 @@ describe("missing details", () => {
 });
 
 describe("matchesPeopleQuery", () => {
-  it("finds someone by their school's acronym", () => {
+  it("finds someone by their school's acronym once the college list is supplied", () => {
     const jordan = person({ fullName: "Jordan Tran", university: "Carnegie Mellon University" });
-    expect(matchesPeopleQuery(jordan, "CMU")).toBe(true);
-    expect(matchesPeopleQuery(jordan, "nyu")).toBe(false);
+    expect(matchesPeopleQuery(jordan, "CMU", collegeSearchTerms)).toBe(true);
+    expect(matchesPeopleQuery(jordan, "nyu", collegeSearchTerms)).toBe(false);
+  });
+
+  it("matches the school as written before that list has loaded", () => {
+    const jordan = person({ fullName: "Jordan Tran", university: "Carnegie Mellon University" });
+    expect(matchesPeopleQuery(jordan, "carnegie")).toBe(true);
+    expect(matchesPeopleQuery(jordan, "CMU")).toBe(false);
   });
 
   it("finds someone by name, tag or hometown", () => {
