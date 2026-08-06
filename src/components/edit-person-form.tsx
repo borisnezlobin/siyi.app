@@ -519,6 +519,7 @@ export function EditPersonForm({
             defaultLabel={person.relationshipLabel}
             defaultRemindersEnabled={person.remindersEnabled}
             defaultReminderIntervalDays={person.reminderIntervalDays}
+            onValuesChange={refreshDirtyState}
           />
           <label className={`${labelClassName} sm:col-span-2`}>
             Reminder status
