@@ -13,6 +13,8 @@ const columnsAwaitingMigration = [
   // 0009_custom_interaction_labels.sql
   "custom_label",
   "custom_icon",
+  // 0012_person_slugs.sql
+  "slug",
 ];
 
 type WriteError = { code?: string; message: string };

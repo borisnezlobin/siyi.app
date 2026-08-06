@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
 import { formatOverdueDuration, getContactReminderState } from "@/lib/reminders";
+import { personPath } from "@/lib/slug";
 import type { Person } from "@/lib/types";
 
 type PersonRowProps = {
@@ -22,7 +23,7 @@ export function PersonRow({ person, showOverdue = false }: PersonRowProps) {
   return (
     <article className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[1.35rem] bg-white p-3 shadow-card ring-1 ring-black/[0.035] transition-transform hover:-translate-y-0.5 sm:p-4">
       <Link
-        href={`/people/${person.id}`}
+        href={personPath(person)}
         className="relative z-0 flex min-w-0 items-center gap-3 overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <Avatar

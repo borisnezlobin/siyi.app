@@ -14,6 +14,7 @@ import {
   type ReminderDefaults,
   type Tag,
 } from "@/lib/types";
+import { looksLikeUuid } from "@/lib/person-links";
 import { supabase } from "@/lib/supabase";
 import {
   clearOfflineUserData,
@@ -49,6 +50,7 @@ type TagRow = {
 
 type PersonRow = {
   id: string;
+  slug?: string | null;
   user_id: string;
   full_name: string;
   preferred_name: string | null;
@@ -245,6 +247,7 @@ function mapPerson(
 
   return {
     id: row.id,
+    slug: row.slug ?? null,
     userId: row.user_id,
     fullName: row.full_name,
     preferredName: row.preferred_name,
@@ -452,7 +455,20 @@ async function getOfflineDatasetRemote(userId: string) {
   return refresh;
 }
 
-async function getPersonDetailsRemote(personId: string) {
+/**
+ * A universal link opened from the web carries the readable slug rather than
+ * the uuid, so it has to be translated before anything is queried by id.
+ */
+async function remotePersonId(identifier: string) {
+  if (looksLikeUuid(identifier)) return identifier;
+  const people = await getPeopleRemote();
+  const match = people.find(({ slug }) => slug === identifier);
+  if (!match) throw new Error("This person could not be found.");
+  return match.id;
+}
+
+async function getPersonDetailsRemote(identifier: string) {
+  const personId = await remotePersonId(identifier);
   const [people, interactionsResult, followUpsResult] = await Promise.all([
     getPeopleRemote(),
     supabase
@@ -550,10 +566,14 @@ export async function getFollowUps() {
   }
 }
 
-export async function getPersonDetails(personId: string) {
+export async function getPersonDetails(identifier: string) {
   const userId = await currentUserId();
   if (!userId) throw new Error("Sign in to see this person.");
   const snapshot = await getOfflineSnapshot(userId);
+  // A link may arrive as either the uuid or the readable slug.
+  const personId = looksLikeUuid(identifier)
+    ? identifier
+    : snapshot.people.find(({ slug }) => slug === identifier)?.id ?? identifier;
   const cached = snapshot.personDetails[personId];
 
   if (!(await isOnline())) {
@@ -577,16 +597,18 @@ export async function getPersonDetails(personId: string) {
       if (currentDetails) return currentDetails;
     }
     const details = await getPersonDetailsRemote(personId);
+    // The cache is always keyed by uuid, even when the link carried a slug.
+    const resolvedId = details.person.id;
     await updateOfflineSnapshot(userId, (current) => ({
       ...current,
-      people: current.people.some(({ id }) => id === personId)
+      people: current.people.some(({ id }) => id === resolvedId)
         ? current.people.map((person) =>
-            person.id === personId ? details.person : person,
+            person.id === resolvedId ? details.person : person,
           )
         : [details.person, ...current.people],
       personDetails: {
         ...current.personDetails,
-        [personId]: details,
+        [resolvedId]: details,
       },
     }));
     return details;
@@ -630,6 +652,9 @@ function optimisticPerson(
 ): Person {
   return {
     id: personId,
+    // The server mints the slug when this row reaches it; until then the uuid
+    // is what links to this person.
+    slug: current?.slug ?? null,
     userId,
     fullName: input.fullName,
     preferredName: input.preferredName,

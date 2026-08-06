@@ -29,6 +29,7 @@ export function createDemoPeople(now = new Date()): Person[] {
   return [
     {
       id: "20000000-0000-4000-8000-000000000001",
+      slug: "amelia-chen-4hkq",
       userId: DEMO_USER_ID,
       fullName: "Amelia Chen",
       preferredName: "Amelia",
@@ -57,6 +58,7 @@ export function createDemoPeople(now = new Date()): Person[] {
     },
     {
       id: "20000000-0000-4000-8000-000000000002",
+      slug: "luis-ortega-9mtb",
       userId: DEMO_USER_ID,
       fullName: "Luis Ortega",
       preferredName: "Luis",
@@ -84,6 +86,7 @@ export function createDemoPeople(now = new Date()): Person[] {
     },
     {
       id: "20000000-0000-4000-8000-000000000003",
+      slug: "amara-okafor-3wqd",
       userId: DEMO_USER_ID,
       fullName: "Amara Okafor",
       preferredName: "Amara",
@@ -111,6 +114,7 @@ export function createDemoPeople(now = new Date()): Person[] {
     },
     {
       id: "20000000-0000-4000-8000-000000000004",
+      slug: "noah-park-7fkz",
       userId: DEMO_USER_ID,
       fullName: "Noah Park",
       preferredName: "Noah",
@@ -138,6 +142,7 @@ export function createDemoPeople(now = new Date()): Person[] {
     },
     {
       id: "20000000-0000-4000-8000-000000000005",
+      slug: "priya-shah-6dnc",
       userId: DEMO_USER_ID,
       fullName: "Priya Shah",
       preferredName: "Priya",
