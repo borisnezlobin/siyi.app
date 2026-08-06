@@ -1,4 +1,4 @@
-import { Plus } from "@phosphor-icons/react/dist/ssr";
+import { GlobeHemisphereWest, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
@@ -29,13 +29,22 @@ export default async function PeoplePage({
         title="People"
         description="Names, context, and the small details that make reconnecting easy."
         action={
-          <Link
-            href="/people/new"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-coral text-white shadow-float transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-            aria-label="Add someone"
-          >
-            <Plus size={20} weight="bold" aria-hidden="true" />
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/map"
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-ink shadow-card transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              aria-label="See where everyone's from"
+            >
+              <GlobeHemisphereWest size={20} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/people/new"
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-coral text-white shadow-float transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              aria-label="Add someone"
+            >
+              <Plus size={20} weight="bold" aria-hidden="true" />
+            </Link>
+          </div>
         }
       />
       {parameters.added ? (
