@@ -1,7 +1,8 @@
+import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
-import { Check, LinkSimple, Sparkle, X } from "phosphor-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
+import { Check, Copy, ShareNetwork, Sparkle, X } from "phosphor-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PanResponder,
   ActivityIndicator,
   Modal,
   Pressable,
@@ -25,6 +26,7 @@ import { onDeviceShortBio } from "@/lib/on-device-intelligence";
 import {
   defaultShareExpiryChoiceId,
   shareExpiryChoices,
+  shareIsLive,
   type PersonShare,
   type ShareExpiryChoiceId,
 } from "@/lib/person-share";
@@ -68,6 +70,10 @@ export function SharePersonSheet({
   const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creatingLink, setCreatingLink] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // Two taps can both land before the button re-renders as disabled, which is
+  // how one press used to produce two links.
+  const workingRef = useRef(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
@@ -126,8 +132,22 @@ export function SharePersonSheet({
     });
   };
 
+  // Dragging the grabber down past a short distance dismisses, the way every
+  // other sheet on the phone behaves.
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) => gesture.dy > 6,
+        onPanResponderRelease: (_event, gesture) => {
+          if (gesture.dy > 80 || gesture.vy > 0.8) onClose();
+        },
+      }),
+    [onClose],
+  );
+
   const createLink = async () => {
-    if (!userId) return;
+    if (!userId || workingRef.current) return null;
+    workingRef.current = true;
     setCreatingLink(true);
     setLinkError(null);
 
@@ -142,17 +162,44 @@ export function SharePersonSheet({
 
       if (result.unavailable) {
         setLinksAvailable(false);
-        return;
+        return null;
       }
       if (result.error || !result.share) {
         setLinkError(result.error ?? "That link couldn't be created.");
-        return;
+        return null;
       }
 
       setShares((current) => [result.share, ...current]);
-      await sendLink(result.share);
+      return result.share;
     } finally {
+      workingRef.current = false;
       setCreatingLink(false);
+    }
+  };
+
+  /** The live link if there is one, otherwise a fresh one. Never a second. */
+  const ensureLink = async () => {
+    const live = shares.find((entry) => shareIsLive(entry));
+    return live ?? (await createLink());
+  };
+
+  const copyLink = async () => {
+    const link = await ensureLink();
+    if (!link) return;
+    await Clipboard.setStringAsync(shareUrl(link));
+    void Haptics.selectionAsync();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareLink = async () => {
+    const link = await ensureLink();
+    if (!link) return;
+    setSharing(true);
+    try {
+      await Share.share({ message: shareUrl(link) });
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -174,8 +221,16 @@ export function SharePersonSheet({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <Pressable
+        accessibilityLabel="Close"
+        onPress={onClose}
+        style={styles.backdrop}
+      >
+        {/* Stops a tap inside the sheet from reaching the backdrop above. */}
+        <Pressable onPress={(event) => event.stopPropagation()} style={styles.sheet}>
+          <View {...panResponder.panHandlers} style={styles.grabArea}>
+            <View style={styles.grabber} />
+          </View>
           <View style={styles.header}>
             <AppText style={styles.title}>
               Share {person.preferredName || person.fullName}
@@ -327,22 +382,31 @@ export function SharePersonSheet({
             ) : null}
           </ScrollView>
 
-          <Button
-            label="Share contact card"
-            onPress={() => void share()}
-            loading={sharing}
-          />
           {linksAvailable ? (
+            <>
+              <Button
+                icon={Copy}
+                label={copied ? "Copied" : "Copy link"}
+                loading={creatingLink}
+                onPress={() => void copyLink()}
+              />
+              <Button
+                icon={ShareNetwork}
+                label="Share link"
+                loading={sharing}
+                onPress={() => void shareLink()}
+                variant="secondary"
+              />
+            </>
+          ) : (
             <Button
-              icon={LinkSimple}
-              label="Create a link"
-              onPress={() => void createLink()}
-              loading={creatingLink}
-              variant="secondary"
+              label="Share contact card"
+              loading={sharing}
+              onPress={() => void share()}
             />
-          ) : null}
-        </View>
-      </View>
+          )}
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -356,11 +420,23 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: "88%",
     padding: 22,
+    paddingTop: 8,
     paddingBottom: 34,
     gap: 12,
     backgroundColor: colors.porcelain,
     borderTopLeftRadius: radii.xlarge,
     borderTopRightRadius: radii.xlarge,
+  },
+  grabArea: {
+    alignItems: "center",
+    paddingBottom: 10,
+    paddingTop: 6,
+  },
+  grabber: {
+    backgroundColor: colors.mist,
+    borderRadius: 3,
+    height: 5,
+    width: 44,
   },
   header: {
     flexDirection: "row",
@@ -371,6 +447,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamilies.display,
     fontSize: 24,
+    // The display face is drawn taller than its point size, so the default
+    // line height clips the top of the capitals.
+    lineHeight: 32,
+    paddingTop: 2,
     color: colors.ink,
   },
   close: {
