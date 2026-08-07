@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
-import { Copy, QrCode } from "phosphor-react-native";
+import { useRouter } from "expo-router";
+import { ArrowLeft, Copy, QrCode } from "phosphor-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Animated, Pressable, StyleSheet, Switch, View } from "react-native";
 import QRCodeView from "react-native-qrcode-svg";
@@ -13,7 +14,6 @@ import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import {
   buildProfileUrl,
-  formatHandle,
   handleProblem,
   handleProblemMessages,
   normalizeHandle,
@@ -25,11 +25,15 @@ import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 
 /**
- * Your page, and the code people scan to reach it. The code fades and lifts into
- * place rather than appearing, so it reads as the same object as the address
- * above it.
+ * Your page, and the code people scan to reach it.
+ *
+ * The switch is the first thing on the screen because nothing under it exists
+ * while it is off. Off, the rest is both greyed and genuinely inert: every
+ * control below carries its own disabled state, so a screen reader says so
+ * rather than reading out a field that will not accept anything.
  */
 export default function ProfileScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const screenData = useRefreshableData<OwnProfile>(() =>
     getOwnProfile(session!.user.id),
@@ -76,6 +80,7 @@ export default function ProfileScreen() {
     profile.handle && profile.tag
       ? buildProfileUrl(brand.webUrl || "https://www.siyi.app", profile.handle, profile.tag)
       : "";
+  const off = !profile.isPublic;
 
   async function save(changes: Parameters<typeof saveOwnProfile>[1]) {
     if (!session) return;
@@ -94,137 +99,194 @@ export default function ProfileScreen() {
   }
 
   return (
-    <Screen
-      subtitle="What you hand out about yourself, the address people find you at, and a code they can scan."
-      title="Your card"
-    >
-      <FormField
-        autoCapitalize="none"
-        autoCorrect={false}
-        label="Your handle"
-        maxLength={30}
-        onChangeText={(value) => setHandle(normalizeHandle(value))}
-        placeholder="boris.nezlobin"
-        value={currentHandle}
-      />
-      {problem ? (
-        <AppText style={styles.error} variant="caption">
-          {handleProblemMessages[problem]}
+    <Screen bottomInset={56}>
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.back}
+        >
+          <ArrowLeft color={colors.ink} size={21} />
+        </Pressable>
+      </View>
+      <View style={styles.header}>
+        <AppText variant="display">Your card</AppText>
+        <AppText style={styles.muted}>
+          What you hand out about yourself, the address people find you at, and
+          a code they can scan.
         </AppText>
-      ) : null}
-      {error ? (
-        <AppText style={styles.error} variant="caption">
-          {error}
+      </View>
+
+      <View style={styles.switchRow}>
+        <AppText style={styles.grow} variant="label">
+          Enable shareable link
         </AppText>
-      ) : null}
+        <Switch
+          accessibilityLabel="Enable shareable link"
+          disabled={saving}
+          ios_backgroundColor={colors.mist}
+          onValueChange={(value) => void save({ isPublic: value })}
+          thumbColor={colors.paper}
+          trackColor={{ false: colors.mist, true: colors.sageStrong }}
+          value={profile.isPublic}
+        />
+      </View>
 
-      <Button
-        disabled={saving || Boolean(problem) || !currentHandle}
-        label={profile.tag ? "Update handle" : "Claim handle"}
-        onPress={() => void save({ handle: currentHandle })}
-      />
+      <View
+        pointerEvents={off ? "none" : "auto"}
+        style={[styles.group, off && styles.groupOff]}
+      >
+        {profile.tag ? (
+          <>
+            <AppText variant="caption">People can find you at {url}</AppText>
 
-      {profile.tag ? (
-        <>
-          <AppText variant="caption">
-            People can find you as {formatHandle(profile.handle, profile.tag)}.
-          </AppText>
-
-          <View style={styles.actions}>
-            <Button
-              compact
-              icon={Copy}
-              label="Copy link"
-              onPress={() => void Clipboard.setStringAsync(url)}
-              variant="secondary"
-            />
-            <Button
-              compact
-              icon={QrCode}
-              label={showQr ? "Hide code" : "Show code"}
-              onPress={() => setShowQr((open) => !open)}
-              variant="secondary"
-            />
-          </View>
-
-          {showQr ? (
-            <Animated.View
-              style={[
-                styles.qr,
-                {
-                  opacity: reveal,
-                  transform: [
-                    {
-                      translateY: reveal.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [12, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              {revealing ? <ConnectRipple size={236} /> : null}
-              <QRCodeView
-                backgroundColor={colors.paper}
-                color={colors.ink}
-                size={200}
-                value={url}
+            <View style={styles.actions}>
+              <Button
+                compact
+                disabled={off}
+                icon={Copy}
+                label="Copy link"
+                onPress={() => void Clipboard.setStringAsync(url)}
+                variant="secondary"
               />
-            </Animated.View>
-          ) : null}
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleCopy}>
-              <AppText variant="label">Show my card on this page</AppText>
-              <AppText variant="caption">
-                Anyone who opens the address above can read it. While this is
-                off the address shows nothing, and the name stays yours.
-              </AppText>
+              <Button
+                compact
+                disabled={off}
+                icon={QrCode}
+                label={showQr ? "Hide code" : "Show code"}
+                onPress={() => setShowQr((open) => !open)}
+                variant="secondary"
+              />
             </View>
-            <Switch
-              onValueChange={(value) => void save({ isPublic: value })}
-              trackColor={{ false: colors.mist, true: colors.sageStrong }}
-              value={profile.isPublic}
-            />
-          </View>
 
-          <AppText variant="label">What goes on it</AppText>
-          <View style={styles.fields}>
-            {ownCardFields.map((field) => {
-              const on = profile.publicFields[field] === true;
-              return (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  key={field}
-                  onPress={() =>
-                    void save({
-                      publicFields: { ...profile.publicFields, [field]: !on },
-                    })
-                  }
-                  style={[styles.field, on && styles.fieldSelected]}
+            {showQr ? (
+              <Animated.View
+                style={[
+                  styles.qr,
+                  {
+                    opacity: reveal,
+                    transform: [
+                      {
+                        translateY: reveal.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [12, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                {revealing ? <ConnectRipple size={236} /> : null}
+                <QRCodeView
+                  backgroundColor={colors.paper}
+                  color={colors.ink}
+                  size={200}
+                  value={url}
+                />
+              </Animated.View>
+            ) : null}
+          </>
+        ) : null}
+
+        <FormField
+          accessibilityState={{ disabled: off }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!off}
+          label="Your handle"
+          maxLength={30}
+          onChangeText={(value) => setHandle(normalizeHandle(value))}
+          placeholder="boris.nezlobin"
+          value={currentHandle}
+        />
+        {problem ? (
+          <AppText style={styles.error} variant="caption">
+            {handleProblemMessages[problem]}
+          </AppText>
+        ) : null}
+        {error ? (
+          <AppText style={styles.error} variant="caption">
+            {error}
+          </AppText>
+        ) : null}
+
+        <Button
+          disabled={off || saving || Boolean(problem) || !currentHandle}
+          label={profile.tag ? "Update handle" : "Claim handle"}
+          onPress={() => void save({ handle: currentHandle })}
+        />
+
+        <AppText variant="label">What goes on it</AppText>
+        <View style={styles.fields}>
+          {ownCardFields.map((field) => {
+            const on = profile.publicFields[field] === true;
+            return (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on, disabled: off }}
+                disabled={off}
+                key={field}
+                onPress={() =>
+                  void save({
+                    publicFields: { ...profile.publicFields, [field]: !on },
+                  })
+                }
+                style={[styles.field, on && styles.fieldSelected]}
+              >
+                <AppText
+                  style={on ? styles.fieldTextSelected : undefined}
+                  variant="caption"
                 >
-                  <AppText
-                    style={on ? styles.fieldTextSelected : undefined}
-                    variant="caption"
-                  >
-                    {ownCardLabels[field]}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
+                  {ownCardLabels[field]}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <View style={styles.divider} />
-      <OwnCardFields />
+        <View style={styles.divider} />
+        <OwnCardFields disabled={off} />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    alignItems: "flex-start",
+  },
+  back: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.small,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  header: {
+    gap: 6,
+  },
+  muted: {
+    color: colors.inkMuted,
+  },
+  grow: {
+    flex: 1,
+  },
+  switchRow: {
+    alignItems: "center",
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: 14,
+    paddingBottom: 16,
+  },
+  group: {
+    gap: 16,
+  },
+  groupOff: {
+    opacity: 0.4,
+  },
   actions: {
     flexDirection: "row",
     gap: 9,
@@ -235,18 +297,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     borderRadius: radii.large,
     padding: 18,
-  },
-  toggleRow: {
-    alignItems: "center",
-    backgroundColor: colors.porcelain,
-    borderRadius: radii.medium,
-    flexDirection: "row",
-    gap: 14,
-    padding: 15,
-  },
-  toggleCopy: {
-    flex: 1,
-    gap: 3,
   },
   fields: {
     flexDirection: "row",

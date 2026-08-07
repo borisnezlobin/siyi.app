@@ -50,7 +50,7 @@ export function DefaultUniversityControl({
   return (
     <div>
       <label className="block text-xs font-semibold text-ink-muted">
-        <span className="sr-only">Default university</span>
+        <span className="sr-only">University</span>
         <CollegeInput
           name="defaultUniversity"
           defaultValue={value}

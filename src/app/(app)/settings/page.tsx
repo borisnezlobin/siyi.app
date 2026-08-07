@@ -108,15 +108,6 @@ export default async function SettingsPage() {
               initialTag={initialHandleTag}
             />
           </div>
-          <div className="mt-7 border-t border-ink/[0.08] pt-6">
-            <h3 className="text-sm font-bold">Default university</h3>
-            <p className="mt-1 text-xs leading-5 text-ink-muted">
-              Filled in for you when you add someone new. Leave blank for none.
-            </p>
-            <div className="mt-4">
-              <DefaultUniversityControl initialValue={initialDefaultUniversity} />
-            </div>
-          </div>
         </section>
 
         <section className="py-7">
@@ -131,6 +122,19 @@ export default async function SettingsPage() {
             Push and reminder timing
             <CaretRight size={14} aria-hidden="true" />
           </Link>
+        </section>
+
+        {/* A default for the people you add, not a detail about you — so it
+            sits with the other new-person defaults, immediately above the
+            check-in intervals, exactly as it does on the phone. */}
+        <section className="py-7">
+          <h2 className="text-sm font-bold">New person defaults</h2>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            Filled in for you when you add someone new. Leave blank for none.
+          </p>
+          <div className="mt-4">
+            <DefaultUniversityControl initialValue={initialDefaultUniversity} />
+          </div>
         </section>
       </div>
 

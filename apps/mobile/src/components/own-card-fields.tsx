@@ -2,9 +2,8 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
-import { CollegeField } from "@/components/college-field";
 import { FormField } from "@/components/form-field";
-import { colors, radii } from "@/constants/theme";
+import { colors } from "@/constants/theme";
 import { getAccountSettings, saveOwnCard } from "@/lib/data";
 import { ownCardFields, ownCardLabels, type OwnCard } from "@/lib/own-card";
 import type { AccountSettings } from "@/lib/data";
@@ -20,6 +19,7 @@ const placeholders: Partial<Record<(typeof ownCardFields)[number], string>> = {
   discordUsername: "username",
   birthday: "2005-04-12",
   hometown: "Berkeley, California",
+  university: "University of California, Berkeley",
   major: "Computer Science",
   graduationYear: "2027",
   dormOrResidence: "Unit 2",
@@ -29,14 +29,13 @@ const placeholders: Partial<Record<(typeof ownCardFields)[number], string>> = {
  * What you hand out about yourself. Lives inside the card screen rather than on
  * its own, so mobile matches the single section the web shows.
  */
-export function OwnCardFields() {
+export function OwnCardFields({ disabled = false }: { disabled?: boolean }) {
   const { session } = useAuth();
   const screenData = useRefreshableData<AccountSettings>(() =>
     getAccountSettings(session!.user.id),
   );
 
   const [card, setCard] = useState<OwnCard | null>(null);
-  const [defaultUniversity, setDefaultUniversity] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +43,16 @@ export function OwnCardFields() {
   const settings = screenData.data;
   if (!settings) return null;
   const currentCard = card ?? settings.ownCard;
-  const currentUniversity = defaultUniversity ?? settings.defaultUniversity;
 
   async function save() {
-    if (!session) return;
+    if (!session || !settings) return;
     setSaving(true);
     setError(null);
     try {
       await saveOwnCard(session.user.id, {
         card: currentCard,
         enabled: true,
-        defaultUniversity: currentUniversity,
+        defaultUniversity: settings.defaultUniversity,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
@@ -69,41 +67,30 @@ export function OwnCardFields() {
 
   return (
     <View style={styles.group}>
-        <CollegeField
-          onChangeText={(value) => setDefaultUniversity(value)}
-          value={currentUniversity}
+      {ownCardFields.map((field) => (
+        <FormField
+          accessibilityState={{ disabled }}
+          editable={!disabled}
+          key={field}
+          label={ownCardLabels[field]}
+          maxLength={200}
+          onChangeText={(value) => setCard({ ...currentCard, [field]: value })}
+          placeholder={placeholders[field]}
+          value={currentCard[field] ?? ""}
         />
-        <AppText style={styles.hint} variant="caption">
-          Filled in for you when you add someone new. Leave blank for none.
+      ))}
+
+      {error ? (
+        <AppText style={styles.error} variant="caption">
+          {error}
         </AppText>
+      ) : null}
 
-
-        {ownCardFields
-          .filter((field) => field !== "university")
-          .map((field) => (
-            <FormField
-              key={field}
-              label={ownCardLabels[field]}
-              maxLength={200}
-              onChangeText={(value) =>
-                setCard({ ...currentCard, [field]: value })
-              }
-              placeholder={placeholders[field]}
-              value={currentCard[field] ?? ""}
-            />
-          ))}
-
-        {error ? (
-          <AppText style={styles.error} variant="caption">
-            {error}
-          </AppText>
-        ) : null}
-
-        <Button
-          disabled={saving}
-          label={saved ? "Saved" : "Save my details"}
-          onPress={() => void save()}
-        />
+      <Button
+        disabled={disabled || saving}
+        label={saved ? "Saved" : "Save my details"}
+        onPress={() => void save()}
+      />
     </View>
   );
 }
@@ -111,21 +98,6 @@ export function OwnCardFields() {
 const styles = StyleSheet.create({
   group: {
     gap: 14,
-  },
-  hint: {
-    marginTop: -4,
-  },
-  toggleRow: {
-    alignItems: "center",
-    backgroundColor: colors.porcelain,
-    borderRadius: radii.medium,
-    flexDirection: "row",
-    gap: 14,
-    padding: 15,
-  },
-  toggleCopy: {
-    flex: 1,
-    gap: 3,
   },
   error: {
     color: colors.coralStrong,

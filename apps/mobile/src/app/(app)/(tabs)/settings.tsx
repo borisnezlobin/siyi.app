@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
+import { CollegeField } from "@/components/college-field";
 import { FormField } from "@/components/form-field";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
@@ -29,6 +30,7 @@ import {
   importAccountData,
   saveAccountSettings,
   saveMarketingOptIn,
+  saveOwnCard,
   shareAccountExport,
   type ExportFormat,
 } from "@/lib/data";
@@ -61,6 +63,7 @@ export default function SettingsScreen() {
     null,
   );
   const [marketingDraft, setMarketingDraft] = useState<boolean | null>(null);
+  const [universityDraft, setUniversityDraft] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -86,6 +89,7 @@ export default function SettingsScreen() {
   const timezone = timezoneDraft ?? settings.timezone;
   const intervals = intervalDraft ?? settings.reminderDefaults;
   const marketingOptIn = marketingDraft ?? settings.marketingOptIn;
+  const defaultUniversity = universityDraft ?? settings.defaultUniversity;
   const providers = Array.from(
     new Set(
       (
@@ -111,6 +115,28 @@ export default function SettingsScreen() {
       );
     }
     setBusyAction(null);
+  }
+
+  async function saveDefaultUniversity() {
+    setBusyAction("university");
+    setError(null);
+    setMessage(null);
+    try {
+      await saveOwnCard(auth.session!.user.id, {
+        card: settings.ownCard,
+        enabled: settings.ownCardEnabled,
+        defaultUniversity,
+      });
+      setUniversityDraft(null);
+      await accountData.reload();
+      setMessage("Saved. New people start with that university.");
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : "That could not be saved.",
+      );
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function savePreferences() {
@@ -297,6 +323,25 @@ export default function SettingsScreen() {
       </Section>
 
       <DeviceContactsSection />
+
+      {/* A default for the people you add, not a detail about you — the same
+          section, in the same place, as the web settings page. */}
+      <Section title="New person defaults">
+        <AppText style={styles.sectionNote} variant="caption">
+          Filled in for you when you add someone new. Leave blank for none.
+        </AppText>
+        <CollegeField
+          onChangeText={setUniversityDraft}
+          value={defaultUniversity}
+        />
+        <View style={styles.sectionAction}>
+          <Button
+            label="Save default"
+            loading={busyAction === "university"}
+            onPress={() => void saveDefaultUniversity()}
+          />
+        </View>
+      </Section>
 
       <Section title="Check-in defaults">
         <AppText style={styles.sectionNote} variant="caption">
