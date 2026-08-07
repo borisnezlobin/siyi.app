@@ -12,10 +12,13 @@ export function CollegeInput({
   name = "university",
   defaultValue = "",
   className,
+  onValueChange,
 }: {
   name?: string;
   defaultValue?: string;
   className?: string;
+  /** For callers holding the value in state rather than reading the form. */
+  onValueChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -34,8 +37,13 @@ export function CollegeInput({
     return matches;
   }, [open, value]);
 
+  function update(next: string) {
+    setValue(next);
+    onValueChange?.(next);
+  }
+
   function choose(collegeName: string) {
-    setValue(collegeName);
+    update(collegeName);
     setOpen(false);
     setActiveIndex(-1);
   }
@@ -54,7 +62,7 @@ export function CollegeInput({
         className={className}
         placeholder="Start typing, or an acronym like CMU"
         onChange={(event) => {
-          setValue(event.target.value);
+          update(event.target.value);
           setOpen(true);
           setActiveIndex(-1);
         }}

@@ -1,3 +1,4 @@
+import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
 import type { Session } from "@supabase/supabase-js";
 import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
@@ -176,6 +177,9 @@ export type AccountSettings = {
   timezone: string;
   reminderDefaults: ReminderDefaults;
   notificationPreference: NotificationPreference;
+  ownCard: OwnCard;
+  ownCardEnabled: boolean;
+  defaultUniversity: string;
 };
 
 const avatarCacheDirectory = new Directory(
@@ -1657,6 +1661,10 @@ export async function getAccountSettings(userId: string) {
 
   const accountSettings = {
     timezone: profileResult.data.timezone,
+    // Absent until migration 0018 has run, so every one of these has a fallback.
+    ownCard: normalizeOwnCard(settingsResult.data.own_card),
+    ownCardEnabled: settingsResult.data.own_card_enabled ?? false,
+    defaultUniversity: settingsResult.data.default_university ?? "",
     reminderDefaults: {
       1: settingsResult.data.strength_1_days,
       2: settingsResult.data.strength_2_days,
@@ -1682,6 +1690,39 @@ export async function getAccountSettings(userId: string) {
     accountSettings,
   }));
   return accountSettings;
+}
+
+/**
+ * Your own details. Written straight through rather than queued: it is a
+ * settings screen, it is small, and there is nothing to reconcile if two devices
+ * disagree beyond last write wins.
+ */
+export async function saveOwnCard(
+  userId: string,
+  values: { card: OwnCard; enabled: boolean; defaultUniversity: string },
+) {
+  const { error } = await supabase.from("user_settings").upsert(
+    {
+      user_id: userId,
+      own_card: normalizeOwnCard(values.card),
+      own_card_enabled: values.enabled,
+      default_university: values.defaultUniversity.trim() || null,
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) throw error;
+
+  await updateOfflineSnapshot(userId, (snapshot) => ({
+    ...snapshot,
+    accountSettings: snapshot.accountSettings
+      ? {
+          ...snapshot.accountSettings,
+          ownCard: values.card,
+          ownCardEnabled: values.enabled,
+          defaultUniversity: values.defaultUniversity,
+        }
+      : snapshot.accountSettings,
+  }));
 }
 
 export async function saveAccountSettings(

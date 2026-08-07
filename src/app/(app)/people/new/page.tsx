@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AddPersonForm } from "@/components/add-person-form";
 import { PageHeader } from "@/components/page-header";
+import { getDefaultUniversity } from "@/lib/own-card-server";
 
 export const metadata: Metadata = {
   title: "Add someone",
 };
 
-export default function AddPersonPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AddPersonPage() {
   return (
     <div className="mx-auto max-w-[680px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
@@ -25,7 +28,7 @@ export default function AddPersonPage() {
           </Link>
         }
       />
-      <AddPersonForm />
+      <AddPersonForm defaultUniversity={await getDefaultUniversity()} />
     </div>
   );
 }

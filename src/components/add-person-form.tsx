@@ -24,7 +24,7 @@ const inputClassName =
   "mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";
 const labelClassName = "block text-xs font-semibold text-ink-muted";
 
-export function AddPersonForm() {
+export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: string }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState("");
@@ -294,7 +294,7 @@ export function AddPersonForm() {
           </label>
           <label className={labelClassName}>
             University
-            <CollegeInput className={inputClassName} />
+            <CollegeInput className={inputClassName} defaultValue={defaultUniversity} />
           </label>
           <label className={labelClassName}>
             Major
