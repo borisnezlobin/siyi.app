@@ -33,7 +33,9 @@ const base64UrlAlphabet =
  * would want to share. Tokens issued before this are 32 characters and stay
  * valid, which is why the pattern accepts a range.
  */
-export const shareTokenByteLength = 9;
+// Reverts to 24 bytes until migration 0018 widens the token constraint; the
+// database still requires exactly 32 characters and rejects anything shorter.
+export const shareTokenByteLength = 24;
 export const shareTokenPattern = /^[A-Za-z0-9_-]{10,64}$/;
 export const shareSlugMaxLength = 12;
 
@@ -81,7 +83,7 @@ export function createShareToken(
   if (bytes.length !== shareTokenByteLength) {
     throw new Error(`Share token needs ${shareTokenByteLength} random bytes.`);
   }
-  return `${shareSlugFor(fullName)}-${encodeBase64Url(bytes)}`;
+  return encodeBase64Url(bytes);
 }
 
 export function isValidShareToken(value: unknown): value is string {
