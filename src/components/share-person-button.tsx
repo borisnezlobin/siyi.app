@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Export, X } from "@phosphor-icons/react";
+import { Check, Copy, Share, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   availableContactShareFields,
@@ -176,7 +176,7 @@ export function SharePersonButton({ person }: { person: Person }) {
         }}
         className="inline-flex h-10 items-center gap-2 rounded-full bg-porcelain px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
-        <Export size={17} weight="bold" aria-hidden="true" />
+        <Share size={17} weight="bold" aria-hidden="true" />
         Share
       </button>
 
@@ -266,7 +266,7 @@ export function SharePersonButton({ person }: { person: Person }) {
                 onClick={() => void sendShareLink()}
                 className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
               >
-                <Export size={16} weight="bold" aria-hidden="true" />
+                <Share size={16} weight="bold" aria-hidden="true" />
                 Share link
               </button>
             ) : null}

@@ -1,4 +1,53 @@
-import { render, screen, waitFor } from "@testing-library/react-native";
+import { act, render, screen, waitFor } from "@testing-library/react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+const safeAreaMetrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 47, left: 0, right: 0, bottom: 34 },
+};
+
+/**
+ * The last props the sheet shell handed to the library, so a test can do what a
+ * swipe down or a backdrop tap does: run the library's own dismissal.
+ */
+const mockSheet: { props: Record<string, unknown> } = { props: {} };
+
+// The real sheet runs on the worklet runtime, which does not exist under Jest.
+// This stand-in keeps the parts the app depends on: nothing is on screen until
+// the sheet is presented, and every way of dismissing it ends in onDismiss.
+jest.mock("@gorhom/bottom-sheet", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require("react");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { View } = require("react-native");
+
+  return {
+    __esModule: true,
+    BottomSheetBackdrop: (props: Record<string, unknown>) =>
+      React.createElement(View, props),
+    BottomSheetModal: React.forwardRef(function BottomSheetModal(
+      props: { children?: unknown; onDismiss?: () => void },
+      ref: unknown,
+    ) {
+      const [presented, setPresented] = React.useState(false);
+      mockSheet.props = props as Record<string, unknown>;
+      React.useImperativeHandle(ref, () => ({
+        present: () => setPresented(true),
+        dismiss: () => {
+          setPresented(false);
+          props.onDismiss?.();
+        },
+      }));
+      return presented
+        ? React.createElement(View, { testID: "bottom-sheet" }, props.children)
+        : null;
+    }),
+    BottomSheetScrollView: ({ children, ...rest }: { children?: unknown }) =>
+      React.createElement(View, rest, children),
+    BottomSheetView: ({ children, ...rest }: { children?: unknown }) =>
+      React.createElement(View, rest, children),
+  };
+});
 
 jest.mock("expo-haptics", () => ({ selectionAsync: jest.fn() }));
 
@@ -58,13 +107,27 @@ const person = {
 
 const listShares = listPersonShares as jest.Mock;
 
+function sheetFor(visible: boolean, onClose: () => void) {
+  return (
+    <SafeAreaProvider initialMetrics={safeAreaMetrics}>
+      <SharePersonSheet person={person} visible={visible} onClose={onClose} />
+    </SafeAreaProvider>
+  );
+}
+
+async function renderSheet(onClose: () => void = () => {}) {
+  return render(sheetFor(true, onClose));
+}
+
 describe("the share sheet", () => {
+  beforeEach(() => {
+    mockSheet.props = {};
+  });
+
   it("offers only the contact card until migration 0015 has been applied", async () => {
     listShares.mockResolvedValue({ available: false, shares: [] });
 
-    await render(
-      <SharePersonSheet person={person} visible onClose={() => {}} />,
-    );
+    await renderSheet();
 
     await waitFor(() => expect(listShares).toHaveBeenCalled());
 
@@ -77,9 +140,7 @@ describe("the share sheet", () => {
   it("offers copying the link once the table exists", async () => {
     listShares.mockResolvedValue({ available: true, shares: [] });
 
-    await render(
-      <SharePersonSheet person={person} visible onClose={() => {}} />,
-    );
+    await renderSheet();
 
     await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
 
@@ -107,12 +168,42 @@ describe("the share sheet", () => {
       ],
     });
 
-    await render(
-      <SharePersonSheet person={person} visible onClose={() => {}} />,
-    );
+    await renderSheet();
 
     await waitFor(() => expect(screen.getByText(/abcdefgh/)).toBeTruthy());
     expect(screen.getByLabelText("Turn off link")).toBeTruthy();
     expect(screen.getByLabelText("Send link")).toBeTruthy();
+  });
+
+  it("opens when asked and goes away again", async () => {
+    listShares.mockResolvedValue({ available: false, shares: [] });
+
+    const { rerender } = await render(sheetFor(false, () => {}));
+    expect(screen.queryByText("Share May")).toBeNull();
+
+    await act(async () => rerender(sheetFor(true, () => {})));
+    expect(screen.getByText("Share May")).toBeTruthy();
+
+    await act(async () => rerender(sheetFor(false, () => {})));
+    expect(screen.queryByText("Share May")).toBeNull();
+  });
+
+  it("closes when the sheet itself is dismissed, not only from the close button", async () => {
+    listShares.mockResolvedValue({ available: false, shares: [] });
+    const onClose = jest.fn();
+
+    await renderSheet(onClose);
+    await waitFor(() => expect(screen.getByText("Share May")).toBeTruthy());
+
+    // A backdrop that fades on its own, and a sheet that can be dragged away.
+    expect(mockSheet.props.backdropComponent).toEqual(expect.any(Function));
+    expect(mockSheet.props.enablePanDownToClose).not.toBe(false);
+
+    // Swiping down and tapping the backdrop both land here.
+    await act(async () => {
+      (mockSheet.props.onDismiss as () => void)();
+    });
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

@@ -1,10 +1,8 @@
 import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
   BottomSheetView,
-  type BottomSheetBackdropProps,
+  type BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import * as Haptics from "expo-haptics";
@@ -48,10 +46,10 @@ import {
   Keyboard,
   Pressable,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppBottomSheet } from "@/components/app-bottom-sheet";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
@@ -415,7 +413,6 @@ export function QuickCaptureProvider({
   const contextRequestRef = useRef(0);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const { session } = useAuth();
   const [phase, setPhase] = useState<CapturePhase>("menu");
   const [people, setPeople] = useState<Person[]>([]);
@@ -845,19 +842,6 @@ export function QuickCaptureProvider({
     }
   }
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        opacity={0.42}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   const value = useMemo<QuickCaptureContextValue>(
     () => ({
       revision,
@@ -922,26 +906,7 @@ export function QuickCaptureProvider({
   return (
     <QuickCaptureContext.Provider value={value}>
       {children}
-      <BottomSheetModal
-        backdropComponent={renderBackdrop}
-        backgroundStyle={styles.sheetBackground}
-        enableDynamicSizing
-        handleIndicatorStyle={styles.handle}
-        // "extend" grew the sheet to full height behind the keyboard, which put
-        // the field being typed in and the save button underneath it.
-        // "interactive" lifts the sheet by the keyboard instead.
-        android_keyboardInputMode="adjustResize"
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        // The ceiling has to come down by the keyboard's height. Left at the
-        // full window the sheet is already as tall as it can be, so there is no
-        // room for "interactive" to lift it and the fields end up underneath.
-        maxDynamicContentSize={
-          windowHeight - insets.top - 12 - keyboardHeight
-        }
-        ref={modalRef}
-        topInset={insets.top + 8}
-      >
+      <AppBottomSheet ref={modalRef}>
         {phase === "menu" ? (
           <BottomSheetView
             style={[
@@ -1673,7 +1638,7 @@ export function QuickCaptureProvider({
             ) : null}
           </BottomSheetScrollView>
         )}
-      </BottomSheetModal>
+      </AppBottomSheet>
     </QuickCaptureContext.Provider>
   );
 }
@@ -1689,16 +1654,6 @@ export function useQuickCapture() {
 }
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    backgroundColor: colors.porcelain,
-    borderTopLeftRadius: radii.xlarge,
-    borderTopRightRadius: radii.xlarge,
-  },
-  handle: {
-    backgroundColor: colors.inkMuted,
-    opacity: 0.35,
-    width: 44,
-  },
   sheetContent: {
     gap: 22,
     paddingHorizontal: 20,
