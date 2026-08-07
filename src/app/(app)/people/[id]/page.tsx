@@ -2,10 +2,10 @@ import { getAllClasses } from "@/lib/classes-server";
 import { PersonClasses } from "@/components/person-classes";
 import {
   ArrowLeft,
-  ArrowSquareOut,
   Buildings,
   Cake,
   CalendarBlank,
+  CaretRight,
   ChatCircleDots,
   EnvelopeSimple,
   GraduationCap,
@@ -16,7 +16,7 @@ import {
   PencilSimple,
   Phone,
 } from "@phosphor-icons/react/dist/ssr";
-import { format, formatDistanceToNowStrict } from "date-fns";
+import { format } from "date-fns";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -38,6 +38,11 @@ import {
   getPersonUpdates,
 } from "@/lib/data";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
+import {
+  dueDateLabel,
+  lastSeenLabel,
+  relativeDateLabel,
+} from "@/lib/relative-time";
 import { getContactReminderState } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +58,11 @@ export async function generateMetadata({
 }
 
 const sectionHeadingClassName = "text-sm font-bold";
+const sectionHeaderClassName = "flex flex-wrap items-center justify-between gap-3";
+// Every section action reads the same way: a small icon and the words for what
+// it does. Nobody has to decode a lone glyph.
+const sectionActionClassName =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral";
 
 export default async function PersonDetailPage({
   params,
@@ -108,11 +118,7 @@ export default async function PersonDetailPage({
     }));
   const reminder = getContactReminderState(person);
   const displayName = person.preferredName ?? person.fullName;
-  const lastInteractionLabel = person.lastInteractionAt
-    ? formatDistanceToNowStrict(new Date(person.lastInteractionAt), {
-        addSuffix: true,
-      })
-    : "No interactions yet";
+  const lastInteractionLabel = lastSeenLabel(person.lastInteractionAt);
 
   const age = ageOnDate(person.birthday);
 
@@ -266,7 +272,7 @@ export default async function PersonDetailPage({
         <div className="rounded-[1.5rem] bg-white p-4">
           <p className="text-xs text-ink-muted">Next reminder</p>
           <p className="mt-1 text-sm font-bold">
-            {reminder ? format(reminder.dueAt, "MMMM d") : "Paused"}
+            {reminder ? dueDateLabel(reminder.dueAt) : "Paused"}
           </p>
         </div>
       </div>
@@ -329,26 +335,26 @@ export default async function PersonDetailPage({
       ) : null}
 
       <section className="mt-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className={sectionHeaderClassName}>
           <h2 className={sectionHeadingClassName}>
             Reminders
             <span className="ml-2 font-normal text-ink-muted">
               {openReminders.length} open
             </span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <QuickCaptureTrigger
               mode="reminder"
               personId={person.id}
-              label={`Add a reminder for ${displayName}`}
-              compact
+              label="Add reminder"
+              surface="quiet"
             />
             <Link
               href={`/reminders?person=${person.id}`}
-              className="grid size-9 place-items-center rounded-full bg-white text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              aria-label="Open all reminders"
+              className={sectionActionClassName}
             >
-              <ArrowSquareOut size={14} aria-hidden="true" />
+              <CaretRight size={16} weight="fill" aria-hidden="true" />
+              See all
             </Link>
           </div>
         </div>
@@ -364,7 +370,7 @@ export default async function PersonDetailPage({
                     {openReminder.text}
                   </p>
                   <p className="mt-1 text-xs text-coral-strong">
-                    Due {format(new Date(openReminder.dueAt), "MMM d")}
+                    {dueDateLabel(openReminder.dueAt)}
                   </p>
                 </li>
               ))}
@@ -378,7 +384,7 @@ export default async function PersonDetailPage({
       </section>
 
       <section className="mt-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className={sectionHeaderClassName}>
           <h2 className={sectionHeadingClassName}>
             History
             <span className="ml-2 font-normal text-ink-muted">
@@ -390,7 +396,7 @@ export default async function PersonDetailPage({
               mode="interaction"
               personId={person.id}
               label="Log interaction"
-              compact
+              surface="quiet"
             />
             <QuickCaptureTrigger
               mode="update"
@@ -414,7 +420,7 @@ export default async function PersonDetailPage({
                     <p className="text-sm font-semibold">{entry.title}</p>
                     <div className="flex shrink-0 items-center gap-1">
                       <time dateTime={entry.at} className="text-[11px] text-ink-muted">
-                        {format(new Date(entry.at), "MMM d, yyyy")}
+                        {relativeDateLabel(entry.at)}
                       </time>
                       <UpdateSheet personName={displayName} entry={entry.editable} />
                     </div>

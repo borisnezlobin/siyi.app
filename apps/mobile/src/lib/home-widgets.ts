@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import { brand } from "@/config/brand";
 import { chooseCatchUpPerson } from "@/lib/catch-up";
-import { relativeDayLabel } from "@/lib/date-labels";
+import { dueDateLabel } from "@/lib/relative-time";
 import {
   daysUntilBirthday,
   overdueDays,
@@ -83,7 +83,7 @@ export async function refreshHomeWidgets({
         ? `${nextBirthday.preferredName || nextBirthday.fullName}’s birthday`
         : "No reminders waiting";
     const nextDetail = nextReminder
-      ? relativeDayLabel(nextReminder.dueAt)
+      ? dueDateLabel(nextReminder.dueAt, now)
       : nextBirthday
         ? `${daysUntilBirthday(nextBirthday.birthday, now)} days away`
         : `Open ${brand.name} to catch up with someone`;

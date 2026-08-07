@@ -1,7 +1,6 @@
 import {
   countsByBucket,
   reminderBucket,
-  reminderDueLabel,
   groupRemindersByBucket,
 } from "@/lib/reminder-buckets";
 
@@ -62,15 +61,5 @@ describe("groupRemindersByBucket", () => {
       week: 2,
       later: 1,
     });
-  });
-});
-
-describe("reminderDueLabel", () => {
-  it("reads as plain language on both sides of today", () => {
-    expect(reminderDueLabel(at(0), now)).toBe("Today");
-    expect(reminderDueLabel(at(1), now)).toBe("Tomorrow");
-    expect(reminderDueLabel(at(5), now)).toBe("In 5 days");
-    expect(reminderDueLabel(at(-1), now)).toBe("1 day late");
-    expect(reminderDueLabel(at(-4), now)).toBe("4 days late");
   });
 });

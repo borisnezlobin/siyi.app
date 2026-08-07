@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { EmptyState } from "@/components/empty-state";
-import {
-  alreadyLoggedIds,
-  checkInCandidates,
-  lastSeenLabel,
-} from "@/lib/daily-check-in";
+import { alreadyLoggedIds, checkInCandidates } from "@/lib/daily-check-in";
 import { getApiResponseError } from "@/lib/http";
+import { lastSeenLabel } from "@/lib/relative-time";
 import type { Person } from "@/lib/types";
 
 /**
@@ -102,7 +99,7 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
                     {person.preferredName || person.fullName}
                   </span>
                   <span className="block text-xs text-ink-muted">
-                    {chosen ? "Logged today" : lastSeenLabel(person)}
+                    {chosen ? "Logged today" : lastSeenLabel(person.lastInteractionAt)}
                   </span>
                 </span>
                 <span

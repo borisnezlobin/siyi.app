@@ -357,6 +357,57 @@ test("switching tabs paints immediately instead of waiting on the server", async
   await expect(page.getByRole("searchbox", { name: "Search people" })).toBeVisible();
 });
 
+test("a people row is one link, with no glyph to decode", async ({ page }) => {
+  await page.goto("/people");
+
+  const row = page.locator('a[href="/people/amelia-chen-4hkq"]').first();
+  await expect(row).toBeVisible();
+
+  // The phone shows a name, when you last spoke, a note and a chevron. The web
+  // used to add a bare "people" button on top of that; it does not any more.
+  await expect(
+    page.getByRole("button", { name: /Log time with/ }),
+  ).toHaveCount(0);
+  await expect(row.getByText(/^(Today|Yesterday|\d+ days ago|\w{3} \d{1,2})/)).toBeVisible();
+});
+
+test("relative dates read the way the phone words them", async ({ page }) => {
+  await page.goto("/people");
+
+  // Not "1 day ago" and not "23 minutes ago" — the phone says Today and
+  // Yesterday, and one shared helper now decides for both.
+  await expect(page.getByText(/\d+ minutes? ago/)).toHaveCount(0);
+  await expect(page.getByText(/^1 day ago$/)).toHaveCount(0);
+});
+
+test("the person page labels every section action", async ({ page }) => {
+  await page.goto("/people/amelia-chen-4hkq");
+
+  // Scoped to the page: the sidebar carries its own copies of these verbs.
+  const main = page.getByRole("main");
+  await expect(main.getByRole("button", { name: "Add reminder" })).toBeVisible();
+  await expect(main.getByRole("link", { name: "See all" })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Log interaction" })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Add update" })).toBeVisible();
+
+  // Reminders and History have to carry the same setup, so neither is a
+  // labelled button sitting next to a bare circle.
+  const remindersActions = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /^Reminders/ }) })
+    .getByRole("button");
+  await expect(remindersActions).toHaveCount(1);
+});
+
+test("a due date says which day, not only how many", async ({ page }) => {
+  await page.goto("/reminders");
+
+  // Demo data: one four days out and one a day late. "Due in 4 days" alone
+  // never answers "which day is that?".
+  await expect(page.getByText(/Due in 4 days · \w{3} \d{1,2}/)).toBeVisible();
+  await expect(page.getByText(/1 day overdue · \w{3} \d{1,2}/)).toBeVisible();
+});
+
 test("the quick facts name the university and the age", async ({ page }) => {
   await page.goto("/people/amelia-chen-4hkq");
 

@@ -109,7 +109,7 @@ import {
   getPreferredContactMethod,
   setPreferredContactMethod,
 } from "@/lib/contact-preferences";
-import { elapsedLabel } from "@/lib/date-labels";
+import { lastSeenLabel } from "@/lib/relative-time";
 import {
   reminderDayFromDaysAway,
   reminderDayLabel,
@@ -1068,7 +1068,7 @@ export function QuickCaptureProvider({
                       </AppText>
                       <AppText variant="caption">
                         Last interaction{" "}
-                        {elapsedLabel(contextPerson.lastInteractionAt).toLowerCase()}
+                        {lastSeenLabel(contextPerson.lastInteractionAt).toLowerCase()}
                       </AppText>
                       <Pressable
                         accessibilityRole="button"

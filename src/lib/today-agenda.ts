@@ -1,4 +1,5 @@
 import { birthdayCountdownLabel } from "@/lib/birthday-calendar";
+import { dueDateLabelFromDaysAway } from "@/lib/relative-time";
 
 /**
  * What the Today screen shows, on both platforms.
@@ -59,17 +60,10 @@ export function agendaStatusFor(daysAway: number): AgendaStatus {
   return "upcoming";
 }
 
-export function agendaDueLabel(daysAway: number) {
-  if (daysAway < 0) {
-    const days = Math.abs(daysAway);
-    return `${days} day${days === 1 ? "" : "s"} overdue`;
-  }
-  if (daysAway === 0) return "Due today";
-  if (daysAway === 1) return "Due tomorrow";
-  return `Due in ${daysAway} days`;
-}
-
-export function buildTodayAgenda(input: AgendaInput): AgendaItem[] {
+export function buildTodayAgenda(
+  input: AgendaInput,
+  now: Date = new Date(),
+): AgendaItem[] {
   const items: AgendaItem[] = [];
 
   for (const reminder of input.reminders) {
@@ -82,7 +76,7 @@ export function buildTodayAgenda(input: AgendaInput): AgendaItem[] {
       personId: reminder.personId,
       reminderId: reminder.id,
       title: reminder.text,
-      detail: `${reminder.personName} · ${agendaDueLabel(reminder.daysAway)}`,
+      detail: `${reminder.personName} · ${dueDateLabelFromDaysAway(reminder.daysAway, now)}`,
     });
   }
 
@@ -96,7 +90,7 @@ export function buildTodayAgenda(input: AgendaInput): AgendaItem[] {
       personId: checkIn.personId,
       reminderId: null,
       title: `Check in with ${checkIn.name}`,
-      detail: agendaDueLabel(-checkIn.daysOverdue),
+      detail: dueDateLabelFromDaysAway(-checkIn.daysOverdue, now),
     });
   }
 

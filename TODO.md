@@ -113,6 +113,16 @@ because the offline queue is awkward is how it fell behind in the first place.
 - Visible change for existing phone users: the composer's free-text "What
       kind?" box is replaced by the web's nine-type grid plus Other-with-a-name.
       Labels already typed still read back, mapped to Other.
+- [x] Person detail section headers, people rows and relative dates now match.
+      Every section action carries a label — no clock or arrow-out-of-box to
+      decode — and Reminders and History use one pattern on both platforms.
+      The tinted circular icon button is gone from the codebase (the
+      `compact` variant of `QuickCaptureTrigger` was deleted along with
+      `quick-interaction-sheet.tsx`, which was its only other home).
+      Avatars are per-person coloured on both, from `avatar-colors.ts`.
+      All relative wording lives in `relative-time.ts`, mirrored into both
+      apps, and it counts calendar days rather than elapsed hours.
+      Every "Due in N days" now carries the date it lands on.
 - Known gap: no simulator or device run. Mobile UI is covered by
       @testing-library/react-native, not by a real device.
 - Running mobile jest from an agent worktree needs

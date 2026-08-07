@@ -11,10 +11,10 @@ import { Avatar } from "@/components/avatar";
 import { CompleteReminderButton } from "@/components/complete-reminder-button";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
+import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
 import { daysUntilBirthday } from "@/lib/birthday-calendar";
-import { lastSeenLabel } from "@/lib/daily-check-in";
+import { lastSeenLabel } from "@/lib/relative-time";
 import { getPeople, getReminders } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
 import {
@@ -125,7 +125,7 @@ export default async function TodayPage() {
         },
       ];
     }),
-  });
+  }, now);
   const counts = agendaCounts(agenda);
   const recentlyMet = recentlyMetPeople(people, now);
   const checkInPeople = pickCheckInSuggestions(
@@ -231,14 +231,15 @@ export default async function TodayPage() {
                       {displayNameOf(person)}
                     </span>
                     <span className="mt-0.5 block text-xs text-ink-muted">
-                      {lastSeenLabel(person, now)}
+                      {lastSeenLabel(person.lastInteractionAt, now)}
                     </span>
                   </span>
                 </Link>
-                <QuickInteractionSheet
+                <QuickCaptureTrigger
+                  mode="interaction"
                   personId={person.id}
-                  personName={displayNameOf(person)}
-                  compact
+                  label="Log interaction"
+                  surface="quiet"
                 />
               </div>
             ))}

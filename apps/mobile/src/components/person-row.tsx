@@ -3,18 +3,19 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
 import { colors, radii } from "@/constants/theme";
-import { elapsedLabel } from "@/lib/date-labels";
-import { overdueDays } from "@/lib/reminders";
+import { lastSeenLabel } from "@/lib/relative-time";
+import { formatOverdueDuration, overdueDays } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
 
 export function PersonRow({
   person,
   onPress,
-  trailing,
+  divider = true,
 }: {
   person: Person;
   onPress: () => void;
-  trailing?: React.ReactNode;
+  /** Off for the last row of a group, so a list never ends on a stray line. */
+  divider?: boolean;
 }) {
   const overdue = overdueDays(person);
 
@@ -23,9 +24,13 @@ export function PersonRow({
       accessibilityLabel={`Open ${person.fullName}`}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        divider && styles.divided,
+        pressed && styles.pressed,
+      ]}
     >
-      <Avatar name={person.fullName} size={52} uri={person.profilePhotoUrl} />
+      <Avatar name={person.fullName} size={48} uri={person.profilePhotoUrl} />
       <View style={styles.copy}>
         <AppText numberOfLines={1} variant="heading">
           {person.preferredName || person.fullName}
@@ -33,7 +38,7 @@ export function PersonRow({
         <View style={styles.metaRow}>
           <Clock color={colors.inkMuted} size={13} />
           <AppText numberOfLines={1} variant="caption">
-            {elapsedLabel(person.lastInteractionAt)}
+            {lastSeenLabel(person.lastInteractionAt)}
           </AppText>
         </View>
         <AppText numberOfLines={1} style={styles.note} variant="caption">
@@ -42,12 +47,12 @@ export function PersonRow({
         {overdue > 0 ? (
           <View style={styles.overdueChip}>
             <AppText style={styles.overdueText} variant="caption">
-              {overdue} day{overdue === 1 ? "" : "s"} overdue
+              {formatOverdueDuration(overdue)}
             </AppText>
           </View>
         ) : null}
       </View>
-      {trailing || <CaretRight color={colors.inkMuted} size={16} />}
+      <CaretRight color={colors.inkMuted} size={16} />
     </Pressable>
   );
 }
@@ -55,11 +60,13 @@ export function PersonRow({
 const styles = StyleSheet.create({
   row: {
     alignItems: "center",
-    borderBottomColor: colors.mist,
-    borderBottomWidth: 1,
     flexDirection: "row",
     gap: 13,
     paddingVertical: 12,
+  },
+  divided: {
+    borderBottomColor: colors.mist,
+    borderBottomWidth: 1,
   },
   pressed: {
     opacity: 0.72,

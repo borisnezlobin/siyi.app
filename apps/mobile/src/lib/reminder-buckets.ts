@@ -84,16 +84,3 @@ export function countsByBucket(
     later: groups.later.length,
   };
 }
-
-export function reminderDueLabel(
-  dueAt: string | Date,
-  now: Date = new Date(),
-): string {
-  const due = dueAt instanceof Date ? dueAt : new Date(dueAt);
-  const daysAway = differenceInCalendarDays(due, now);
-  if (daysAway === 0) return "Today";
-  if (daysAway === 1) return "Tomorrow";
-  if (daysAway === -1) return "1 day late";
-  if (daysAway < 0) return `${Math.abs(daysAway)} days late`;
-  return `In ${daysAway} days`;
-}
