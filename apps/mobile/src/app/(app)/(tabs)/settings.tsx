@@ -164,7 +164,7 @@ export default function SettingsScreen() {
       );
       setPendingImport(null);
       setMessage(
-        `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.followUps} reminders.`,
+        `Imported ${result.imported.people} people, ${result.imported.updates} updates, ${result.imported.interactions} legacy interactions, and ${result.imported.reminders} reminders.`,
       );
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (importError) {
@@ -281,6 +281,7 @@ export default function SettingsScreen() {
             </AppText>
             <View style={styles.daysField}>
               <FormField
+                accessibilityLabel={`${relationshipTierLabels[strength]} interval in days`}
                 keyboardType="number-pad"
                 label=""
                 maxLength={4}
@@ -405,7 +406,7 @@ export default function SettingsScreen() {
               {pendingImport.preview.people} people ·{" "}
               {pendingImport.preview.updates} updates ·{" "}
               {pendingImport.preview.interactions} legacy interactions ·{" "}
-              {pendingImport.preview.followUps} reminders ·{" "}
+              {pendingImport.preview.reminders} reminders ·{" "}
               {pendingImport.preview.tags} tags
             </AppText>
             <View style={styles.previewActions}>
@@ -554,7 +555,7 @@ function Section({
   return (
     <View style={styles.section}>
       <AppText style={styles.sectionTitle} variant="label">
-        {title.toUpperCase()}
+        {title}
       </AppText>
       {children}
     </View>

@@ -21,7 +21,7 @@ import { useMemo, useRef, useState } from "react";
 import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
 import { relationshipTierLabels } from "@/lib/relationship-labels";
-import type { FollowUp, Interaction, Person, RelationshipStrength } from "@/lib/types";
+import type { Reminder, Interaction, Person, RelationshipStrength } from "@/lib/types";
 import { importPayloadSchema } from "@/lib/validation";
 import { friendlyTimezoneOptions } from "@/lib/timezones";
 
@@ -31,7 +31,7 @@ type ImportPreview = {
   counts: {
     people: number;
     interactions: number;
-    followUps: number;
+    reminders: number;
     tags: number;
   };
 };
@@ -54,7 +54,7 @@ function downloadFile(fileName: string, content: string, type: string) {
 export function SettingsControls({
   people,
   interactions,
-  followUps,
+  reminders,
   authMethods,
   accountEmail,
   initialTimezone,
@@ -63,7 +63,7 @@ export function SettingsControls({
 }: {
   people: Person[];
   interactions: Interaction[];
-  followUps: FollowUp[];
+  reminders: Reminder[];
   authMethods: string[];
   accountEmail: string;
   initialTimezone: string;
@@ -201,7 +201,7 @@ export function SettingsControls({
           exportedAt: new Date().toISOString(),
           people,
           interactions,
-          followUps,
+          reminders,
           tags: Array.from(
             new Map(
               people
@@ -305,7 +305,7 @@ export function SettingsControls({
         counts: {
           people: validation.data.people.length,
           interactions: validation.data.interactions.length,
-          followUps: validation.data.followUps.length,
+          reminders: validation.data.reminders.length,
           tags: validation.data.tags.length,
         },
       });
@@ -649,7 +649,7 @@ export function SettingsControls({
             <p className="mt-1 text-[11px] leading-5">
               Ready to add {importPreview.counts.people} people,{" "}
               {importPreview.counts.interactions} interactions,{" "}
-              {importPreview.counts.followUps} reminders, and{" "}
+              {importPreview.counts.reminders} reminders, and{" "}
               {importPreview.counts.tags} tags.
             </p>
             <button

@@ -244,7 +244,7 @@ export const personNoteOrderSchema = z.object({
   noteIds: z.array(z.string().uuid()).min(1).max(maxNoteSectionsPerPerson),
 });
 
-export const followUpInputSchema = z.object({
+export const reminderInputSchema = z.object({
   personId: z.string().uuid(),
   text: z.string().trim().min(1).max(500),
   dueAt: z.string().datetime(),
@@ -298,9 +298,9 @@ export const importPayloadSchema = z.object({
     .max(500_000)
     .optional()
     .default([]),
-  followUps: z
+  reminders: z
     .array(
-      followUpInputSchema.extend({
+      reminderInputSchema.extend({
         id: z.string().uuid().optional(),
         completedAt: z.string().datetime().optional().nullable(),
       }),

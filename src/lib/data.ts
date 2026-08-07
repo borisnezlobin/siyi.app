@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { createDemoFollowUps, createDemoInteractions, createDemoPeople } from "@/lib/demo-data";
+import { createDemoReminders, createDemoInteractions, createDemoPeople } from "@/lib/demo-data";
 import { resolveAvatarUrls, resolvedAvatarUrl } from "@/lib/avatar-urls";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { looksLikeUuid } from "@/lib/slug";
@@ -14,7 +14,7 @@ import {
   type PersonContactMethods,
 } from "@/lib/contact-methods";
 import type {
-  FollowUp,
+  Reminder,
   Interaction,
   Person,
   PersonNote,
@@ -517,14 +517,14 @@ export async function getInteractions(personId?: string): Promise<Interaction[]>
   }));
 }
 
-export async function getFollowUps(): Promise<FollowUp[]> {
+export async function getReminders(): Promise<Reminder[]> {
   if (!isSupabaseConfigured()) {
-    return createDemoFollowUps();
+    return createDemoReminders();
   }
 
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("follow_ups")
+    .from("reminders")
     .select("*, people(id,full_name,preferred_name,profile_photo_url)")
     .order("due_at", { ascending: true });
 

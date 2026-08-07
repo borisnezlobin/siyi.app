@@ -118,8 +118,8 @@ export default function PersonDetailScreen() {
     );
   }
 
-  const { person, interactions, followUps, updates } = personData.data!;
-  const openFollowUps = followUps.filter((followUp) => !followUp.completedAt);
+  const { person, interactions, reminders, updates } = personData.data!;
+  const openReminders = reminders.filter((reminder) => !reminder.completedAt);
   const visibleNoteSections = noteSectionsOf(personData.data!).sections.filter(
     (section) => section.body.trim(),
   );
@@ -421,18 +421,18 @@ export default function PersonDetailScreen() {
 
         <View style={styles.section}>
           <SectionHeading
-            detail={`${openFollowUps.length} open`}
+            detail={`${openReminders.length} open`}
             title="Reminders"
           />
-          {openFollowUps.length > 0 ? (
+          {openReminders.length > 0 ? (
             <Card style={styles.timelineCard}>
-              {openFollowUps.map((followUp) => (
-                <View key={followUp.id} style={styles.timelineItem}>
+              {openReminders.map((reminder) => (
+                <View key={reminder.id} style={styles.timelineItem}>
                   <View style={styles.timelineDot} />
                   <View style={styles.timelineCopy}>
-                    <AppText variant="label">{followUp.text}</AppText>
+                    <AppText variant="label">{reminder.text}</AppText>
                     <AppText variant="caption">
-                      {relativeDayLabel(followUp.dueAt)}
+                      {relativeDayLabel(reminder.dueAt)}
                     </AppText>
                   </View>
                 </View>
@@ -447,7 +447,7 @@ export default function PersonDetailScreen() {
                 compact
                 icon={ClockCountdown}
                 label="Add one"
-                onPress={() => quickCapture.addFollowUp(person.id)}
+                onPress={() => quickCapture.addReminder(person.id)}
                 variant="secondary"
               />
             </Card>
@@ -556,7 +556,7 @@ export default function PersonDetailScreen() {
         <Pressable
           accessibilityLabel="Add reminder"
           accessibilityRole="button"
-          onPress={() => quickCapture.addFollowUp(person.id)}
+          onPress={() => quickCapture.addReminder(person.id)}
           style={styles.footerSecondary}
         >
           <ClockCountdown color={colors.sageStrong} size={22} weight="bold" />

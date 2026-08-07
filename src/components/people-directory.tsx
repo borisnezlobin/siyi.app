@@ -342,7 +342,7 @@ export function PeopleDirectory({
           sections.length ? (
             sections.map((section) => (
               <section key={section.letter}>
-                <h2 className="sticky top-0 z-10 bg-porcelain/95 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted backdrop-blur">
+                <h2 className="sticky top-0 z-10 bg-porcelain/95 py-2 text-xs font-semibold text-ink-muted backdrop-blur">
                   {section.letter}
                 </h2>
                 <div className="divide-y divide-ink/[0.07]">

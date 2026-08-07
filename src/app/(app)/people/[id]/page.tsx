@@ -29,7 +29,7 @@ import { buildPersonTimeline } from "@/lib/person-timeline";
 import { contactDraftsOf } from "@/lib/contact-methods";
 import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import {
-  getFollowUps,
+  getReminders,
   getInteractions,
   getPerson,
   getPersonNoteSections,
@@ -66,18 +66,18 @@ export default async function PersonDetailPage({
   const [
     interactions,
     personUpdates,
-    allFollowUps,
+    allReminders,
     noteSections,
   ] = await Promise.all([
     getInteractions(person.id),
     getPersonUpdates(person.id),
-    getFollowUps(),
+    getReminders(),
     getPersonNoteSections(person.id),
   ]);
 
   const timeline = buildPersonTimeline(personUpdates, interactions);
-  const openFollowUps = allFollowUps.filter(
-    (followUp) => followUp.personId === person.id && !followUp.completedAt,
+  const openReminders = allReminders.filter(
+    (reminder) => reminder.personId === person.id && !reminder.completedAt,
   );
   const visibleNoteSections = noteSections.sections.filter((noteSection) =>
     noteSection.body.trim(),
@@ -420,7 +420,7 @@ export default async function PersonDetailPage({
                   compact
                 />
                 <Link
-                  href={`/follow-ups?person=${person.id}`}
+                  href={`/reminders?person=${person.id}`}
                   className="grid size-9 place-items-center rounded-full bg-porcelain text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                   aria-label="Open all reminders"
                 >
@@ -429,15 +429,15 @@ export default async function PersonDetailPage({
               </div>
             </div>
             <div className="mt-4 space-y-2">
-              {openFollowUps.length ? (
-                openFollowUps.map((followUp) => (
+              {openReminders.length ? (
+                openReminders.map((reminder) => (
                   <div
-                    key={followUp.id}
+                    key={reminder.id}
                     className="rounded-2xl bg-porcelain px-3 py-3"
                   >
-                    <p className="text-xs font-semibold leading-5">{followUp.text}</p>
+                    <p className="text-xs font-semibold leading-5">{reminder.text}</p>
                     <p className="mt-1 text-[10px] text-coral-strong">
-                      Due {format(new Date(followUp.dueAt), "MMM d")}
+                      Due {format(new Date(reminder.dueAt), "MMM d")}
                     </p>
                   </div>
                 ))

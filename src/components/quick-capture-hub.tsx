@@ -127,7 +127,7 @@ export function QuickCaptureHub({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<CaptureMode | null>(null);
   const [personId, setPersonId] = useState("");
-  const [followUpText, setFollowUpText] = useState("");
+  const [reminderText, setReminderText] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [interactionDraft, setInteractionDraft] = useState<InteractionDraft>(
     emptyInteractionDraft(),
@@ -189,7 +189,7 @@ export function QuickCaptureHub({
   function resetSheet() {
     setMode(null);
     setPersonId("");
-    setFollowUpText("");
+    setReminderText("");
     setInteractionDraft(emptyInteractionDraft());
     setUpdateText("");
     setSaving(false);
@@ -208,12 +208,12 @@ export function QuickCaptureHub({
     window.setTimeout(closeSheet, 550);
   }
 
-  async function saveFollowUp() {
+  async function saveReminder() {
     if (!personId) {
       setError("Choose who this is for.");
       return;
     }
-    if (!followUpText.trim()) {
+    if (!reminderText.trim()) {
       setError("Add what you want to remember.");
       return;
     }
@@ -231,12 +231,12 @@ export function QuickCaptureHub({
       return;
     }
 
-    const response = await fetch("/api/follow-ups", {
+    const response = await fetch("/api/reminders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         personId,
-        text: followUpText,
+        text: reminderText,
         dueAt: new Date(`${dueDate}T12:00:00`).toISOString(),
       }),
     });
@@ -441,8 +441,8 @@ export function QuickCaptureHub({
                   <label className="mt-4 block text-xs font-semibold text-ink-muted">
                     Reminder
                     <input
-                      value={followUpText}
-                      onChange={(event) => setFollowUpText(event.target.value)}
+                      value={reminderText}
+                      onChange={(event) => setReminderText(event.target.value)}
                       maxLength={500}
                       placeholder="Send the class notes"
                       className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
@@ -533,7 +533,7 @@ export function QuickCaptureHub({
                 type="button"
                 onClick={
                   mode === "reminder"
-                    ? saveFollowUp
+                    ? saveReminder
                     : mode === "update"
                       ? savePersonUpdate
                       : saveInteraction

@@ -81,7 +81,7 @@ export default function NotificationsScreen() {
         pushEnabled: preference.pushEnabled,
         overdueContactEnabled: preference.overdueContactEnabled,
         birthdayEnabled: preference.birthdayEnabled,
-        followUpEnabled: preference.followUpEnabled,
+        reminderEnabled: preference.reminderEnabled,
         reminderHourLocal: preference.reminderHourLocal,
         reminderDaysOfWeek: preference.reminderDaysOfWeek,
       });
@@ -314,9 +314,9 @@ export default function NotificationsScreen() {
             icon={ClockCountdown}
             label="Reminders"
             onChange={(enabled) =>
-              setDraft({ ...preferences, followUpEnabled: enabled })
+              setDraft({ ...preferences, reminderEnabled: enabled })
             }
-            value={preferences.followUpEnabled}
+            value={preferences.reminderEnabled}
           />
         </Card>
       </View>

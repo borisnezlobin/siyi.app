@@ -30,9 +30,9 @@ import { colors, radii } from "@/constants/theme";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
 import {
   getAccountSettings,
-  getFollowUps,
+  getReminders,
   getPeople,
-  setFollowUpComplete,
+  setReminderComplete,
 } from "@/lib/data";
 import { relativeDayLabel } from "@/lib/date-labels";
 import { refreshHomeWidgets } from "@/lib/home-widgets";
@@ -42,7 +42,7 @@ import {
   overdueDays,
   reminderDueDate,
 } from "@/lib/reminders";
-import type { FollowUp, Person } from "@/lib/types";
+import type { Reminder, Person } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
@@ -50,12 +50,12 @@ import { useQuickCapture } from "@/providers/quick-capture-provider";
 type TodayData = Awaited<ReturnType<typeof loadToday>>;
 
 async function loadToday(userId: string) {
-  const [people, followUps, settings] = await Promise.all([
+  const [people, reminders, settings] = await Promise.all([
     getPeople(),
-    getFollowUps(),
+    getReminders(),
     getAccountSettings(userId),
   ]);
-  return { people, followUps, settings };
+  return { people, reminders, settings };
 }
 
 function stableDailyScore(personId: string) {
@@ -69,16 +69,16 @@ function stableDailyScore(personId: string) {
   return score >>> 0;
 }
 
-function FollowUpItem({
-  followUp,
+function ReminderItem({
+  reminder,
   onComplete,
   onOpen,
 }: {
-  followUp: FollowUp;
+  reminder: Reminder;
   onComplete: () => void;
   onOpen: () => void;
 }) {
-  const overdue = new Date(followUp.dueAt) < new Date();
+  const overdue = new Date(reminder.dueAt) < new Date();
   return (
     <PressableCard onPress={onOpen} style={styles.actionRow}>
       <View
@@ -95,20 +95,20 @@ function FollowUpItem({
       </View>
       <View style={styles.actionCopy}>
         <AppText numberOfLines={2} variant="label">
-          {followUp.text}
+          {reminder.text}
         </AppText>
         <AppText
           style={overdue ? styles.urgentText : undefined}
           variant="caption"
         >
-          {followUp.person?.preferredName ||
-            followUp.person?.fullName ||
+          {reminder.person?.preferredName ||
+            reminder.person?.fullName ||
             "Someone"}{" "}
-          · {relativeDayLabel(followUp.dueAt)}
+          · {relativeDayLabel(reminder.dueAt)}
         </AppText>
       </View>
       <Pressable
-        accessibilityLabel={`Complete ${followUp.text}`}
+        accessibilityLabel={`Complete ${reminder.text}`}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: false }}
         hitSlop={10}
@@ -183,7 +183,7 @@ export default function TodayScreen() {
     if (!screenData.data) return;
     void refreshHomeWidgets({
       people: screenData.data.people,
-      followUps: screenData.data.followUps,
+      reminders: screenData.data.reminders,
       reminderDefaults: screenData.data.settings.reminderDefaults,
     });
   }, [screenData.data]);
@@ -200,17 +200,17 @@ export default function TodayScreen() {
     );
   }
 
-  const { people, followUps, settings } = screenData.data!;
+  const { people, reminders, settings } = screenData.data!;
   const now = new Date();
   const upcomingCutoff = new Date(now);
   upcomingCutoff.setDate(upcomingCutoff.getDate() + 14);
   const endOfToday = new Date(now);
   endOfToday.setHours(23, 59, 59, 999);
-  const openFollowUps = followUps.filter((item) => !item.completedAt);
-  const overdueFollowUps = openFollowUps.filter(
+  const openReminders = reminders.filter((item) => !item.completedAt);
+  const overdueReminders = openReminders.filter(
     (item) => new Date(item.dueAt).getTime() < now.getTime(),
   );
-  const upcomingFollowUps = openFollowUps
+  const upcomingReminders = openReminders
     .filter((item) => {
       const dueAt = new Date(item.dueAt).getTime();
       return (
@@ -261,11 +261,11 @@ export default function TodayScreen() {
     )
     .slice(0, 4);
   const reminderItems = [
-    ...overdueFollowUps.map((followUp) => ({
+    ...overdueReminders.map((reminder) => ({
       kind: "reminder" as const,
-      id: followUp.id,
-      at: new Date(followUp.dueAt).getTime(),
-      followUp,
+      id: reminder.id,
+      at: new Date(reminder.dueAt).getTime(),
+      reminder,
     })),
     ...overduePeople.map((person) => ({
       kind: "person" as const,
@@ -279,30 +279,30 @@ export default function TodayScreen() {
       at: nextBirthday(person.birthday, now)?.getTime() ?? Infinity,
       person,
     })),
-    ...upcomingFollowUps.map((followUp) => ({
+    ...upcomingReminders.map((reminder) => ({
       kind: "reminder" as const,
-      id: followUp.id,
-      at: new Date(followUp.dueAt).getTime(),
-      followUp,
+      id: reminder.id,
+      at: new Date(reminder.dueAt).getTime(),
+      reminder,
     })),
   ]
     .sort((left, right) => left.at - right.at)
     .slice(0, 12);
   const hasTimeSensitive = reminderItems.length > 0;
   const hasImmediateAttention =
-    overdueFollowUps.length > 0 ||
+    overdueReminders.length > 0 ||
     overduePeople.length > 0 ||
-    upcomingFollowUps.some(
-      (followUp) =>
-        new Date(followUp.dueAt).getTime() <= endOfToday.getTime(),
+    upcomingReminders.some(
+      (reminder) =>
+        new Date(reminder.dueAt).getTime() <= endOfToday.getTime(),
     ) ||
     birthdays.some(
       (person) => (daysUntilBirthday(person.birthday, now) ?? 99) <= 1,
     );
 
-  async function complete(followUpId: string) {
+  async function complete(reminderId: string) {
     try {
-      await setFollowUpComplete(followUpId, true);
+      await setReminderComplete(reminderId, true);
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
       );
@@ -347,7 +347,7 @@ export default function TodayScreen() {
           </View>
           <View style={styles.overviewCopy}>
             <AppText variant="heading">
-              {overdueFollowUps.length + overduePeople.length}
+              {overdueReminders.length + overduePeople.length}
             </AppText>
             <AppText variant="caption">need attention</AppText>
           </View>
@@ -363,7 +363,7 @@ export default function TodayScreen() {
           </View>
           <View style={styles.overviewCopy}>
             <AppText variant="heading">
-              {birthdays.length + upcomingFollowUps.length}
+              {birthdays.length + upcomingReminders.length}
             </AppText>
             <AppText variant="caption">coming up</AppText>
           </View>
@@ -377,12 +377,12 @@ export default function TodayScreen() {
             {reminderItems.map((item) => {
               if (item.kind === "reminder") {
                 return (
-                  <FollowUpItem
-                    followUp={item.followUp}
+                  <ReminderItem
+                    reminder={item.reminder}
                     key={`reminder-${item.id}`}
-                    onComplete={() => void complete(item.followUp.id)}
+                    onComplete={() => void complete(item.reminder.id)}
                     onOpen={() =>
-                      router.push(`/people/${item.followUp.personId}`)
+                      router.push(`/people/${item.reminder.personId}`)
                     }
                   />
                 );

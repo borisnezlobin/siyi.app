@@ -8,7 +8,7 @@ const preferenceSchema = z.object({
   pushEnabled: z.boolean(),
   overdueContactEnabled: z.boolean(),
   birthdayEnabled: z.boolean(),
-  followUpEnabled: z.boolean(),
+  reminderEnabled: z.boolean(),
   reminderHourLocal: z.number().int().min(0).max(23),
   reminderDaysOfWeek: z.array(z.number().int().min(0).max(6)).min(1),
 });
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest) {
         push_enabled: preferences.pushEnabled,
         overdue_contact_enabled: preferences.overdueContactEnabled,
         birthday_enabled: preferences.birthdayEnabled,
-        follow_up_enabled: preferences.followUpEnabled,
+        follow_up_enabled: preferences.reminderEnabled,
         reminder_hour_local: preferences.reminderHourLocal,
         reminder_days_of_week: preferences.reminderDaysOfWeek,
       },

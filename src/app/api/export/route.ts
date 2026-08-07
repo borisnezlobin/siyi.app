@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       interactionsResult,
       tagsResult,
       personTagsResult,
-      followUpsResult,
+      remindersResult,
       deliveriesResult,
       subscriptionsResult,
       nativeSubscriptionsResult,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       supabase.from("interactions").select("*").eq("user_id", user.id),
       supabase.from("tags").select("*").eq("user_id", user.id),
       supabase.from("person_tags").select("*"),
-      supabase.from("follow_ups").select("*").eq("user_id", user.id),
+      supabase.from("reminders").select("*").eq("user_id", user.id),
       supabase
         .from("notification_deliveries")
         .select("*")
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       interactionsResult.error,
       tagsResult.error,
       personTagsResult.error,
-      followUpsResult.error,
+      remindersResult.error,
       deliveriesResult.error,
       subscriptionsResult.error,
       // A web-only project has no phone-app table, which must not block
@@ -352,14 +352,14 @@ export async function GET(request: NextRequest) {
         personId: personTag.person_id,
         tagId: personTag.tag_id,
       })),
-      followUps: (followUpsResult.data ?? []).map((followUp) => ({
-        id: followUp.id,
-        personId: followUp.person_id,
-        text: followUp.text,
-        dueAt: followUp.due_at,
-        completedAt: followUp.completed_at,
-        createdAt: followUp.created_at,
-        updatedAt: followUp.updated_at,
+      reminders: (remindersResult.data ?? []).map((reminder) => ({
+        id: reminder.id,
+        personId: reminder.person_id,
+        text: reminder.text,
+        dueAt: reminder.due_at,
+        completedAt: reminder.completed_at,
+        createdAt: reminder.created_at,
+        updatedAt: reminder.updated_at,
       })),
       notificationDeliveries: deliveriesResult.data ?? [],
       pushSubscriptions: subscriptionsResult.data ?? [],

@@ -1,5 +1,5 @@
 import {
-  followUpInputSchema,
+  reminderInputSchema,
   maxUniversityLength,
   importPreviewSchema,
   interactionEditSchema,
@@ -109,7 +109,7 @@ describe("mobile validation", () => {
   });
 
   it("rejects an invalid reminder date", () => {
-    const result = followUpInputSchema.safeParse({
+    const result = reminderInputSchema.safeParse({
       personId: "11111111-1111-4111-8111-111111111111",
       text: "Send the notes",
       dueAt: "tomorrow",
@@ -161,7 +161,7 @@ describe("mobile validation", () => {
       exportedAt: "2026-08-04T12:00:00.000Z",
       people: [{ fullName: "Jordan Lee" }],
       interactions: [],
-      followUps: [],
+      reminders: [],
       tags: [],
     });
 

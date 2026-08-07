@@ -9,26 +9,26 @@ import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { colors, fontFamilies, radii } from "@/constants/theme";
-import { getFollowUps, setFollowUpComplete } from "@/lib/data";
+import { getReminders, setReminderComplete } from "@/lib/data";
 import {
   countsByBucket,
-  followUpBucketEmptyLabels,
-  followUpBucketLabels,
-  followUpBucketOrder,
-  followUpDueLabel,
-  groupFollowUpsByBucket,
-  type FollowUpBucket,
-} from "@/lib/follow-up-buckets";
-import type { FollowUp } from "@/lib/types";
+  reminderBucketEmptyLabels,
+  reminderBucketLabels,
+  reminderBucketOrder,
+  reminderDueLabel,
+  groupRemindersByBucket,
+  type ReminderBucket,
+} from "@/lib/reminder-buckets";
+import type { Reminder } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
-export default function FollowUpsScreen() {
+export default function RemindersScreen() {
   const router = useRouter();
   const quickCapture = useQuickCapture();
-  const screenData = useRefreshableData(getFollowUps);
+  const screenData = useRefreshableData(getReminders);
   const [query, setQuery] = useState("");
-  const [focusedBucket, setFocusedBucket] = useState<FollowUpBucket | null>(
+  const [focusedBucket, setFocusedBucket] = useState<ReminderBucket | null>(
     null,
   );
   const [showCompleted, setShowCompleted] = useState(false);
@@ -40,18 +40,18 @@ export default function FollowUpsScreen() {
 
   const { groups, completed, counts } = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const visible = (screenData.data || []).filter((followUp) =>
+    const visible = (screenData.data || []).filter((reminder) =>
       [
-        followUp.text,
-        followUp.person?.fullName,
-        followUp.person?.preferredName,
+        reminder.text,
+        reminder.person?.fullName,
+        reminder.person?.preferredName,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(normalized),
     );
-    const bucketed = groupFollowUpsByBucket(visible);
+    const bucketed = groupRemindersByBucket(visible);
     return { ...bucketed, counts: countsByBucket(bucketed.groups) };
   }, [query, screenData.data]);
 
@@ -67,9 +67,9 @@ export default function FollowUpsScreen() {
     );
   }
 
-  async function toggleComplete(followUp: FollowUp) {
+  async function toggleComplete(reminder: Reminder) {
     try {
-      await setFollowUpComplete(followUp.id, !followUp.completedAt);
+      await setReminderComplete(reminder.id, !reminder.completedAt);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await screenData.reload();
     } catch {
@@ -77,8 +77,8 @@ export default function FollowUpsScreen() {
     }
   }
 
-  const shownBuckets = focusedBucket ? [focusedBucket] : followUpBucketOrder;
-  const openTotal = followUpBucketOrder.reduce(
+  const shownBuckets = focusedBucket ? [focusedBucket] : reminderBucketOrder;
+  const openTotal = reminderBucketOrder.reduce(
     (total, bucket) => total + counts[bucket],
     0,
   );
@@ -92,12 +92,12 @@ export default function FollowUpsScreen() {
       title="Reminders"
     >
       <View style={styles.distribution}>
-        {followUpBucketOrder.map((bucket, index) => {
+        {reminderBucketOrder.map((bucket, index) => {
           const focused = focusedBucket === bucket;
           return (
             <Pressable
               accessibilityHint="Shows only this part of the list"
-              accessibilityLabel={`${followUpBucketLabels[bucket]}: ${counts[bucket]}`}
+              accessibilityLabel={`${reminderBucketLabels[bucket]}: ${counts[bucket]}`}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               key={bucket}
@@ -123,7 +123,7 @@ export default function FollowUpsScreen() {
                 {counts[bucket]}
               </AppText>
               <AppText style={styles.distributionLabel} variant="caption">
-                {followUpBucketLabels[bucket]}
+                {reminderBucketLabels[bucket]}
               </AppText>
             </Pressable>
           );
@@ -171,7 +171,7 @@ export default function FollowUpsScreen() {
                 }
                 variant="heading"
               >
-                {followUpBucketLabels[bucket]}
+                {reminderBucketLabels[bucket]}
               </AppText>
               <AppText style={styles.sectionCount} variant="caption">
                 {counts[bucket]}
@@ -179,15 +179,15 @@ export default function FollowUpsScreen() {
             </View>
             {groups[bucket].length === 0 ? (
               <AppText style={styles.sectionEmpty} variant="caption">
-                {followUpBucketEmptyLabels[bucket]}
+                {reminderBucketEmptyLabels[bucket]}
               </AppText>
             ) : (
-              groups[bucket].map((followUp) => (
-                <FollowUpRow
-                  followUp={followUp}
-                  key={followUp.id}
-                  onOpen={() => router.push(`/people/${followUp.personId}`)}
-                  onToggle={() => void toggleComplete(followUp)}
+              groups[bucket].map((reminder) => (
+                <ReminderRow
+                  reminder={reminder}
+                  key={reminder.id}
+                  onOpen={() => router.push(`/people/${reminder.personId}`)}
+                  onToggle={() => void toggleComplete(reminder)}
                   overdue={bucket === "overdue"}
                 />
               ))
@@ -214,12 +214,12 @@ export default function FollowUpsScreen() {
               Nothing finished yet.
             </AppText>
           ) : (
-            completed.map((followUp) => (
-              <FollowUpRow
-                followUp={followUp}
-                key={followUp.id}
-                onOpen={() => router.push(`/people/${followUp.personId}`)}
-                onToggle={() => void toggleComplete(followUp)}
+            completed.map((reminder) => (
+              <ReminderRow
+                reminder={reminder}
+                key={reminder.id}
+                onOpen={() => router.push(`/people/${reminder.personId}`)}
+                onToggle={() => void toggleComplete(reminder)}
               />
             ))
           )}
@@ -229,24 +229,24 @@ export default function FollowUpsScreen() {
       <Button
         icon={ClockCountdown}
         label="Add a reminder"
-        onPress={() => quickCapture.addFollowUp()}
+        onPress={() => quickCapture.addReminder()}
       />
     </Screen>
   );
 }
 
-function FollowUpRow({
-  followUp,
+function ReminderRow({
+  reminder,
   onOpen,
   onToggle,
   overdue = false,
 }: {
-  followUp: FollowUp;
+  reminder: Reminder;
   onOpen: () => void;
   onToggle: () => void;
   overdue?: boolean;
 }) {
-  const done = Boolean(followUp.completedAt);
+  const done = Boolean(reminder.completedAt);
 
   return (
     <Pressable
@@ -255,9 +255,9 @@ function FollowUpRow({
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <Avatar
-        name={followUp.person?.fullName || "Someone"}
+        name={reminder.person?.fullName || "Someone"}
         size={40}
-        uri={followUp.person?.profilePhotoUrl}
+        uri={reminder.person?.profilePhotoUrl}
       />
       <View style={styles.rowCopy}>
         <AppText
@@ -265,13 +265,13 @@ function FollowUpRow({
           style={done ? styles.doneText : undefined}
           variant="label"
         >
-          {followUp.text}
+          {reminder.text}
         </AppText>
         <AppText numberOfLines={1} variant="caption">
-          {followUp.person?.preferredName ||
-            followUp.person?.fullName ||
+          {reminder.person?.preferredName ||
+            reminder.person?.fullName ||
             "Someone"}
-          {done ? "" : ` · ${followUpDueLabel(followUp.dueAt)}`}
+          {done ? "" : ` · ${reminderDueLabel(reminder.dueAt)}`}
         </AppText>
       </View>
       <Pressable

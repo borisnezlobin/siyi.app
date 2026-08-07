@@ -127,7 +127,7 @@ export const personInputSchema = z.object({
   generalNotes: optionalText,
 });
 
-export const followUpInputSchema = z.object({
+export const reminderInputSchema = z.object({
   personId: z.string().uuid(),
   text: z.string().trim().min(1, "Add what you want to remember.").max(500),
   dueAt: z.string().datetime(),
@@ -220,14 +220,14 @@ export const importPreviewSchema = z
     interactions: z.array(z.unknown()).max(100_000),
     updates: z.array(z.unknown()).max(100_000).optional().default([]),
     updatePeople: z.array(z.unknown()).max(500_000).optional().default([]),
-    followUps: z.array(z.unknown()).max(100_000),
+    reminders: z.array(z.unknown()).max(100_000),
     tags: z.array(z.unknown()).max(2_000),
     personTags: z.array(z.unknown()).max(100_000).optional().default([]),
   })
   .passthrough();
 
 export type PersonInput = z.infer<typeof personInputSchema>;
-export type FollowUpInput = z.infer<typeof followUpInputSchema>;
+export type ReminderInput = z.infer<typeof reminderInputSchema>;
 export type InteractionInput = z.infer<typeof interactionInputSchema>;
 export type PersonUpdateInput = z.infer<typeof personUpdateInputSchema>;
 export type InteractionEdit = z.infer<typeof interactionEditSchema>;

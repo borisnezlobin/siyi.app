@@ -6,7 +6,7 @@ import * as Sharing from "expo-sharing";
 import {
   defaultReminderIntervals,
   unavailableNoteSections,
-  type FollowUp,
+  type Reminder,
   type Interaction,
   type NotificationPreference,
   type Person,
@@ -59,14 +59,14 @@ import {
   type OfflineMutation,
 } from "@/lib/offline-store";
 import {
-  followUpInputSchema,
+  reminderInputSchema,
   importPreviewSchema,
   interactionEditSchema,
   interactionInputSchema,
   personUpdateEditSchema,
   personUpdateInputSchema,
   personInputSchema,
-  type FollowUpInput,
+  type ReminderInput,
   type InteractionEdit,
   type InteractionInput,
   type PersonUpdateEdit,
@@ -121,7 +121,7 @@ type PersonRow = {
   person_tags?: { tags: TagRow | TagRow[] | null }[];
 };
 
-type FollowUpRow = {
+type ReminderRow = {
   id: string;
   person_id: string;
   user_id: string;
@@ -161,7 +161,7 @@ type PersonUpdateRow = {
 export type PersonDetails = {
   person: Person;
   interactions: Interaction[];
-  followUps: FollowUp[];
+  reminders: Reminder[];
   updates: PersonUpdate[];
   /** Named note sections. Absent on anything cached by a build that predates
    * them, and unavailable until migration 0010 has been applied. */
@@ -259,17 +259,17 @@ async function cachePeopleAvatars(people: Person[]) {
   );
 }
 
-async function cacheFollowUpAvatars(followUps: FollowUp[]) {
+async function cacheReminderAvatars(reminders: Reminder[]) {
   return Promise.all(
-    followUps.map(async (followUp) => {
-      if (!followUp.person) return followUp;
+    reminders.map(async (reminder) => {
+      if (!reminder.person) return reminder;
       return {
-        ...followUp,
+        ...reminder,
         person: {
-          ...followUp.person,
+          ...reminder.person,
           profilePhotoUrl: await cachedAvatarUrl(
-            followUp.person.profilePhotoUrl,
-            followUp.person.profilePhotoPath,
+            reminder.person.profilePhotoUrl,
+            reminder.person.profilePhotoPath,
           ),
         },
       };
@@ -464,15 +464,15 @@ function mapPerson(
 }
 
 function relatedPerson(
-  relation: FollowUpRow["people"],
+  relation: ReminderRow["people"],
 ) {
   return Array.isArray(relation) ? relation[0] : relation;
 }
 
-function mapFollowUp(
-  row: FollowUpRow,
+function mapReminder(
+  row: ReminderRow,
   avatarUrls: Map<string, string>,
-): FollowUp {
+): Reminder {
   const person = relatedPerson(row.people);
   const path = avatarPath(person?.profile_photo_url || null);
 
@@ -554,27 +554,27 @@ async function getPeopleRemote() {
   );
 }
 
-async function getFollowUpsRemote() {
+async function getRemindersRemote() {
   const { data, error } = await supabase
-    .from("follow_ups")
+    .from("reminders")
     .select("*, people(id,full_name,preferred_name,profile_photo_url)")
     .order("due_at", { ascending: true });
   if (error) throw error;
 
-  const rows = data as FollowUpRow[];
+  const rows = data as ReminderRow[];
   const avatarUrls = await signedAvatarUrls(
     rows.map(
       (row) => relatedPerson(row.people)?.profile_photo_url || null,
     ),
   );
-  return cacheFollowUpAvatars(
-    rows.map((row) => mapFollowUp(row, avatarUrls)),
+  return cacheReminderAvatars(
+    rows.map((row) => mapReminder(row, avatarUrls)),
   );
 }
 
 type OfflineDataset = {
   people: Person[];
-  followUps: FollowUp[];
+  reminders: Reminder[];
   personDetails: Record<string, PersonDetails>;
 };
 
@@ -587,13 +587,13 @@ async function getOfflineDatasetRemote(userId: string) {
   const refresh = (async () => {
     const [
       people,
-      followUps,
+      reminders,
       notes,
       interactionsResult,
       updatesResult,
     ] = await Promise.all([
       getPeopleRemote(),
-      getFollowUpsRemote(),
+      getRemindersRemote(),
       getPersonNotesRemote(),
       supabase
         .from("interactions")
@@ -627,8 +627,8 @@ async function getOfflineDatasetRemote(userId: string) {
           interactions: interactions.filter(
             (interaction) => interaction.personId === person.id,
           ),
-          followUps: followUps.filter(
-            (followUp) => followUp.personId === person.id,
+          reminders: reminders.filter(
+            (reminder) => reminder.personId === person.id,
           ),
           updates: updates.filter((update) =>
             update.personIds.includes(person.id),
@@ -638,7 +638,7 @@ async function getOfflineDatasetRemote(userId: string) {
       ]),
     );
 
-    return { people, followUps, personDetails };
+    return { people, reminders, personDetails };
   })().finally(() => {
     activeDatasetRefreshes.delete(userId);
   });
@@ -661,7 +661,7 @@ async function remotePersonId(identifier: string) {
 
 async function getPersonDetailsRemote(identifier: string) {
   const personId = await remotePersonId(identifier);
-  const [people, notes, interactionsResult, followUpsResult] = await Promise.all([
+  const [people, notes, interactionsResult, remindersResult] = await Promise.all([
     getPeopleRemote(),
     getPersonNotesRemote(personId),
     supabase
@@ -670,23 +670,23 @@ async function getPersonDetailsRemote(identifier: string) {
       .eq("person_id", personId)
       .order("occurred_at", { ascending: false }),
     supabase
-      .from("follow_ups")
+      .from("reminders")
       .select("*, people(id,full_name,preferred_name,profile_photo_url)")
       .eq("person_id", personId)
       .order("due_at", { ascending: true }),
   ]);
 
   if (interactionsResult.error) throw interactionsResult.error;
-  if (followUpsResult.error) throw followUpsResult.error;
+  if (remindersResult.error) throw remindersResult.error;
   const person = people.find(({ id }) => id === personId);
   if (!person) throw new Error("This person could not be found.");
 
   const interactions = (
     interactionsResult.data as Record<string, unknown>[]
   ).map(mapInteraction);
-  const followUpRows = followUpsResult.data as FollowUpRow[];
+  const reminderRows = remindersResult.data as ReminderRow[];
   const avatarUrls = await signedAvatarUrls(
-    followUpRows.map(
+    reminderRows.map(
       (row) => relatedPerson(row.people)?.profile_photo_url || null,
     ),
   );
@@ -706,8 +706,8 @@ async function getPersonDetailsRemote(identifier: string) {
   return {
     person,
     interactions,
-    followUps: await cacheFollowUpAvatars(
-      followUpRows.map((row) => mapFollowUp(row, avatarUrls)),
+    reminders: await cacheReminderAvatars(
+      reminderRows.map((row) => mapReminder(row, avatarUrls)),
     ),
     updates,
     notes,
@@ -737,25 +737,25 @@ export async function getPeople() {
   }
 }
 
-export async function getFollowUps() {
+export async function getReminders() {
   const userId = await currentUserId();
   if (!userId) throw new Error("Sign in to see your reminders.");
   const snapshot = await getOfflineSnapshot(userId);
 
-  if (!(await isOnline())) return snapshot.followUps;
+  if (!(await isOnline())) return snapshot.reminders;
 
   try {
     if (!(await flushOfflineMutations(userId))) {
-      return (await getOfflineSnapshot(userId)).followUps;
+      return (await getOfflineSnapshot(userId)).reminders;
     }
     const dataset = await getOfflineDatasetRemote(userId);
     await updateOfflineSnapshot(userId, (current) => ({
       ...current,
       ...dataset,
     }));
-    return dataset.followUps;
+    return dataset.reminders;
   } catch (error) {
-    if (snapshot.followUps.length > 0) return snapshot.followUps;
+    if (snapshot.reminders.length > 0) return snapshot.reminders;
     throw error;
   }
 }
@@ -777,8 +777,8 @@ export async function getPersonDetails(identifier: string) {
     return {
       person,
       interactions: [],
-      followUps: snapshot.followUps.filter(
-        (followUp) => followUp.personId === personId,
+      reminders: snapshot.reminders.filter(
+        (reminder) => reminder.personId === personId,
       ),
       updates: [],
     };
@@ -920,7 +920,7 @@ export async function createPerson(
         sourceUpdateId: null,
       },
     ],
-    followUps: [],
+    reminders: [],
     updates: [],
   };
 
@@ -1015,29 +1015,29 @@ export async function updatePerson(
   return updatedPerson;
 }
 
-export async function createFollowUp(userId: string, input: FollowUpInput) {
-  const followUp = followUpInputSchema.parse(input);
-  const followUpId = Crypto.randomUUID();
+export async function createReminder(userId: string, input: ReminderInput) {
+  const reminder = reminderInputSchema.parse(input);
+  const reminderId = Crypto.randomUUID();
   const mutationId = Crypto.randomUUID();
   const createdAt = new Date().toISOString();
-  let createdFollowUp: FollowUp | null = null;
+  let createdReminder: Reminder | null = null;
 
   await enqueueOfflineMutation({
     id: mutationId,
-    kind: "create-follow-up",
+    kind: "create-reminder",
     userId,
     createdAt,
-    followUpId,
-    input: followUp,
+    reminderId,
+    input: reminder,
   });
   await updateOfflineSnapshot(userId, (snapshot) => {
-    const person = snapshot.people.find(({ id }) => id === followUp.personId);
-    createdFollowUp = {
-      id: followUpId,
-      personId: followUp.personId,
+    const person = snapshot.people.find(({ id }) => id === reminder.personId);
+    createdReminder = {
+      id: reminderId,
+      personId: reminder.personId,
       userId,
-      text: followUp.text,
-      dueAt: followUp.dueAt,
+      text: reminder.text,
+      dueAt: reminder.dueAt,
       completedAt: null,
       createdAt,
       updatedAt: createdAt,
@@ -1051,26 +1051,26 @@ export async function createFollowUp(userId: string, input: FollowUpInput) {
           }
         : undefined,
     };
-    const details = snapshot.personDetails[followUp.personId];
+    const details = snapshot.personDetails[reminder.personId];
 
     return {
       ...snapshot,
-      followUps: [...snapshot.followUps, createdFollowUp!].sort((left, right) =>
+      reminders: [...snapshot.reminders, createdReminder!].sort((left, right) =>
         left.dueAt.localeCompare(right.dueAt),
       ),
       personDetails: details
         ? {
             ...snapshot.personDetails,
-            [followUp.personId]: {
+            [reminder.personId]: {
               ...details,
-              followUps: [...details.followUps, createdFollowUp!],
+              reminders: [...details.reminders, createdReminder!],
             },
           }
         : snapshot.personDetails,
     };
   });
   void flushOfflineMutations(userId);
-  return createdFollowUp;
+  return createdReminder;
 }
 
 export async function createInteraction(
@@ -1518,8 +1518,8 @@ export async function deleteInteraction(
   void flushOfflineMutations(userId);
 }
 
-export async function setFollowUpComplete(
-  followUpId: string,
+export async function setReminderComplete(
+  reminderId: string,
   complete: boolean,
 ) {
   const userId = await currentUserId();
@@ -1527,32 +1527,32 @@ export async function setFollowUpComplete(
   const completedAt = complete ? new Date().toISOString() : null;
   await enqueueOfflineMutation({
     id: Crypto.randomUUID(),
-    kind: "set-follow-up-complete",
+    kind: "set-reminder-complete",
     userId,
     createdAt: new Date().toISOString(),
-    followUpId,
+    reminderId,
     completedAt,
   });
   await updateOfflineSnapshot(userId, (snapshot) => ({
     ...snapshot,
-    followUps: snapshot.followUps.map((followUp) =>
-      followUp.id === followUpId
-        ? { ...followUp, completedAt, updatedAt: new Date().toISOString() }
-        : followUp,
+    reminders: snapshot.reminders.map((reminder) =>
+      reminder.id === reminderId
+        ? { ...reminder, completedAt, updatedAt: new Date().toISOString() }
+        : reminder,
     ),
     personDetails: Object.fromEntries(
       Object.entries(snapshot.personDetails).map(([personId, details]) => [
         personId,
         {
           ...details,
-          followUps: details.followUps.map((followUp) =>
-            followUp.id === followUpId
+          reminders: details.reminders.map((reminder) =>
+            reminder.id === reminderId
               ? {
-                  ...followUp,
+                  ...reminder,
                   completedAt,
                   updatedAt: new Date().toISOString(),
                 }
-              : followUp,
+              : reminder,
           ),
         },
       ]),
@@ -1670,7 +1670,7 @@ export async function getAccountSettings(userId: string) {
       overdueContactEnabled:
         preferencesResult.data.overdue_contact_enabled,
       birthdayEnabled: preferencesResult.data.birthday_enabled,
-      followUpEnabled: preferencesResult.data.follow_up_enabled,
+      reminderEnabled: preferencesResult.data.follow_up_enabled,
       reminderHourLocal: preferencesResult.data.reminder_hour_local,
       reminderDaysOfWeek: preferencesResult.data.reminder_days_of_week,
       createdAt: preferencesResult.data.created_at,
@@ -2443,10 +2443,10 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     return;
   }
 
-  if (mutation.kind === "create-follow-up") {
-    const { error } = await supabase.from("follow_ups").upsert(
+  if (mutation.kind === "create-reminder") {
+    const { error } = await supabase.from("reminders").upsert(
       {
-        id: mutation.followUpId,
+        id: mutation.reminderId,
         user_id: mutation.userId,
         person_id: mutation.input.personId,
         text: mutation.input.text,
@@ -2544,11 +2544,11 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     return;
   }
 
-  if (mutation.kind === "set-follow-up-complete") {
+  if (mutation.kind === "set-reminder-complete") {
     const { error } = await supabase
-      .from("follow_ups")
+      .from("reminders")
       .update({ completed_at: mutation.completedAt })
-      .eq("id", mutation.followUpId);
+      .eq("id", mutation.reminderId);
     if (error) throw error;
     return;
   }
@@ -2604,7 +2604,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
       overdue_contact_enabled:
         mutation.preferences.overdueContactEnabled,
       birthday_enabled: mutation.preferences.birthdayEnabled,
-      follow_up_enabled: mutation.preferences.followUpEnabled,
+      follow_up_enabled: mutation.preferences.reminderEnabled,
       reminder_hour_local: mutation.preferences.reminderHourLocal,
       reminder_days_of_week:
         mutation.preferences.reminderDaysOfWeek,
@@ -2788,7 +2788,7 @@ export async function chooseImportFile() {
       people: preview.data.people.length,
       updates: preview.data.updates.length,
       interactions: preview.data.interactions.length,
-      followUps: preview.data.followUps.length,
+      reminders: preview.data.reminders.length,
       tags: preview.data.tags.length,
     },
   };
@@ -2814,7 +2814,7 @@ export async function importAccountData(
       people: number;
       updates: number;
       interactions: number;
-      followUps: number;
+      reminders: number;
       tags: number;
     };
   };

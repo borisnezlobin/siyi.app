@@ -43,7 +43,7 @@ function peopleLabel(count: number) {
 function StatCard({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-2xl bg-paper px-5 py-4 shadow-card">
-      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
+      <p className="text-xs font-semibold text-ink-muted">
         {label}
       </p>
       <p className="mt-2 font-display text-3xl leading-none text-ink">{value}</p>

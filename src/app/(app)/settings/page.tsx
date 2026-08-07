@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { SettingsControls } from "@/components/settings-controls";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { DEFAULT_REMINDER_INTERVALS } from "@/lib/constants";
-import { getFollowUps, getInteractions, getPeople } from "@/lib/data";
+import { getReminders, getInteractions, getPeople } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { RelationshipStrength } from "@/lib/types";
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [people, interactions, followUps, user] = await Promise.all([
+  const [people, interactions, reminders, user] = await Promise.all([
     getPeople(),
     getInteractions(),
-    getFollowUps(),
+    getReminders(),
     getAuthenticatedUser(),
   ]);
   const providers = user?.app_metadata.providers as string[] | undefined;
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
       <SettingsControls
         people={people}
         interactions={interactions}
-        followUps={followUps}
+        reminders={reminders}
         authMethods={authMethods}
         accountEmail={user?.email ?? ""}
         initialTimezone={initialTimezone}

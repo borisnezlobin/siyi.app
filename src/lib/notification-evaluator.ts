@@ -20,7 +20,7 @@ export type NotificationEvaluationInput = {
     pushEnabled: boolean;
     overdueContactEnabled: boolean;
     birthdayEnabled: boolean;
-    followUpEnabled: boolean;
+    reminderEnabled: boolean;
     reminderHourLocal: number;
     reminderDaysOfWeek: number[];
   };
@@ -36,7 +36,7 @@ export type NotificationEvaluationInput = {
     firstMetAt: string;
     lastInteractionAt: string | null;
   }[];
-  followUps: {
+  reminders: {
     id: string;
     personId: string;
     text: string;
@@ -211,19 +211,19 @@ export function evaluateUserNotifications(
     }
   }
 
-  if (preferences.followUpEnabled) {
-    for (const followUp of input.followUps) {
-      const dueDate = localDateParts(new Date(followUp.dueAt), input.timezone);
+  if (preferences.reminderEnabled) {
+    for (const reminder of input.reminders) {
+      const dueDate = localDateParts(new Date(reminder.dueAt), input.timezone);
       if (dueDate.dayNumber <= localNow.dayNumber) {
         candidates.push({
           type: "follow_up",
-          relatedEntityId: followUp.id,
+          relatedEntityId: reminder.id,
           scheduledFor: now.toISOString(),
-          deduplicationKey: `follow-up:${input.userId}:${followUp.id}:${dueDate.dateKey}`,
-          title: `A reminder with ${followUp.personName}`,
-          body: followUp.text,
-          url: `/follow-ups?person=${followUp.personId}`,
-          tag: `reminder-${followUp.id}`,
+          deduplicationKey: `reminder:${input.userId}:${reminder.id}:${dueDate.dateKey}`,
+          title: `A reminder with ${reminder.personName}`,
+          body: reminder.text,
+          url: `/reminders?person=${reminder.personId}`,
+          tag: `reminder-${reminder.id}`,
         });
       }
     }

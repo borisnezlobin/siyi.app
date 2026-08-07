@@ -123,15 +123,15 @@ export async function POST(request: NextRequest) {
       if (error) return apiError(error.message, 400);
     }
 
-    if (payload.followUps.length) {
-      const { error } = await supabase.from("follow_ups").upsert(
-        payload.followUps.map((followUp) => ({
-          id: followUp.id ?? crypto.randomUUID(),
-          person_id: personIdMap.get(followUp.personId) ?? followUp.personId,
+    if (payload.reminders.length) {
+      const { error } = await supabase.from("reminders").upsert(
+        payload.reminders.map((reminder) => ({
+          id: reminder.id ?? crypto.randomUUID(),
+          person_id: personIdMap.get(reminder.personId) ?? reminder.personId,
           user_id: user.id,
-          text: followUp.text,
-          due_at: followUp.dueAt,
-          completed_at: followUp.completedAt,
+          text: reminder.text,
+          due_at: reminder.dueAt,
+          completed_at: reminder.completedAt,
         })),
       );
       if (error) return apiError(error.message, 400);
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
         people: payload.people.length,
         updates: payload.updates.length,
         interactions: payload.interactions.length,
-        followUps: payload.followUps.length,
+        reminders: payload.reminders.length,
         tags: payload.tags.length,
       },
     });

@@ -279,7 +279,7 @@ async function seedSnapshot(details: Partial<PersonDetails> = {}) {
       [personId]: {
         person: person(),
         interactions: [],
-        followUps: [],
+        reminders: [],
         updates: [],
         ...details,
       },

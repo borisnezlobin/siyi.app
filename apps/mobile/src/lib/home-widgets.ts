@@ -7,14 +7,14 @@ import {
   overdueDays,
 } from "@/lib/reminders";
 import type {
-  FollowUp,
+  Reminder,
   Person,
   ReminderDefaults,
 } from "@/lib/types";
 
 type HomeWidgetData = {
   people: Person[];
-  followUps: FollowUp[];
+  reminders: Reminder[];
   reminderDefaults: ReminderDefaults;
 };
 
@@ -32,7 +32,7 @@ function shortWidgetContext(person: Person) {
 
 export async function refreshHomeWidgets({
   people,
-  followUps,
+  reminders,
   reminderDefaults,
 }: HomeWidgetData) {
   if (
@@ -51,12 +51,12 @@ export async function refreshHomeWidgets({
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() + 14);
-    const openFollowUps = followUps.filter((followUp) => !followUp.completedAt);
-    const overdueFollowUps = openFollowUps.filter(
-      (followUp) => new Date(followUp.dueAt) < now,
+    const openReminders = reminders.filter((reminder) => !reminder.completedAt);
+    const overdueReminders = openReminders.filter(
+      (reminder) => new Date(reminder.dueAt) < now,
     );
-    const upcomingFollowUps = openFollowUps.filter((followUp) => {
-      const dueAt = new Date(followUp.dueAt);
+    const upcomingReminders = openReminders.filter((reminder) => {
+      const dueAt = new Date(reminder.dueAt);
       return dueAt >= now && dueAt <= cutoff;
     });
     const activePeople = people.filter(
@@ -75,23 +75,23 @@ export async function refreshHomeWidgets({
           (daysUntilBirthday(left.birthday, now) || 0) -
           (daysUntilBirthday(right.birthday, now) || 0),
       );
-    const nextFollowUp = overdueFollowUps[0] || upcomingFollowUps[0];
+    const nextReminder = overdueReminders[0] || upcomingReminders[0];
     const nextBirthday = birthdays[0];
-    const nextTitle = nextFollowUp
-      ? nextFollowUp.text
+    const nextTitle = nextReminder
+      ? nextReminder.text
       : nextBirthday
         ? `${nextBirthday.preferredName || nextBirthday.fullName}’s birthday`
         : "No reminders waiting";
-    const nextDetail = nextFollowUp
-      ? relativeDayLabel(nextFollowUp.dueAt)
+    const nextDetail = nextReminder
+      ? relativeDayLabel(nextReminder.dueAt)
       : nextBirthday
         ? `${daysUntilBirthday(nextBirthday.birthday, now)} days away`
         : `Open ${brand.name} to catch up with someone`;
 
     todayWidget.updateSnapshot({
       appName: brand.name,
-      needAttention: overdueFollowUps.length + overduePeople.length,
-      comingUp: upcomingFollowUps.length + birthdays.length,
+      needAttention: overdueReminders.length + overduePeople.length,
+      comingUp: upcomingReminders.length + birthdays.length,
       nextTitle,
       nextDetail,
       destination: `${brand.scheme}://today`,
