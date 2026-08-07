@@ -7,11 +7,9 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
+import { publicPageMetadata } from "@/lib/public-pages";
 
-export const metadata: Metadata = {
-  title: "Support",
-  description: `Get help with ${brand.name}.`,
-};
+export const metadata: Metadata = publicPageMetadata("support");
 
 const helpTopics = [
   {

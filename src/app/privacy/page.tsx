@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
+import { publicPageMetadata } from "@/lib/public-pages";
 
-export const metadata: Metadata = {
-  title: "Privacy policy",
-  description: `How ${brand.name} collects, uses, protects, and deletes personal information.`,
-};
+export const metadata: Metadata = publicPageMetadata("privacy");
 
 const sections = [
   {
