@@ -26,7 +26,6 @@ export default async function PeoplePage({
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="Your circle"
         title="People"
         description="Names, context, and the small details that make reconnecting easy."
         action={

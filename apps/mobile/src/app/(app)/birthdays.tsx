@@ -47,7 +47,6 @@ export default function BirthdaysScreen() {
 
   return (
     <Screen
-      eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle={`${withBirthday} of ${people.length} people have a birthday saved.`}

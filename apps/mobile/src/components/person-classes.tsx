@@ -154,10 +154,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   form: {
-    backgroundColor: colors.porcelain,
-    borderRadius: radii.medium,
+    // Deliberately flat: this sits inside a card already, and a card within a
+    // card reads as clutter.
+    borderTopColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: 12,
-    padding: 14,
+    paddingTop: 14,
   },
   addRow: {
     alignItems: "center",

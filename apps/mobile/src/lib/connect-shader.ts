@@ -35,12 +35,12 @@ export const connectShaderBody = /* glsl */ `
       float ringRadius = phase * 1.35;
       // A thin band that fades as it travels, so rings dissolve near the edge
       // rather than stopping at it.
-      float band = smoothstep(0.055, 0.0, abs(radius - ringRadius));
+      float band = smoothstep(0.085, 0.0, abs(radius - ringRadius));
       wave += band * (1.0 - phase) * (1.0 - phase);
     }
 
     // Hollow the middle out so the code itself stays the brightest thing.
-    float centreMask = smoothstep(0.12, 0.42, radius);
+    float centreMask = smoothstep(0.20, 0.62, radius);
     return wave * centreMask;
   }
 
@@ -52,7 +52,7 @@ export const connectShaderBody = /* glsl */ `
     vec3 sage = vec3(0.612, 0.729, 0.663);
     vec3 tint = mix(coral, sage, clamp(length(uv), 0.0, 1.0));
 
-    float alpha = clamp(wave, 0.0, 1.0) * 0.55;
+    float alpha = clamp(wave, 0.0, 1.0) * 0.85;
     return vec4(tint * alpha, alpha);
   }
 `;

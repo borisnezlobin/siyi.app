@@ -30,13 +30,12 @@ export default async function ClassesPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-5 pb-24 pt-8">
       <PageHeader
-        eyebrow="Your circle"
         title="Classes"
         description="Who you have a course with, built from what you have written down."
       />
 
       {groups.length === 0 ? (
-        <div className="mt-8 rounded-3xl bg-white px-6 py-14 text-center">
+        <div className="mt-8 text-center">
           <p className="font-display text-2xl">No classes saved yet</p>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-ink-muted">
             Add a class on someone&apos;s profile and it will show up here. You can

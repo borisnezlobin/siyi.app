@@ -238,7 +238,6 @@ export default function SettingsScreen() {
 
   return (
     <Screen
-      eyebrow="Make it work your way"
       onRefresh={() => void accountData.refresh()}
       refreshing={accountData.refreshing}
       subtitle="Adjust timing, notifications, account access, and your data."
@@ -260,19 +259,11 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <Section title="Your page">
+      <Section title="Your card">
         <NavigationRow
-          detail="A handle people can find you by, and a code they can scan"
-          label="Public profile"
+          detail="What you hand out, the address people find you at, and a code to scan"
+          label="Your card"
           onPress={() => router.push("/profile")}
-        />
-      </Section>
-
-      <Section title="Your own details">
-        <NavigationRow
-          detail="What you hand out about yourself, and a default university"
-          label="Your contact card"
-          onPress={() => router.push("/own-card")}
         />
       </Section>
 

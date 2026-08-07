@@ -44,7 +44,7 @@ export function LogInteractionPanel({ people }: { people: PickablePerson[] }) {
 
   return (
     <section className="mt-9" aria-labelledby="log-interaction-heading">
-      <h2 id="log-interaction-heading" className="text-base font-bold">
+      <h2 id="log-interaction-heading" className="text-sm font-bold">
         Log a single interaction
       </h2>
       <p className="mt-1 text-xs text-ink-muted">

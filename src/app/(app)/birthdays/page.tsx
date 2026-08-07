@@ -29,7 +29,6 @@ export default async function BirthdaysPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-5 pb-24 pt-8">
       <PageHeader
-        eyebrow="Your circle"
         title="Birthdays"
         description={`${withBirthday} of ${people.length} people have a birthday saved.`}
       />

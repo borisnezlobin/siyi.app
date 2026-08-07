@@ -331,7 +331,7 @@ export default async function PersonDetailPage({
           <section>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold">History</h2>
+                <h2 className="text-sm font-bold">History</h2>
                 <p className="mt-1 text-xs text-ink-muted">
                   Time you spent together, and what you have learned
                 </p>
@@ -341,7 +341,7 @@ export default async function PersonDetailPage({
                   mode="interaction"
                   personId={person.id}
                   label="Log interaction"
-                  surface="quiet"
+                  compact
                 />
                 <QuickCaptureTrigger
                   mode="update"

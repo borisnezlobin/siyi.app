@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, QrCode, SpinnerGap } from "@phosphor-icons/react";
+import { Check, Copy, SpinnerGap } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ConnectRipple } from "@/components/connect-ripple";
@@ -51,7 +51,6 @@ export function ProfileControls({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [qr, setQr] = useState<string | null>(null);
-  const [showQr, setShowQr] = useState(false);
 
   const url = useMemo(
     () =>
@@ -74,7 +73,7 @@ export function ProfileControls({
     void QRCode.toDataURL(url, {
       margin: 1,
       width: 320,
-      color: { dark: "#17201c", light: "#ffffff" },
+      color: { dark: "#17201c", light: "#00000000" },
     }).then((image) => {
       if (stillMounted) setQr(image);
     });
@@ -145,10 +144,12 @@ export function ProfileControls({
 
       {tag ? (
         <>
-          <p className="mt-3 text-xs leading-5 text-ink-muted">
+          <p className="mt-3 break-all font-mono text-xs leading-5 text-ink">{url}</p>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
             People can find you as{" "}
             <span className="font-semibold text-ink">{formatHandle(handle, tag)}</span>.
-            The four characters keep your page from being guessed by name alone.
+            The four characters keep your page from being guessed by name alone,
+            and stay the same if you rename yourself.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -168,28 +169,13 @@ export function ProfileControls({
               )}
               {copied ? "Copied" : "Copy link"}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowQr((open) => !open)}
-              aria-expanded={showQr}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-porcelain px-4 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            >
-              <QrCode size={15} weight="bold" aria-hidden="true" />
-              {showQr ? "Hide code" : "Show code"}
-            </button>
           </div>
 
-          {/* Grows out of the button rather than appearing, so the code reads as
-              the same object as the link above it. */}
-          <div
-            className={`grid transition-all duration-300 ease-out ${
-              showQr ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-            }`}
-          >
-            <div className="overflow-hidden">
+          <div className="mt-4">
+            <div>
               {qr ? (
-                <div className="relative w-fit overflow-hidden rounded-3xl bg-white p-4 shadow-card ring-1 ring-black/[0.035]">
-                  <ConnectRipple size={232} />
+                <div className="relative w-fit overflow-hidden rounded-3xl bg-white p-8 shadow-card ring-1 ring-black/[0.035]">
+                  <ConnectRipple size={264} />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qr}
