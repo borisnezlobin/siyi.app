@@ -15,7 +15,7 @@ import {
   MapPin,
   NotePencil,
   PencilSimple,
-  ShareNetwork,
+  Share,
   Phone,
   UsersThree,
 } from "phosphor-react-native";
@@ -248,7 +248,7 @@ export default function PersonDetailScreen() {
               onPress={() => setSharing(true)}
               style={styles.headerButton}
             >
-              <ShareNetwork color={colors.ink} size={20} />
+              <Share color={colors.ink} size={20} />
             </Pressable>
             <Pressable
               accessibilityLabel="Edit person"

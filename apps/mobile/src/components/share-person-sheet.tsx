@@ -1,17 +1,27 @@
+import {
+  BottomSheetScrollView,
+  type BottomSheetModal,
+} from "@gorhom/bottom-sheet";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
-import { Check, Copy, ShareNetwork, Sparkle, X } from "phosphor-react-native";
+import {
+  Check,
+  Copy,
+  Share as ShareIcon,
+  Sparkle,
+  X,
+} from "phosphor-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanResponder,
+import {
   ActivityIndicator,
-  Modal,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   Switch,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppBottomSheet } from "@/components/app-bottom-sheet";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { colors, fontFamilies, radii } from "@/constants/theme";
@@ -77,6 +87,8 @@ export function SharePersonSheet({
   const [linkError, setLinkError] = useState<string | null>(null);
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
+  const insets = useSafeAreaInsets();
+  const sheetRef = useRef<BottomSheetModal>(null);
 
   const fields = useMemo(
     () => availableContactShareFields(person),
@@ -88,6 +100,11 @@ export function SharePersonSheet({
     setLinksAvailable(result.available);
     setShares(result.shares);
   }, [person.id]);
+
+  useEffect(() => {
+    if (visible) sheetRef.current?.present();
+    else sheetRef.current?.dismiss();
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -118,7 +135,7 @@ export function SharePersonSheet({
     setSharing(true);
     try {
       await sharePersonCard(person, selection, bio);
-      onClose();
+      sheetRef.current?.dismiss();
     } finally {
       setSharing(false);
     }
@@ -131,19 +148,6 @@ export function SharePersonSheet({
       title: person.preferredName || person.fullName,
     });
   };
-
-  // Dragging the grabber down past a short distance dismisses, the way every
-  // other sheet on the phone behaves.
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gesture) => gesture.dy > 6,
-        onPanResponderRelease: (_event, gesture) => {
-          if (gesture.dy > 80 || gesture.vy > 0.8) onClose();
-        },
-      }),
-    [onClose],
-  );
 
   const createLink = async () => {
     if (!userId || workingRef.current) return null;
@@ -215,228 +219,199 @@ export function SharePersonSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        accessibilityLabel="Close"
-        onPress={onClose}
-        style={styles.backdrop}
+    <AppBottomSheet onDismiss={onClose} ref={sheetRef}>
+      <BottomSheetScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom + 24, 36) },
+        ]}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Stops a tap inside the sheet from reaching the backdrop above. */}
-        <Pressable onPress={(event) => event.stopPropagation()} style={styles.sheet}>
-          <View {...panResponder.panHandlers} style={styles.grabArea}>
-            <View style={styles.grabber} />
-          </View>
-          <View style={styles.header}>
-            <AppText style={styles.title}>
-              Share {person.preferredName || person.fullName}
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              onPress={onClose}
-              style={styles.close}
-            >
-              <X size={18} weight="bold" color={colors.ink} />
-            </Pressable>
-          </View>
-          <AppText style={styles.subtitle}>
-            Choose what goes on the card. Everything else stays with you.
+        <View style={styles.header}>
+          <AppText style={styles.title}>
+            Share {person.preferredName || person.fullName}
           </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={() => sheetRef.current?.dismiss()}
+            style={styles.close}
+          >
+            <X size={18} weight="bold" color={colors.ink} />
+          </Pressable>
+        </View>
+        <AppText style={styles.subtitle}>
+          Choose what goes on the card. Everything else stays with you.
+        </AppText>
 
-          <ScrollView style={styles.list} contentContainerStyle={styles.listInner}>
-            {fields.map((field) => (
-              <Pressable
-                key={field}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selection[field] }}
-                onPress={() => toggle(field)}
-                style={styles.row}
+        <View style={styles.list}>
+          {fields.map((field) => (
+            <Pressable
+              key={field}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selection[field] }}
+              onPress={() => toggle(field)}
+              style={styles.row}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  selection[field] && styles.checkboxOn,
+                ]}
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    selection[field] && styles.checkboxOn,
-                  ]}
-                >
-                  {selection[field] ? (
-                    <Check size={13} weight="bold" color={colors.paper} />
-                  ) : null}
-                </View>
-                <View style={styles.rowText}>
-                  <AppText style={styles.rowLabel}>
-                    {contactShareFieldLabels[field]}
-                  </AppText>
-                  {sensitiveFields.has(field) ? (
-                    <AppText style={styles.rowHint}>Off by default</AppText>
-                  ) : null}
-                </View>
-              </Pressable>
-            ))}
-
-            <View style={styles.bioRow}>
-              <View style={styles.rowText}>
-                <View style={styles.bioLabel}>
-                  <Sparkle size={14} weight="fill" color={colors.sageStrong} />
-                  <AppText style={styles.rowLabel}>Short bio</AppText>
-                </View>
-                <AppText style={styles.rowHint}>
-                  Written on your device from public details only. Your notes
-                  are never used.
-                </AppText>
-              </View>
-              <Switch
-                value={selection.bio}
-                onValueChange={(value) => void toggleBio(value)}
-                trackColor={{ true: colors.sageStrong, false: colors.mist }}
-              />
-            </View>
-
-            {selection.bio ? (
-              <View style={styles.bioPreview}>
-                {generatingBio ? (
-                  <ActivityIndicator color={colors.sageStrong} />
-                ) : (
-                  <AppText style={styles.bioText}>
-                    {bio ??
-                      "No bio available on this device. The card will be shared without one."}
-                  </AppText>
-                )}
-              </View>
-            ) : null}
-
-            {linksAvailable ? (
-              <View style={styles.linkSection}>
-                <AppText style={styles.linkHeading}>Or send a link</AppText>
-                <AppText style={styles.rowHint}>
-                  A page on siyi.app showing only what you ticked above. Anyone
-                  with the link can open it, so it expires by default.
-                </AppText>
-
-                <View style={styles.expiryRow}>
-                  {shareExpiryChoices.map((choice) => (
-                    <Pressable
-                      key={choice.id}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: expiry === choice.id }}
-                      accessibilityLabel={choice.label}
-                      onPress={() => setExpiry(choice.id)}
-                      style={[
-                        styles.expiryChip,
-                        expiry === choice.id && styles.expiryChipOn,
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.expiryLabel,
-                          expiry === choice.id && styles.expiryLabelOn,
-                        ]}
-                      >
-                        {choice.label}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
-
-                {shares.map((personShare) => (
-                  <View key={personShare.id} style={styles.linkRow}>
-                    <View style={styles.rowText}>
-                      <AppText style={styles.rowLabel}>
-                        /s/{personShare.token.slice(0, 8)}…
-                      </AppText>
-                      <AppText style={styles.rowHint}>
-                        {personShare.expiresAt
-                          ? `Expires ${new Date(
-                              personShare.expiresAt,
-                            ).toLocaleDateString()}`
-                          : "No expiry"}
-                      </AppText>
-                    </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Send link"
-                      onPress={() => void sendLink(personShare)}
-                      style={styles.linkAction}
-                    >
-                      <AppText style={styles.linkActionLabel}>Send</AppText>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Turn off link"
-                      onPress={() => void revokeLink(personShare)}
-                      style={styles.linkAction}
-                    >
-                      <AppText style={styles.linkActionLabel}>Turn off</AppText>
-                    </Pressable>
-                  </View>
-                ))}
-
-                {linkError ? (
-                  <AppText style={styles.linkError}>{linkError}</AppText>
+                {selection[field] ? (
+                  <Check size={13} weight="bold" color={colors.paper} />
                 ) : null}
               </View>
-            ) : null}
-          </ScrollView>
+              <View style={styles.rowText}>
+                <AppText style={styles.rowLabel}>
+                  {contactShareFieldLabels[field]}
+                </AppText>
+                {sensitiveFields.has(field) ? (
+                  <AppText style={styles.rowHint}>Off by default</AppText>
+                ) : null}
+              </View>
+            </Pressable>
+          ))}
+
+          <View style={styles.bioRow}>
+            <View style={styles.rowText}>
+              <View style={styles.bioLabel}>
+                <Sparkle size={14} weight="fill" color={colors.sageStrong} />
+                <AppText style={styles.rowLabel}>Short bio</AppText>
+              </View>
+              <AppText style={styles.rowHint}>
+                Written on your device from public details only. Your notes
+                are never used.
+              </AppText>
+            </View>
+            <Switch
+              value={selection.bio}
+              onValueChange={(value) => void toggleBio(value)}
+              trackColor={{ true: colors.sageStrong, false: colors.mist }}
+            />
+          </View>
+
+          {selection.bio ? (
+            <View style={styles.bioPreview}>
+              {generatingBio ? (
+                <ActivityIndicator color={colors.sageStrong} />
+              ) : (
+                <AppText style={styles.bioText}>
+                  {bio ??
+                    "No bio available on this device. The card will be shared without one."}
+                </AppText>
+              )}
+            </View>
+          ) : null}
 
           {linksAvailable ? (
-            <>
-              <Button
-                icon={Copy}
-                label={copied ? "Copied" : "Copy link"}
-                loading={creatingLink}
-                onPress={() => void copyLink()}
-              />
-              <Button
-                icon={ShareNetwork}
-                label="Share link"
-                loading={sharing}
-                onPress={() => void shareLink()}
-                variant="secondary"
-              />
-            </>
-          ) : (
+            <View style={styles.linkSection}>
+              <AppText style={styles.linkHeading}>Or send a link</AppText>
+              <AppText style={styles.rowHint}>
+                A page on siyi.app showing only what you ticked above. Anyone
+                with the link can open it, so it expires by default.
+              </AppText>
+
+              <View style={styles.expiryRow}>
+                {shareExpiryChoices.map((choice) => (
+                  <Pressable
+                    key={choice.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: expiry === choice.id }}
+                    accessibilityLabel={choice.label}
+                    onPress={() => setExpiry(choice.id)}
+                    style={[
+                      styles.expiryChip,
+                      expiry === choice.id && styles.expiryChipOn,
+                    ]}
+                  >
+                    <AppText
+                      style={[
+                        styles.expiryLabel,
+                        expiry === choice.id && styles.expiryLabelOn,
+                      ]}
+                    >
+                      {choice.label}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+
+              {shares.map((personShare) => (
+                <View key={personShare.id} style={styles.linkRow}>
+                  <View style={styles.rowText}>
+                    <AppText style={styles.rowLabel}>
+                      /s/{personShare.token.slice(0, 8)}…
+                    </AppText>
+                    <AppText style={styles.rowHint}>
+                      {personShare.expiresAt
+                        ? `Expires ${new Date(
+                            personShare.expiresAt,
+                          ).toLocaleDateString()}`
+                        : "No expiry"}
+                    </AppText>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Send link"
+                    onPress={() => void sendLink(personShare)}
+                    style={styles.linkAction}
+                  >
+                    <AppText style={styles.linkActionLabel}>Send</AppText>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Turn off link"
+                    onPress={() => void revokeLink(personShare)}
+                    style={styles.linkAction}
+                  >
+                    <AppText style={styles.linkActionLabel}>Turn off</AppText>
+                  </Pressable>
+                </View>
+              ))}
+
+              {linkError ? (
+                <AppText style={styles.linkError}>{linkError}</AppText>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+
+        {linksAvailable ? (
+          <>
             <Button
-              label="Share contact card"
-              loading={sharing}
-              onPress={() => void share()}
+              icon={Copy}
+              label={copied ? "Copied" : "Copy link"}
+              loading={creatingLink}
+              onPress={() => void copyLink()}
             />
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+            <Button
+              icon={ShareIcon}
+              label="Share link"
+              loading={sharing}
+              onPress={() => void shareLink()}
+              variant="secondary"
+            />
+          </>
+        ) : (
+          <Button
+            label="Share contact card"
+            loading={sharing}
+            onPress={() => void share()}
+          />
+        )}
+      </BottomSheetScrollView>
+    </AppBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(23, 32, 28, 0.4)",
-  },
-  sheet: {
-    maxHeight: "88%",
-    padding: 22,
-    paddingTop: 8,
-    paddingBottom: 34,
+  content: {
     gap: 12,
-    backgroundColor: colors.porcelain,
-    borderTopLeftRadius: radii.xlarge,
-    borderTopRightRadius: radii.xlarge,
-  },
-  grabArea: {
-    alignItems: "center",
-    paddingBottom: 10,
-    paddingTop: 6,
-  },
-  grabber: {
-    backgroundColor: colors.mist,
-    borderRadius: 3,
-    height: 5,
-    width: 44,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
   header: {
     flexDirection: "row",
@@ -462,8 +437,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mist,
   },
   subtitle: { fontSize: 13, lineHeight: 19, color: colors.inkMuted },
-  list: { flexGrow: 0 },
-  listInner: { gap: 4, paddingVertical: 4 },
+  list: { gap: 4, paddingVertical: 4 },
   row: {
     flexDirection: "row",
     alignItems: "center",
