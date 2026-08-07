@@ -77,7 +77,9 @@ export function shareSlugFor(fullName: string): string {
  */
 export function createShareToken(
   randomBytes: (size: number) => Uint8Array,
-  fullName = "",
+  // Kept in the signature so callers stay ready for the readable links that
+  // return once migration 0018 widens the token constraint.
+  _fullName = "",
 ): string {
   const bytes = randomBytes(shareTokenByteLength);
   if (bytes.length !== shareTokenByteLength) {
