@@ -60,7 +60,10 @@ export async function renderOgImage(page: OgPage) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
+          // Logo pinned to the top, text centred in what is left. Anchoring the
+          // text to the bottom instead left a short title like "Support"
+          // stranded halfway down the card.
+          justifyContent: "flex-start",
           backgroundColor: "#dfe9e2",
           padding: "80px 88px",
           fontFamily: "Manrope",
@@ -82,7 +85,15 @@ export async function renderOgImage(page: OgPage) {
           </span>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", maxWidth: 940 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            flexGrow: 1,
+            maxWidth: 940,
+          }}
+        >
           <span
             style={{
               fontSize: titleFontSize(page.title),
