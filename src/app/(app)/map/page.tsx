@@ -205,7 +205,7 @@ export default async function MapPage({
       {withoutHometown.length > 0 ? (
         <p className="mt-9 rounded-2xl bg-sage px-4 py-3 text-sm leading-6 text-sage-strong">
           {peopleSentence(withoutHometown.length)}{" "}
-          {withoutHometown.length === 1 ? "has" : "have"} no hometown saved yet.
+          {withoutHometown.length === 1 ? "has" : "have"} no {noun} saved yet.
         </p>
       ) : null}
 

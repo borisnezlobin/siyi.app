@@ -1,9 +1,12 @@
 /**
  * A share link publishes someone else's details to whoever holds the URL, and
  * that person never agreed to it. So the rules here are deliberately strict:
- * the token carries all the entropy (nothing about it is derived from the
- * person), links expire unless the sharer opts out, and the payload is rebuilt
- * from the stored field selection rather than trimmed at render time.
+ * links expire unless the sharer opts out, and the payload is rebuilt from the
+ * stored field selection rather than trimmed at render time.
+ *
+ * The token carries their surname so the link is readable, which does mean the
+ * URL alone hints at who it is about. That is a deliberate trade for something
+ * people will actually send; the details behind it still take a working link.
  */
 
 import {
@@ -20,10 +23,19 @@ import type { Person } from "@/lib/types";
 const base64UrlAlphabet =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-/** 24 bytes is 192 bits, and divides by three so base64url needs no padding. */
-export const shareTokenByteLength = 24;
-export const shareTokenLength = 32;
-export const shareTokenPattern = /^[A-Za-z0-9_-]{32}$/;
+/**
+ * A link is read aloud, texted and typed, so it carries the person's surname and
+ * a short random tail: siyi.app/s/zhang-k7f2m9qp.
+ *
+ * The tail is 9 bytes, which is 12 base64url characters and about 72 bits. That
+ * is far short of the 192 bits links used to carry, and deliberately: 72 bits is
+ * still nowhere near guessable, while 32 random characters made a link nobody
+ * would want to share. Tokens issued before this are 32 characters and stay
+ * valid, which is why the pattern accepts a range.
+ */
+export const shareTokenByteLength = 9;
+export const shareTokenPattern = /^[A-Za-z0-9_-]{10,64}$/;
+export const shareSlugMaxLength = 12;
 
 function encodeBase64Url(bytes: Uint8Array) {
   let encoded = "";
@@ -44,18 +56,32 @@ function encodeBase64Url(bytes: Uint8Array) {
   return encoded;
 }
 
+/** The readable half of a link: their surname, or the last word that survives. */
+export function shareSlugFor(fullName: string): string {
+  const words = fullName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+  const chosen = words[words.length - 1] ?? "";
+  return chosen.slice(0, shareSlugMaxLength) || "card";
+}
+
 /**
  * `randomBytes` must come from a cryptographically secure source. It is passed
  * in because Node and React Native disagree about where that lives.
  */
 export function createShareToken(
   randomBytes: (size: number) => Uint8Array,
+  fullName = "",
 ): string {
   const bytes = randomBytes(shareTokenByteLength);
   if (bytes.length !== shareTokenByteLength) {
-    throw new Error("Share token needs 24 random bytes.");
+    throw new Error(`Share token needs ${shareTokenByteLength} random bytes.`);
   }
-  return encodeBase64Url(bytes);
+  return `${shareSlugFor(fullName)}-${encodeBase64Url(bytes)}`;
 }
 
 export function isValidShareToken(value: unknown): value is string {

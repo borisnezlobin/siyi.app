@@ -7,7 +7,7 @@ import {
   recordShareView,
   resolveSharedPerson,
 } from "@/lib/person-share-server";
-import { SaveToContactsButton } from "./save-to-contacts";
+import { SaveActions } from "./save-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -103,10 +103,11 @@ export default async function SharedPersonPage({
       )}
 
       <div className="mt-10 border-t border-black/[0.07] pt-8">
-        <SaveToContactsButton
+        <SaveActions
           card={buildVCard(person, selection)}
           fileName={contactCardFileName(person)}
           personName={displayName}
+          token={token}
         />
         <p className="mt-4 text-xs leading-5 text-ink-muted">
           {expiryNote(shared.expiresAt)}
@@ -118,8 +119,7 @@ export default async function SharedPersonPage({
         <Link href="/" className="font-semibold text-ink hover:underline">
           {brand.name}
         </Link>
-        , a private place to remember the people in your life. Nothing else from
-        that address book is on this page.
+        , a private place to remember the people in your life.
       </p>
     </main>
   );

@@ -135,6 +135,7 @@ export function SharePersonSheet({
       const result = await createPersonShare({
         userId,
         personId: person.id,
+        personName: person.fullName,
         selection,
         expiry,
       });

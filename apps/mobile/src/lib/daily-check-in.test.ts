@@ -1,5 +1,7 @@
 import {
+  alreadyLoggedIds,
   checkInCandidates,
+  startOfCheckInDay,
   lastSeenLabel,
   loggedToday,
   shouldAskToday,
@@ -40,12 +42,23 @@ describe("checkInCandidates", () => {
     ]);
   });
 
-  it("leaves out anyone already logged today", () => {
+  it("keeps anyone already logged today on the list, so they stay ticked", () => {
     const candidates = checkInCandidates(
       [person("1", "Done", daysAgo(0)), person("2", "Still open", daysAgo(3))],
       today,
     );
-    expect(candidates.map((entry) => entry.fullName)).toEqual(["Still open"]);
+    expect(candidates.map((entry) => entry.fullName)).toEqual(["Done", "Still open"]);
+    expect(alreadyLoggedIds(candidates, today)).toEqual(["1"]);
+  });
+
+  it("treats the day as ending at 4am, not midnight", () => {
+    const oneAm = new Date(2026, 7, 7, 1, 0, 0);
+    const lastNight = new Date(2026, 7, 6, 23, 0, 0).toISOString();
+    expect(alreadyLoggedIds([person("1", "Party", lastNight)], oneAm)).toEqual(["1"]);
+    expect(startOfCheckInDay(oneAm).getDate()).toBe(6);
+
+    const nineAm = new Date(2026, 7, 7, 9, 0, 0);
+    expect(alreadyLoggedIds([person("1", "Party", lastNight)], nineAm)).toEqual([]);
   });
 
   it("leaves out archived people", () => {

@@ -12,7 +12,7 @@ import {
   shareIsLive,
   sharedFieldRows,
   shareTokenByteLength,
-  shareTokenLength,
+  shareSlugFor,
 } from "@/lib/person-share";
 import type { Person } from "@/lib/types";
 
@@ -62,13 +62,23 @@ function person(overrides: Partial<Person> = {}): Person {
 }
 
 describe("share tokens", () => {
-  it("is 32 URL-safe characters carrying at least 128 bits", () => {
-    const token = createShareToken(secureRandomBytes);
+  it("reads as a name and a short random tail", () => {
+    const token = createShareToken(secureRandomBytes, "Wei Zhang");
 
-    expect(shareTokenByteLength * 8).toBeGreaterThanOrEqual(128);
-    expect(token).toHaveLength(shareTokenLength);
-    expect(token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(shareTokenByteLength * 8).toBeGreaterThanOrEqual(64);
+    expect(token).toMatch(/^zhang-[A-Za-z0-9_-]{12}$/);
     expect(token).not.toContain("=");
+  });
+
+  it("still accepts the 32 character tokens issued before the change", () => {
+    expect(isValidShareToken("a".repeat(32))).toBe(true);
+  });
+
+  it("builds a slug from any name, however awkward", () => {
+    expect(shareSlugFor("Wei Zhang")).toBe("zhang");
+    expect(shareSlugFor("José Álvarez")).toBe("alvarez");
+    expect(shareSlugFor("???")).toBe("card");
+    expect(shareSlugFor("Bartholomew Featherstonehaugh")).toHaveLength(12);
   });
 
   it("never repeats across many draws", () => {
@@ -80,7 +90,8 @@ describe("share tokens", () => {
 
   it("refuses anything that is not exactly the token shape", () => {
     expect(isValidShareToken("short")).toBe(false);
-    expect(isValidShareToken("a".repeat(33))).toBe(false);
+    expect(isValidShareToken("a".repeat(9))).toBe(false);
+    expect(isValidShareToken("a".repeat(65))).toBe(false);
     expect(isValidShareToken(`${"a".repeat(30)}/=`)).toBe(false);
     expect(isValidShareToken(null)).toBe(false);
   });
