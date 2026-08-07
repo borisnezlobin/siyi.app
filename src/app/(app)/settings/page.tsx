@@ -88,7 +88,6 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-[720px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="Make it yours"
         title="Settings"
         description="How often to check in, your account, and a full copy of your data."
       />
@@ -104,7 +103,7 @@ export default async function SettingsPage() {
       />
 
       <section className="mt-10 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-base font-bold">Default university</h2>
+        <h2 className="text-sm font-bold">Default university</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           Filled in for you when you add someone new. Leave blank for none.
         </p>
@@ -114,9 +113,10 @@ export default async function SettingsPage() {
       </section>
 
       <section className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-base font-bold">Your page</h2>
+        <h2 className="text-sm font-bold">Your card</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
-          An address you can say out loud, and a code people can scan.
+          What you hand out about yourself, the address people can find you at,
+          and a code they can scan.
         </p>
         <div className="mt-5">
           <ProfileControls
@@ -127,15 +127,7 @@ export default async function SettingsPage() {
             initialTag={initialHandleTag}
           />
         </div>
-      </section>
-
-      <section className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-base font-bold">Your own details</h2>
-        <p className="mt-1 text-xs leading-5 text-ink-muted">
-          What you hand out about yourself, so you are not retyping it every time
-          you meet someone.
-        </p>
-        <div className="mt-5">
+        <div className="mt-6 border-t border-black/[0.07] pt-6">
           <OwnCardControls
             initialCard={initialOwnCard}
             initialEnabled={initialOwnCardEnabled}

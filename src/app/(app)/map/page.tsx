@@ -69,7 +69,6 @@ export default async function MapPage({
       </Link>
 
       <PageHeader
-        eyebrow="Your circle"
         title={mode === "college" ? "Where everyone studies" : "Where everyone's from"}
         description={
           mode === "college"

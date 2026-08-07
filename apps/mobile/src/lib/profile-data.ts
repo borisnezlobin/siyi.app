@@ -30,8 +30,8 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
 }
 
 /**
- * The tag is minted here only when the handle is new or has changed, so keeping
- * the same handle keeps the same address.
+ * The tag is minted once and then kept, so renaming yourself does not break the
+ * links people already have.
  */
 export async function saveOwnProfile(
   userId: string,
@@ -48,9 +48,7 @@ export async function saveOwnProfile(
     const current = await getOwnProfile(userId);
     update.handle = handle;
     update.handle_tag =
-      current.handle === handle && current.tag
-        ? current.tag
-        : createHandleTag((size) => Crypto.getRandomBytes(size));
+      current.tag || createHandleTag((size) => Crypto.getRandomBytes(size));
   }
   if (changes.isPublic !== undefined) update.profile_public = changes.isPublic;
   if (changes.publicFields !== undefined) {

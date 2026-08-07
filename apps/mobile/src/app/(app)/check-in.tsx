@@ -70,7 +70,6 @@ export default function CheckInScreen() {
 
   return (
     <Screen
-      eyebrow="Daily check-in"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="Tap everyone you saw or spoke to. One tap each, nothing to type."

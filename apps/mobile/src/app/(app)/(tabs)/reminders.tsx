@@ -85,7 +85,6 @@ export default function RemindersScreen() {
 
   return (
     <Screen
-      eyebrow="Promises to your future self"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="What is coming up, and when it lands."

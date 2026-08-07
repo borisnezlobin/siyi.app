@@ -181,7 +181,6 @@ export default function PeopleScreen() {
 
   return (
     <Screen
-      eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="Search by name, school, class, hometown, major, dorm, or tag."

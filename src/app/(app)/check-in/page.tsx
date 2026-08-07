@@ -15,7 +15,6 @@ export default async function CheckInPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-5 pb-24 pt-8">
       <PageHeader
-        eyebrow="Daily check-in"
         title="Who did you talk to today?"
         description="Tap everyone you saw or spoke to. One tap each, nothing to type."
       />

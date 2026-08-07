@@ -20,6 +20,7 @@ import {
 } from "@/lib/handles";
 import { getOwnProfile, saveOwnProfile, type OwnProfile } from "@/lib/profile-data";
 import { ownCardFields, ownCardLabels } from "@/lib/own-card";
+import { OwnCardFields } from "@/components/own-card-fields";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -83,9 +84,8 @@ export default function ProfileScreen() {
 
   return (
     <Screen
-      eyebrow="Make it yours"
-      subtitle="An address you can say out loud, and a code people can scan."
-      title="Your page"
+      subtitle="What you hand out about yourself, the address people find you at, and a code they can scan."
+      title="Your card"
     >
       <FormField
         autoCapitalize="none"
@@ -206,6 +206,9 @@ export default function ProfileScreen() {
           </View>
         </>
       ) : null}
+
+      <View style={styles.divider} />
+      <OwnCardFields />
     </Screen>
   );
 }
@@ -250,6 +253,11 @@ const styles = StyleSheet.create({
   },
   fieldTextSelected: {
     color: colors.paper,
+  },
+  divider: {
+    backgroundColor: colors.mist,
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 8,
   },
   error: {
     color: colors.coralStrong,

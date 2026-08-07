@@ -4,9 +4,6 @@ import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { CollegeField } from "@/components/college-field";
 import { FormField } from "@/components/form-field";
-import { KeyboardAwareForm } from "@/components/keyboard-aware-form";
-import { ErrorState, LoadingState } from "@/components/load-state";
-import { Screen } from "@/components/screen";
 import { colors, radii } from "@/constants/theme";
 import { getAccountSettings, saveOwnCard } from "@/lib/data";
 import { ownCardFields, ownCardLabels, type OwnCard } from "@/lib/own-card";
@@ -29,10 +26,10 @@ const placeholders: Partial<Record<(typeof ownCardFields)[number], string>> = {
 };
 
 /**
- * What you hand out about yourself, so you are not retyping it every time you
- * meet someone. Nothing is shown to anyone until the switch is on.
+ * What you hand out about yourself. Lives inside the card screen rather than on
+ * its own, so mobile matches the single section the web shows.
  */
-export default function OwnCardScreen() {
+export function OwnCardFields() {
   const { session } = useAuth();
   const screenData = useRefreshableData<AccountSettings>(() =>
     getAccountSettings(session!.user.id),
@@ -45,16 +42,8 @@ export default function OwnCardScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (screenData.loading && !screenData.data) {
-    return <LoadingState label="Opening your details…" />;
-  }
-  if (screenData.error && !screenData.data) {
-    return (
-      <ErrorState message={screenData.error} onRetry={() => void screenData.reload()} />
-    );
-  }
-
-  const settings = screenData.data!;
+  const settings = screenData.data;
+  if (!settings) return null;
   const currentCard = card ?? settings.ownCard;
   const currentEnabled = enabled ?? settings.ownCardEnabled;
   const currentUniversity = defaultUniversity ?? settings.defaultUniversity;
@@ -81,12 +70,7 @@ export default function OwnCardScreen() {
   }
 
   return (
-    <Screen
-      eyebrow="Make it yours"
-      subtitle="What you hand out about yourself, so you are not retyping it."
-      title="Your own details"
-    >
-      <KeyboardAwareForm>
+    <View style={styles.group}>
         <CollegeField
           onChangeText={(value) => setDefaultUniversity(value)}
           value={currentUniversity}
@@ -136,12 +120,14 @@ export default function OwnCardScreen() {
           label={saved ? "Saved" : "Save my details"}
           onPress={() => void save()}
         />
-      </KeyboardAwareForm>
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  group: {
+    gap: 14,
+  },
   hint: {
     marginTop: -4,
   },

@@ -15,7 +15,6 @@ export default async function AddPersonPage() {
   return (
     <div className="mx-auto max-w-[680px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="While it’s fresh"
         title="Add someone"
         description="Start with the details you remember now. You can fill in the rest later."
         action={

@@ -184,7 +184,7 @@ export function PeopleDirectory({
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
           className={clsx(
-            "relative grid size-12 shrink-0 place-items-center rounded-2xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+            "relative grid size-12 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
             filtersOpen || activeFilterCount
               ? "bg-ink text-white"
               : "bg-white text-ink-muted hover:text-ink",

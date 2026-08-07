@@ -183,7 +183,7 @@ export function ContactFields({
                             ? `Main ${noun}`
                             : `Make this the main ${noun}`
                         }
-                        className={`grid size-12 shrink-0 place-items-center rounded-2xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                        className={`grid size-12 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
                           row.isPrimary
                             ? "bg-sun/25 text-ink"
                             : "bg-porcelain text-ink-muted hover:bg-mist"
@@ -203,7 +203,7 @@ export function ContactFields({
                       <button
                         type="button"
                         onClick={() => update(withoutDraftAt(rows, index))}
-                        className="grid size-12 shrink-0 place-items-center rounded-2xl bg-porcelain text-ink-muted transition-colors hover:bg-mist hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                        className="grid size-12 shrink-0 place-items-center rounded-full bg-porcelain text-ink-muted transition-colors hover:bg-mist hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                       >
                         <X size={16} aria-hidden="true" />
                         <span className="sr-only">Remove this {noun}</span>

@@ -53,7 +53,6 @@ export default function ClassesScreen() {
 
   return (
     <Screen
-      eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="Who you have a course with, built from what you have written down."

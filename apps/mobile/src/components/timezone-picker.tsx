@@ -23,6 +23,7 @@ import {
   friendlyTimezones,
   timezoneOffset,
   timezonePlace,
+  timezoneMatchRank,
   timezoneSearchText,
   timezoneTitle,
 } from "@/lib/timezones";
@@ -47,11 +48,14 @@ export function TimezonePicker({
   const [query, setQuery] = useState("");
   const options = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const matches = normalized
-      ? friendlyTimezones().filter((timezone) =>
-          timezoneSearchText(timezone).includes(normalized),
-        )
+    const words = normalized.split(/\s+/).filter(Boolean);
+    const matches = words.length
+      ? friendlyTimezones().filter((timezone) => {
+          const haystack = timezoneSearchText(timezone);
+          return words.every((word) => haystack.includes(word));
+        })
       : friendlyTimezones();
+
     return [...matches].sort((left, right) => {
       const leftPreferred =
         left.name === detectedTimezone ||
@@ -59,7 +63,13 @@ export function TimezonePicker({
       const rightPreferred =
         right.name === detectedTimezone ||
         right.group.includes(detectedTimezone || "");
-      return Number(rightPreferred) - Number(leftPreferred);
+      if (leftPreferred !== rightPreferred) {
+        return Number(rightPreferred) - Number(leftPreferred);
+      }
+      const byRank = timezoneMatchRank(right, normalized) - timezoneMatchRank(left, normalized);
+      if (byRank !== 0) return byRank;
+      // A zone people actually live in beats one that merely shares a word.
+      return right.mainCities.length - left.mainCities.length;
     });
   }, [detectedTimezone, query]);
 
@@ -363,8 +373,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     borderTopLeftRadius: radii.large,
     borderTopRightRadius: radii.large,
+    // No minimum: the keyboard has to be able to squeeze this, or the sheet is
+    // pushed off the top of the screen instead of shrinking.
     maxHeight: "88%",
-    minHeight: "65%",
+    flexShrink: 1,
     paddingHorizontal: 20,
     paddingTop: 11,
     ...floatShadow,

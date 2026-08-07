@@ -45,7 +45,6 @@ export default function MapScreen() {
 
   return (
     <Screen
-      eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle={`Drawn from the ${noun}s you have written down. Nothing about your people is sent anywhere to draw this.`}

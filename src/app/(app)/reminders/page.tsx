@@ -24,7 +24,6 @@ export default async function RemindersPage({
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="Keep your word"
         title="Reminders"
         description="A practical list of the things you said you’d send, ask, or do."
         action={

@@ -30,7 +30,6 @@ export default async function EditPersonPage({
   return (
     <div className="mx-auto max-w-[720px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow="Keep the context current"
         title={`Edit ${person.preferredName ?? person.fullName}`}
         description="Update the details that make the next conversation easier."
         action={

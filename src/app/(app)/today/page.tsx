@@ -181,7 +181,6 @@ export default async function TodayPage() {
   return (
     <div className="mx-auto max-w-[980px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        eyebrow={format(now, "EEEE, MMMM d")}
         title="What needs your attention?"
         description="Log who you saw, then everything that needs you today."
         action={
@@ -212,7 +211,7 @@ export default async function TodayPage() {
       <section className="mt-9" aria-labelledby="time-sensitive-heading">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 id="time-sensitive-heading" className="text-base font-bold">
+            <h2 id="time-sensitive-heading" className="text-sm font-bold">
               Time-sensitive
             </h2>
             <p className="mt-1 text-xs text-ink-muted">
@@ -301,7 +300,7 @@ export default async function TodayPage() {
 
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">
-          <h2 id="check-in-heading" className="text-base font-bold">
+          <h2 id="check-in-heading" className="text-sm font-bold">
             A few people to check in on
           </h2>
           <p className="mt-1 text-xs text-ink-muted">
@@ -356,7 +355,7 @@ export default async function TodayPage() {
 
       {recentPeople.length ? (
         <section className="mt-9" aria-labelledby="new-people-heading">
-          <h2 id="new-people-heading" className="text-base font-bold">
+          <h2 id="new-people-heading" className="text-sm font-bold">
             Just met
           </h2>
           <p className="mt-1 text-xs text-ink-muted">Added in the last 7 days</p>
