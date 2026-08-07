@@ -260,6 +260,14 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <Section title="Your own details">
+        <NavigationRow
+          detail="What you hand out about yourself, and a default university"
+          label="Your contact card"
+          onPress={() => router.push("/own-card")}
+        />
+      </Section>
+
       <Section title="Notifications">
         <NavigationRow
           detail="Permission, categories, preferred hour, and a test"

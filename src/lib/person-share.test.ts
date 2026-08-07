@@ -52,11 +52,11 @@ function person(overrides: Partial<Person> = {}): Person {
 }
 
 describe("share tokens", () => {
-  it("is URL-safe and carries plenty of randomness", () => {
+  it("reads as a name and a short random tail", () => {
     const token = createShareToken(secureRandomBytes, "Wei Zhang");
 
     expect(shareTokenByteLength * 8).toBeGreaterThanOrEqual(64);
-    expect(token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(token).toMatch(/^zhang-[A-Za-z0-9_-]{12}$/);
     expect(token).not.toContain("=");
     expect(isValidShareToken(token)).toBe(true);
   });
@@ -84,7 +84,7 @@ describe("share tokens", () => {
     const firstCharacters = new Set(
       Array.from(
         { length: 500 },
-        () => createShareToken(secureRandomBytes)[0],
+        () => createShareToken(secureRandomBytes).split("-")[1][0],
       ),
     );
     expect(firstCharacters.size).toBeGreaterThan(20);

@@ -1,3 +1,5 @@
+import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { OwnCardControls } from "@/components/own-card-controls";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { SettingsControls } from "@/components/settings-controls";
@@ -25,6 +27,9 @@ export default async function SettingsPage() {
   const authMethods = providers?.length
     ? providers.map((provider) => (provider === "email" ? "Email" : "Google"))
     : ["Preview mode"];
+  let initialOwnCard: OwnCard = {};
+  let initialOwnCardEnabled = false;
+  let initialDefaultUniversity = "";
   let initialTimezone = "America/Los_Angeles";
   let initialMarketingOptIn = false;
   let initialIntervals: Record<RelationshipStrength, number> = {
@@ -42,7 +47,7 @@ export default async function SettingsPage() {
       supabase
         .from("user_settings")
         .select(
-          "strength_1_days,strength_2_days,strength_3_days,strength_4_days",
+          "strength_1_days,strength_2_days,strength_3_days,strength_4_days,own_card,own_card_enabled,default_university",
         )
         .eq("user_id", user.id)
         .maybeSingle(),
@@ -57,6 +62,9 @@ export default async function SettingsPage() {
       .eq("auth_user_id", user.id)
       .maybeSingle();
     initialMarketingOptIn = consent?.marketing_opt_in ?? false;
+    initialOwnCard = normalizeOwnCard(settings?.own_card);
+    initialOwnCardEnabled = settings?.own_card_enabled ?? false;
+    initialDefaultUniversity = settings?.default_university ?? "";
     if (settings) {
       initialIntervals = {
         1: settings.strength_1_days,
@@ -84,6 +92,21 @@ export default async function SettingsPage() {
         initialIntervals={initialIntervals}
         initialMarketingOptIn={initialMarketingOptIn}
       />
+
+      <section className="mt-10 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+        <h2 className="text-base font-bold">Your own details</h2>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          What you hand out about yourself, so you are not retyping it every time
+          you meet someone.
+        </p>
+        <div className="mt-5">
+          <OwnCardControls
+            initialCard={initialOwnCard}
+            initialEnabled={initialOwnCardEnabled}
+            initialDefaultUniversity={initialDefaultUniversity}
+          />
+        </div>
+      </section>
     </div>
   );
 }

@@ -61,9 +61,11 @@ type PhotoAsset = {
 export function PersonForm({
   person,
   noteSections,
+  defaultUniversity = "",
 }: {
   person?: Person;
   noteSections?: PersonNoteSectionsData;
+  defaultUniversity?: string;
 }) {
   const router = useRouter();
   const { session } = useAuth();
@@ -93,7 +95,10 @@ export function PersonForm({
   const [dormOrResidence, setDormOrResidence] = useState(
     person?.dormOrResidence || "",
   );
-  const [university, setUniversity] = useState(person?.university || "");
+  // A new person starts at your default school; an existing one keeps theirs.
+  const [university, setUniversity] = useState(
+    person?.university || (person ? "" : defaultUniversity),
+  );
   const [major, setMajor] = useState(person?.major || "");
   const [graduationYear, setGraduationYear] = useState(
     person?.graduationYear ? String(person.graduationYear) : "",
@@ -136,6 +141,13 @@ export function PersonForm({
     });
     void Haptics.selectionAsync();
   }
+
+  // The default arrives after the form is on screen, so it is applied then —
+  // but only to a new person who has not typed anything, never over an edit.
+  useEffect(() => {
+    if (person || !defaultUniversity) return;
+    setUniversity((current) => current || defaultUniversity);
+  }, [defaultUniversity, person]);
 
   useEffect(() => {
     if (!userId) return;
