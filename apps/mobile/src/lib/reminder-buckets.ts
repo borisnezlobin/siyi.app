@@ -1,22 +1,22 @@
 import { differenceInCalendarDays } from "date-fns";
 
-export type FollowUpBucket = "overdue" | "today" | "week" | "later";
+export type ReminderBucket = "overdue" | "today" | "week" | "later";
 
-export const followUpBucketOrder: FollowUpBucket[] = [
+export const reminderBucketOrder: ReminderBucket[] = [
   "overdue",
   "today",
   "week",
   "later",
 ];
 
-export const followUpBucketLabels: Record<FollowUpBucket, string> = {
+export const reminderBucketLabels: Record<ReminderBucket, string> = {
   overdue: "Overdue",
   today: "Today",
   week: "This week",
   later: "Later",
 };
 
-export const followUpBucketEmptyLabels: Record<FollowUpBucket, string> = {
+export const reminderBucketEmptyLabels: Record<ReminderBucket, string> = {
   overdue: "Nothing has slipped.",
   today: "Nothing due today.",
   week: "The rest of the week is clear.",
@@ -27,10 +27,10 @@ export const followUpBucketEmptyLabels: Record<FollowUpBucket, string> = {
  * "This week" is the six days after today, so a reminder seven days out reads
  * as "later" rather than crowding the week you are actually looking at.
  */
-export function followUpBucket(
+export function reminderBucket(
   dueAt: string | Date,
   now: Date = new Date(),
-): FollowUpBucket {
+): ReminderBucket {
   const due = dueAt instanceof Date ? dueAt : new Date(dueAt);
   const daysAway = differenceInCalendarDays(due, now);
   if (daysAway < 0) return "overdue";
@@ -39,16 +39,16 @@ export function followUpBucket(
   return "later";
 }
 
-type BucketableFollowUp = {
+type BucketableReminder = {
   dueAt: string;
   completedAt?: string | null;
 };
 
-export function groupFollowUpsByBucket<Item extends BucketableFollowUp>(
-  followUps: Item[],
+export function groupRemindersByBucket<Item extends BucketableReminder>(
+  reminders: Item[],
   now: Date = new Date(),
 ) {
-  const groups: Record<FollowUpBucket, Item[]> = {
+  const groups: Record<ReminderBucket, Item[]> = {
     overdue: [],
     today: [],
     week: [],
@@ -56,15 +56,15 @@ export function groupFollowUpsByBucket<Item extends BucketableFollowUp>(
   };
   const completed: Item[] = [];
 
-  for (const followUp of followUps) {
-    if (followUp.completedAt) {
-      completed.push(followUp);
+  for (const reminder of reminders) {
+    if (reminder.completedAt) {
+      completed.push(reminder);
       continue;
     }
-    groups[followUpBucket(followUp.dueAt, now)].push(followUp);
+    groups[reminderBucket(reminder.dueAt, now)].push(reminder);
   }
 
-  for (const bucket of followUpBucketOrder) {
+  for (const bucket of reminderBucketOrder) {
     groups[bucket].sort(
       (left, right) =>
         new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime(),
@@ -75,8 +75,8 @@ export function groupFollowUpsByBucket<Item extends BucketableFollowUp>(
 }
 
 export function countsByBucket(
-  groups: Record<FollowUpBucket, unknown[]>,
-): Record<FollowUpBucket, number> {
+  groups: Record<ReminderBucket, unknown[]>,
+): Record<ReminderBucket, number> {
   return {
     overdue: groups.overdue.length,
     today: groups.today.length,
@@ -85,7 +85,7 @@ export function countsByBucket(
   };
 }
 
-export function followUpDueLabel(
+export function reminderDueLabel(
   dueAt: string | Date,
   now: Date = new Date(),
 ): string {

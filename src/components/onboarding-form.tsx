@@ -20,7 +20,7 @@ export function OnboardingForm() {
   const [timezone, setTimezone] = useState("UTC");
   const [overdueContactEnabled, setOverdueContactEnabled] = useState(true);
   const [birthdayEnabled, setBirthdayEnabled] = useState(true);
-  const [followUpEnabled, setFollowUpEnabled] = useState(true);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
     "default",
   );
@@ -68,7 +68,7 @@ export function OnboardingForm() {
           locale: navigator.language || "en-US",
           overdueContactEnabled,
           birthdayEnabled,
-          followUpEnabled,
+          reminderEnabled,
           pushEnabled: permission === "granted",
         }),
       });
@@ -156,8 +156,8 @@ export function OnboardingForm() {
             label="Upcoming birthdays"
           />
           <SwitchControl
-            checked={followUpEnabled}
-            onChange={setFollowUpEnabled}
+            checked={reminderEnabled}
+            onChange={setReminderEnabled}
             label="Open reminders"
           />
         </div>

@@ -11,7 +11,7 @@ const baseInput: NotificationEvaluationInput = {
     pushEnabled: true,
     overdueContactEnabled: true,
     birthdayEnabled: true,
-    followUpEnabled: true,
+    reminderEnabled: true,
     reminderHourLocal: 10,
     reminderDaysOfWeek: [1, 2, 3, 4, 5],
   },
@@ -28,7 +28,7 @@ const baseInput: NotificationEvaluationInput = {
       lastInteractionAt: "2026-07-01T18:00:00.000Z",
     },
   ],
-  followUps: [
+  reminders: [
     {
       id: "40000000-0000-4000-8000-000000000001",
       personId: "20000000-0000-4000-8000-000000000001",
@@ -53,7 +53,7 @@ describe("evaluateUserNotifications", () => {
     expect(candidates[0].deduplicationKey).toBe(
       "contact:00000000-0000-4000-8000-000000000001:20000000-0000-4000-8000-000000000001:2026-07-15",
     );
-    expect(candidates[2].url).toContain("/follow-ups?person=");
+    expect(candidates[2].url).toContain("/reminders?person=");
   });
 
   it("says the age they are turning, and nothing when the year is a placeholder", () => {

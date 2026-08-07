@@ -48,7 +48,7 @@ type InteractionRow = {
   occurred_at: string;
 };
 
-type FollowUpRow = {
+type ReminderRow = {
   id: string;
   user_id: string;
   person_id: string;
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     const peopleColumns =
       "id,user_id,full_name,preferred_name,birthday,relationship_strength,reminder_interval_days,first_met_at";
 
-    const [peopleResult, interactionsResult, followUpsResult] =
+    const [peopleResult, interactionsResult, remindersResult] =
       await Promise.all([
       selectPeople(`${peopleColumns},reminders_enabled`).then((result) =>
         result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         .in("user_id", eligibleUserIds)
         .order("occurred_at", { ascending: false }),
       admin
-        .from("follow_ups")
+        .from("reminders")
         .select("id,user_id,person_id,text,due_at")
         .in("user_id", eligibleUserIds)
         .is("completed_at", null),
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     const firstError = [
       peopleResult.error,
       interactionsResult.error,
-      followUpsResult.error,
+      remindersResult.error,
     ].find(Boolean);
 
     if (firstError) {
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
 
     const people = peopleResult.data as unknown as PersonRow[];
     const interactions = interactionsResult.data as InteractionRow[];
-    const followUps = followUpsResult.data as FollowUpRow[];
+    const reminders = remindersResult.data as ReminderRow[];
 
     const latestInteractionByPerson = new Map<string, string>();
     for (const interaction of interactions) {
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
             pushEnabled: preference.push_enabled,
             overdueContactEnabled: preference.overdue_contact_enabled,
             birthdayEnabled: preference.birthday_enabled,
-            followUpEnabled: preference.follow_up_enabled,
+            reminderEnabled: preference.follow_up_enabled,
             reminderHourLocal: preference.reminder_hour_local,
             reminderDaysOfWeek: preference.reminder_days_of_week,
           },
@@ -225,15 +225,15 @@ export async function GET(request: NextRequest) {
             lastInteractionAt:
               latestInteractionByPerson.get(person.id) ?? null,
           })),
-          followUps: followUps
-            .filter((followUp) => followUp.user_id === preference.user_id)
-            .map((followUp) => {
-              const person = peopleById.get(followUp.person_id);
+          reminders: reminders
+            .filter((reminder) => reminder.user_id === preference.user_id)
+            .map((reminder) => {
+              const person = peopleById.get(reminder.person_id);
               return {
-                id: followUp.id,
-                personId: followUp.person_id,
-                text: followUp.text,
-                dueAt: followUp.due_at,
+                id: reminder.id,
+                personId: reminder.person_id,
+                text: reminder.text,
+                dueAt: reminder.due_at,
                 personName:
                   person?.preferred_name ?? person?.full_name ?? "someone",
               };

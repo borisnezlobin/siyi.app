@@ -53,7 +53,9 @@ export function FormField({
 
   return (
     <View style={styles.group}>
-      <AppText variant="label">{label}</AppText>
+      {/* An empty label still reserves a line, which leaves a field sitting in
+          a row of its own height. Fields labelled by their row skip it. */}
+      {label ? <AppText variant="label">{label}</AppText> : null}
       {accessory ? (
         <View style={[styles.frame, error && styles.errorFrame]}>
           {input}

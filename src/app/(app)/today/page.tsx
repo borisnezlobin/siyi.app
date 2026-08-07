@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/page-header";
 import { LogInteractionPanel } from "@/components/log-interaction-panel";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
-import { getFollowUps, getPeople, getQuickPeople } from "@/lib/data";
+import { getReminders, getPeople, getQuickPeople } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
 
@@ -65,15 +65,15 @@ function getDisplayName(person: Person) {
 export default async function TodayPage() {
   const now = new Date();
   const today = startOfDay(now);
-  const [people, followUps, quickPeople] = await Promise.all([
+  const [people, reminders, quickPeople] = await Promise.all([
     getPeople(),
-    getFollowUps(),
+    getReminders(),
     getQuickPeople(),
   ]);
   const timeSensitiveItems: TimeSensitiveItem[] = [];
 
-  for (const followUp of followUps.filter(({ completedAt }) => !completedAt)) {
-    const dueAt = startOfDay(new Date(followUp.dueAt));
+  for (const reminder of reminders.filter(({ completedAt }) => !completedAt)) {
+    const dueAt = startOfDay(new Date(reminder.dueAt));
     const daysFromToday = differenceInCalendarDays(dueAt, today);
     const status =
       daysFromToday < 0
@@ -83,15 +83,15 @@ export default async function TodayPage() {
           : "upcoming";
 
     timeSensitiveItems.push({
-      key: `reminder-${followUp.id}`,
+      key: `reminder-${reminder.id}`,
       kind: "reminder",
       status,
       dueAt,
-      href: `/follow-ups?person=${followUp.personId}`,
-      title: followUp.text,
+      href: `/reminders?person=${reminder.personId}`,
+      title: reminder.text,
       personName:
-        followUp.person?.preferredName ??
-        followUp.person?.fullName ??
+        reminder.person?.preferredName ??
+        reminder.person?.fullName ??
         "Reminder",
       dueLabel:
         status === "overdue"
@@ -208,7 +208,7 @@ export default async function TodayPage() {
             </p>
           </div>
           <Link
-            href="/follow-ups"
+            href="/reminders"
             className="text-xs font-semibold text-coral-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             All reminders

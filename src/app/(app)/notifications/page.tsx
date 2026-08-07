@@ -19,7 +19,7 @@ export default async function NotificationsPage() {
     pushEnabled: false,
     overdueContactEnabled: true,
     birthdayEnabled: true,
-    followUpEnabled: true,
+    reminderEnabled: true,
     reminderHourLocal: 10,
     reminderDaysOfWeek: [1, 2, 3, 4, 5],
   };
@@ -38,7 +38,7 @@ export default async function NotificationsPage() {
           pushEnabled: data.push_enabled,
           overdueContactEnabled: data.overdue_contact_enabled,
           birthdayEnabled: data.birthday_enabled,
-          followUpEnabled: data.follow_up_enabled,
+          reminderEnabled: data.follow_up_enabled,
           reminderHourLocal: data.reminder_hour_local,
           reminderDaysOfWeek: data.reminder_days_of_week,
         };

@@ -10,7 +10,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="today" />
       <Tabs.Screen name="people" />
-      <Tabs.Screen name="follow-ups" />
+      <Tabs.Screen name="reminders" />
       <Tabs.Screen name="settings" />
     </Tabs>
   );

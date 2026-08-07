@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         "/auth/",
         "/today",
         "/people",
-        "/follow-ups",
+        "/reminders",
         "/notifications",
         "/settings",
         "/onboarding",

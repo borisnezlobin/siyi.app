@@ -41,7 +41,7 @@ export type InitialNotificationPreferences = {
   pushEnabled: boolean;
   overdueContactEnabled: boolean;
   birthdayEnabled: boolean;
-  followUpEnabled: boolean;
+  reminderEnabled: boolean;
   reminderHourLocal: number;
   reminderDaysOfWeek: number[];
 };
@@ -59,8 +59,8 @@ export function NotificationControls({
   const [birthdayEnabled, setBirthdayEnabled] = useState(
     initialPreferences.birthdayEnabled,
   );
-  const [followUpEnabled, setFollowUpEnabled] = useState(
-    initialPreferences.followUpEnabled,
+  const [reminderEnabled, setReminderEnabled] = useState(
+    initialPreferences.reminderEnabled,
   );
   const [reminderHour, setReminderHour] = useState(
     String(initialPreferences.reminderHourLocal),
@@ -218,7 +218,7 @@ export function NotificationControls({
           pushEnabled,
           overdueContactEnabled,
           birthdayEnabled,
-          followUpEnabled,
+          reminderEnabled,
           reminderHourLocal: Number(reminderHour),
           reminderDaysOfWeek: days,
         }),
@@ -353,8 +353,8 @@ export function NotificationControls({
             description="A heads-up before a saved birthday."
           />
           <SwitchControl
-            checked={followUpEnabled}
-            onChange={setFollowUpEnabled}
+            checked={reminderEnabled}
+            onChange={setReminderEnabled}
             label="Reminders"
             description="For reminders that are due or overdue."
           />

@@ -22,7 +22,7 @@ export async function PATCH(
 
     const supabase = await createClient();
     const { data, error } = await supabase
-      .from("follow_ups")
+      .from("reminders")
       .update({ completed_at: validation.data.completedAt })
       .eq("id", id)
       .eq("user_id", user.id)
@@ -30,7 +30,7 @@ export async function PATCH(
       .single();
 
     if (error) return apiError(error.message, 400);
-    return NextResponse.json({ followUp: data });
+    return NextResponse.json({ reminder: data });
   } catch (error) {
     return apiError(errorMessage(error), 401);
   }

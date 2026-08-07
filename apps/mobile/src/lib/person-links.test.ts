@@ -25,7 +25,7 @@ describe("personRouteIdentifier", () => {
 
   it("leaves other routes alone", () => {
     expect(personRouteIdentifier("/people/new")).toBeNull();
-    expect(personRouteIdentifier("/follow-ups")).toBeNull();
+    expect(personRouteIdentifier("/reminders")).toBeNull();
     expect(personRouteIdentifier("/people/abc/edit")).toBeNull();
     expect(personRouteIdentifier("/people/")).toBeNull();
     expect(personRouteIdentifier("https://example.com/people/abc")).toBeNull();

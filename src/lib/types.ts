@@ -119,7 +119,7 @@ export type Tag = {
   createdAt: string;
 };
 
-export type FollowUp = {
+export type Reminder = {
   id: string;
   personId: string;
   userId: string;
@@ -139,7 +139,7 @@ export type NotificationPreference = {
   pushEnabled: boolean;
   overdueContactEnabled: boolean;
   birthdayEnabled: boolean;
-  followUpEnabled: boolean;
+  reminderEnabled: boolean;
   reminderHourLocal: number;
   reminderDaysOfWeek: number[];
   createdAt: string;

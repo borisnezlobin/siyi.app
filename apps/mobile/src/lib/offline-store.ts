@@ -5,14 +5,14 @@ import type { AccountSettings, PersonDetails } from "@/lib/data";
 import type { ContactMethodDraft } from "@/lib/contact-methods";
 import type { NoteText } from "@/lib/note-sync";
 import type {
-  FollowUp,
+  Reminder,
   NotificationPreference,
   Person,
   ReminderDefaults,
   UserProfile,
 } from "@/lib/types";
 import type {
-  FollowUpInput,
+  ReminderInput,
   InteractionEdit,
   InteractionInput,
   PersonInput,
@@ -106,11 +106,11 @@ export type OfflineMutation =
     }
   | {
       id: string;
-      kind: "create-follow-up";
+      kind: "create-reminder";
       userId: string;
       createdAt: string;
-      followUpId: string;
-      input: FollowUpInput;
+      reminderId: string;
+      input: ReminderInput;
     }
   | {
       id: string;
@@ -165,10 +165,10 @@ export type OfflineMutation =
     }
   | {
       id: string;
-      kind: "set-follow-up-complete";
+      kind: "set-reminder-complete";
       userId: string;
       createdAt: string;
-      followUpId: string;
+      reminderId: string;
       completedAt: string | null;
     }
   | {
@@ -212,7 +212,7 @@ export type OfflineSnapshot = {
   savedAt: string;
   profile: UserProfile | null;
   people: Person[];
-  followUps: FollowUp[];
+  reminders: Reminder[];
   personDetails: Record<string, PersonDetails>;
   accountSettings: AccountSettings | null;
   recentUpdateTypes: string[];
@@ -240,7 +240,7 @@ function emptySnapshot(userId: string): OfflineSnapshot {
     savedAt: new Date(0).toISOString(),
     profile: null,
     people: [],
-    followUps: [],
+    reminders: [],
     personDetails: {},
     accountSettings: null,
     recentUpdateTypes: [],
@@ -317,12 +317,28 @@ export async function updateOfflineSnapshot(
   return snapshot;
 }
 
+/**
+ * Reminders used to be called follow-ups, and the kind is written into storage.
+ * A queue built by an older build still has the old spelling in it, so it is
+ * translated on the way out — otherwise anything saved offline before the update
+ * would match no handler and be dropped without a trace.
+ */
+const renamedKinds: Record<string, string> = {
+  "create-follow-up": "create-reminder",
+  "set-follow-up-complete": "set-reminder-complete",
+};
+
 export async function getOfflineQueue(userId: string) {
   const stored = await AsyncStorage.getItem(queueKey(userId));
   if (!stored) return [] as OfflineMutation[];
 
   try {
-    return JSON.parse(stored) as OfflineMutation[];
+    const queue = JSON.parse(stored) as OfflineMutation[];
+    return queue.map((mutation) =>
+      renamedKinds[mutation.kind]
+        ? ({ ...mutation, kind: renamedKinds[mutation.kind] } as OfflineMutation)
+        : mutation,
+    );
   } catch {
     return [] as OfflineMutation[];
   }

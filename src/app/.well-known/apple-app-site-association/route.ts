@@ -17,7 +17,7 @@ export function GET() {
                 appIDs: [`${teamId}.${bundleIdentifier}`],
                 components: [
                   { "/": "/people/*" },
-                  { "/": "/follow-ups*" },
+                  { "/": "/reminders*" },
                   { "/": "/today*" },
                   { "/": "/auth/callback*" },
                 ],

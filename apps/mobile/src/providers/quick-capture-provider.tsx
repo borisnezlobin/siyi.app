@@ -65,7 +65,7 @@ import {
   radii,
 } from "@/constants/theme";
 import {
-  createFollowUp,
+  createReminder,
   createInteraction,
   createPersonUpdate,
   deleteInteraction,
@@ -113,12 +113,12 @@ import {
 } from "@/lib/contact-preferences";
 import { elapsedLabel } from "@/lib/date-labels";
 import {
-  followUpDayFromDaysAway,
-  followUpDayLabel,
-  followUpDayValue,
-  followUpDueAt,
-  followUpQuickChoices,
-} from "@/lib/follow-up-due";
+  reminderDayFromDaysAway,
+  reminderDayLabel,
+  reminderDayValue,
+  reminderDueAt,
+  reminderQuickChoices,
+} from "@/lib/reminder-due";
 import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
 import {
   type InteractionType,
@@ -139,7 +139,7 @@ type QuickCaptureContextValue = {
   revision: number;
   open: () => void;
   addPerson: () => void;
-  addFollowUp: (personId?: string) => void;
+  addReminder: (personId?: string) => void;
   logInteraction: (personId?: string) => void;
   addUpdate: (personId?: string) => void;
   editEntry: (entry: EditableEntry) => void;
@@ -422,8 +422,8 @@ export function QuickCaptureProvider({
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
-  const [followUpText, setFollowUpText] = useState("");
-  const [dueDay, setDueDay] = useState(() => followUpDayFromDaysAway(1));
+  const [reminderText, setReminderText] = useState("");
+  const [dueDay, setDueDay] = useState(() => reminderDayFromDaysAway(1));
   const [pickingDueDate, setPickingDueDate] = useState(false);
   const [updateText, setUpdateText] = useState("");
   const [title, setTitle] = useState("");
@@ -465,8 +465,8 @@ export function QuickCaptureProvider({
   }, []);
 
   const resetForm = useCallback(() => {
-    setFollowUpText("");
-    setDueDay(followUpDayFromDaysAway(1));
+    setReminderText("");
+    setDueDay(reminderDayFromDaysAway(1));
     setPickingDueDate(false);
     setUpdateText("");
     setTitle("");
@@ -579,9 +579,9 @@ export function QuickCaptureProvider({
     router.push("/people/new");
   }, [router]);
 
-  async function saveFollowUp() {
+  async function saveReminder() {
     const personId = selectedPersonIds[0];
-    if (!session || !personId || !followUpText.trim()) {
+    if (!session || !personId || !reminderText.trim()) {
       setError("Choose someone and add what you want to remember.");
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
@@ -592,10 +592,10 @@ export function QuickCaptureProvider({
     setSaving(true);
     setError(null);
     try {
-      await createFollowUp(session.user.id, {
+      await createReminder(session.user.id, {
         personId,
-        text: followUpText,
-        dueAt: followUpDueAt(dueDay),
+        text: reminderText,
+        dueAt: reminderDueAt(dueDay),
       });
       setRevision((value) => value + 1);
       await Haptics.notificationAsync(
@@ -863,7 +863,7 @@ export function QuickCaptureProvider({
       revision,
       open: () => present("menu"),
       addPerson,
-      addFollowUp: (personId) => present("reminder", personId),
+      addReminder: (personId) => present("reminder", personId),
       logInteraction: (personId) => present("interaction", personId),
       addUpdate: (personId) => present("update", personId),
       editEntry,
@@ -1313,21 +1313,21 @@ export function QuickCaptureProvider({
                   bottomSheet
                   label="What do you want to remember?"
                   multiline
-                  onChangeText={setFollowUpText}
+                  onChangeText={setReminderText}
                   placeholder="Send the class notes"
-                  value={followUpText}
+                  value={reminderText}
                 />
                 <View style={styles.optionGroup}>
                   <AppText variant="label">When?</AppText>
                   <View style={styles.optionRow}>
-                    {followUpQuickChoices.map((option) => {
-                      const optionDay = followUpDayFromDaysAway(
+                    {reminderQuickChoices.map((option) => {
+                      const optionDay = reminderDayFromDaysAway(
                         option.daysAway,
                       );
                       const selected =
                         !pickingDueDate &&
-                        followUpDayValue(dueDay) ===
-                          followUpDayValue(optionDay);
+                        reminderDayValue(dueDay) ===
+                          reminderDayValue(optionDay);
                       return (
                         <Pressable
                           accessibilityRole="radio"
@@ -1377,7 +1377,7 @@ export function QuickCaptureProvider({
                         variant="caption"
                       >
                         {pickingDueDate
-                          ? followUpDayLabel(dueDay)
+                          ? reminderDayLabel(dueDay)
                           : "Pick a date"}
                       </AppText>
                     </Pressable>
@@ -1386,7 +1386,7 @@ export function QuickCaptureProvider({
                     <DateTimePicker
                       accentColor={colors.coral}
                       display="inline"
-                      minimumDate={followUpDayFromDaysAway(0)}
+                      minimumDate={reminderDayFromDaysAway(0)}
                       mode="date"
                       onValueChange={(_event, date) => {
                         setDueDay(date);
@@ -1397,14 +1397,14 @@ export function QuickCaptureProvider({
                     />
                   ) : null}
                   <AppText style={styles.dueSummary} variant="caption">
-                    Due {followUpDayLabel(dueDay)}
+                    Due {reminderDayLabel(dueDay)}
                   </AppText>
                 </View>
                 <Button
-                  disabled={!selectedPersonIds[0] || !followUpText.trim()}
+                  disabled={!selectedPersonIds[0] || !reminderText.trim()}
                   label="Save reminder"
                   loading={saving}
-                  onPress={() => void saveFollowUp()}
+                  onPress={() => void saveReminder()}
                 />
               </>
             ) : phase === "interaction" ? (

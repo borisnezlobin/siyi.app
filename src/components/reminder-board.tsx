@@ -8,25 +8,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import {
   countsByBucket,
-  followUpBucketEmptyLabels,
-  followUpBucketLabels,
-  followUpBucketOrder,
-  followUpDueLabel,
-  groupFollowUpsByBucket,
-  type FollowUpBucket,
-} from "@/lib/follow-up-buckets";
-import type { FollowUp, Person } from "@/lib/types";
+  reminderBucketEmptyLabels,
+  reminderBucketLabels,
+  reminderBucketOrder,
+  reminderDueLabel,
+  groupRemindersByBucket,
+  type ReminderBucket,
+} from "@/lib/reminder-buckets";
+import type { Reminder, Person } from "@/lib/types";
 
-export function FollowUpBoard({
-  initialFollowUps,
+export function ReminderBoard({
+  initialReminders,
   people,
   initialPersonId = "all",
 }: {
-  initialFollowUps: FollowUp[];
+  initialReminders: Reminder[];
   people: Person[];
   initialPersonId?: string;
 }) {
-  const [followUps, setFollowUps] = useState(initialFollowUps);
+  const [reminders, setReminders] = useState(initialReminders);
   const [personId, setPersonId] = useState(initialPersonId);
   const [showCompleted, setShowCompleted] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -36,33 +36,33 @@ export function FollowUpBoard({
   const settledIds = useRef(new Set<string>());
 
   useEffect(() => {
-    setFollowUps(initialFollowUps);
-  }, [initialFollowUps]);
+    setReminders(initialReminders);
+  }, [initialReminders]);
 
   const forPerson = useMemo(
     () =>
       personId === "all"
-        ? followUps
-        : followUps.filter((followUp) => followUp.personId === personId),
-    [followUps, personId],
+        ? reminders
+        : reminders.filter((reminder) => reminder.personId === personId),
+    [reminders, personId],
   );
 
   const { groups, completed } = useMemo(() => {
     const stayingInPlace = forPerson.filter(
-      (followUp) => !followUp.completedAt || settledIds.current.has(followUp.id),
+      (reminder) => !reminder.completedAt || settledIds.current.has(reminder.id),
     );
-    const { groups: openGroups } = groupFollowUpsByBucket(
-      stayingInPlace.map((followUp) => ({ ...followUp, completedAt: null })),
+    const { groups: openGroups } = groupRemindersByBucket(
+      stayingInPlace.map((reminder) => ({ ...reminder, completedAt: null })),
     );
-    const byId = new Map(forPerson.map((followUp) => [followUp.id, followUp]));
-    const restored = {} as Record<FollowUpBucket, FollowUp[]>;
-    for (const bucket of followUpBucketOrder) {
+    const byId = new Map(forPerson.map((reminder) => [reminder.id, reminder]));
+    const restored = {} as Record<ReminderBucket, Reminder[]>;
+    for (const bucket of reminderBucketOrder) {
       restored[bucket] = openGroups[bucket].map(
-        (followUp) => byId.get(followUp.id)!,
+        (reminder) => byId.get(reminder.id)!,
       );
     }
     const doneItems = forPerson.filter(
-      (followUp) => followUp.completedAt && !settledIds.current.has(followUp.id),
+      (reminder) => reminder.completedAt && !settledIds.current.has(reminder.id),
     );
     return { groups: restored, completed: doneItems };
   }, [forPerson]);
@@ -73,18 +73,18 @@ export function FollowUpBoard({
     week: groups.week.filter((item) => !item.completedAt),
     later: groups.later.filter((item) => !item.completedAt),
   });
-  const listedTotal = followUpBucketOrder.reduce(
+  const listedTotal = reminderBucketOrder.reduce(
     (total, bucket) => total + groups[bucket].length,
     0,
   );
 
-  async function toggleComplete(followUp: FollowUp) {
-    setWorkingId(followUp.id);
-    const completedAt = followUp.completedAt ? null : new Date().toISOString();
-    settledIds.current.add(followUp.id);
+  async function toggleComplete(reminder: Reminder) {
+    setWorkingId(reminder.id);
+    const completedAt = reminder.completedAt ? null : new Date().toISOString();
+    settledIds.current.add(reminder.id);
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      const response = await fetch(`/api/follow-ups/${followUp.id}`, {
+      const response = await fetch(`/api/reminders/${reminder.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completedAt }),
@@ -97,11 +97,11 @@ export function FollowUpBoard({
       await new Promise((resolve) => window.setTimeout(resolve, 220));
     }
 
-    setFollowUps((currentFollowUps) =>
-      currentFollowUps.map((currentFollowUp) =>
-        currentFollowUp.id === followUp.id
-          ? { ...currentFollowUp, completedAt }
-          : currentFollowUp,
+    setReminders((currentReminders) =>
+      currentReminders.map((currentReminder) =>
+        currentReminder.id === reminder.id
+          ? { ...currentReminder, completedAt }
+          : currentReminder,
       ),
     );
     setWorkingId(null);
@@ -113,7 +113,7 @@ export function FollowUpBoard({
         aria-label="How your reminders are spread out"
         className="mt-7 grid grid-cols-4 border-y border-ink/[0.08]"
       >
-        {followUpBucketOrder.map((bucket) => (
+        {reminderBucketOrder.map((bucket) => (
           <a
             key={bucket}
             href={`#reminders-${bucket}`}
@@ -134,7 +134,7 @@ export function FollowUpBoard({
               {counts[bucket]}
             </span>
             <span className="text-[11px] font-semibold leading-4 text-ink-muted">
-              {followUpBucketLabels[bucket]}
+              {reminderBucketLabels[bucket]}
             </span>
           </a>
         ))}
@@ -185,7 +185,7 @@ export function FollowUpBoard({
         </div>
       ) : (
         <div className="mt-2">
-          {followUpBucketOrder.map((bucket) => (
+          {reminderBucketOrder.map((bucket) => (
             <section
               key={bucket}
               id={`reminders-${bucket}`}
@@ -202,7 +202,7 @@ export function FollowUpBoard({
                       "text-coral-strong",
                   )}
                 >
-                  {followUpBucketLabels[bucket]}
+                  {reminderBucketLabels[bucket]}
                 </h2>
                 <span className="text-[11px] font-semibold tabular-nums text-ink-muted">
                   {counts[bucket]}
@@ -210,18 +210,18 @@ export function FollowUpBoard({
               </div>
               {groups[bucket].length ? (
                 <ul className="divide-y divide-ink/[0.055]">
-                  {groups[bucket].map((followUp) => (
-                    <FollowUpRow
-                      key={followUp.id}
-                      followUp={followUp}
-                      busy={workingId === followUp.id}
-                      onToggle={() => toggleComplete(followUp)}
+                  {groups[bucket].map((reminder) => (
+                    <ReminderRow
+                      key={reminder.id}
+                      reminder={reminder}
+                      busy={workingId === reminder.id}
+                      onToggle={() => toggleComplete(reminder)}
                     />
                   ))}
                 </ul>
               ) : (
                 <p className="flex min-h-[3.5rem] items-center text-xs text-ink-muted">
-                  {followUpBucketEmptyLabels[bucket]}
+                  {reminderBucketEmptyLabels[bucket]}
                 </p>
               )}
             </section>
@@ -239,12 +239,12 @@ export function FollowUpBoard({
               </div>
               {completed.length ? (
                 <ul className="divide-y divide-ink/[0.055]">
-                  {completed.map((followUp) => (
-                    <FollowUpRow
-                      key={followUp.id}
-                      followUp={followUp}
-                      busy={workingId === followUp.id}
-                      onToggle={() => toggleComplete(followUp)}
+                  {completed.map((reminder) => (
+                    <ReminderRow
+                      key={reminder.id}
+                      reminder={reminder}
+                      busy={workingId === reminder.id}
+                      onToggle={() => toggleComplete(reminder)}
                     />
                   ))}
                 </ul>
@@ -261,17 +261,17 @@ export function FollowUpBoard({
   );
 }
 
-function FollowUpRow({
-  followUp,
+function ReminderRow({
+  reminder,
   busy,
   onToggle,
 }: {
-  followUp: FollowUp;
+  reminder: Reminder;
   busy: boolean;
   onToggle: () => void;
 }) {
-  const person = followUp.person;
-  const done = Boolean(followUp.completedAt);
+  const person = reminder.person;
+  const done = Boolean(reminder.completedAt);
 
   return (
     <li className="flex min-h-[4.25rem] items-center gap-3 py-3">
@@ -287,8 +287,8 @@ function FollowUpRow({
         )}
         aria-label={
           done
-            ? `Mark “${followUp.text}” incomplete`
-            : `Mark “${followUp.text}” complete`
+            ? `Mark “${reminder.text}” incomplete`
+            : `Mark “${reminder.text}” complete`
         }
       >
         <Check size={16} weight="bold" aria-hidden="true" />
@@ -301,7 +301,7 @@ function FollowUpRow({
             done && "text-ink-muted line-through",
           )}
         >
-          {followUp.text}
+          {reminder.text}
         </p>
         {person ? (
           <Link
@@ -322,13 +322,13 @@ function FollowUpRow({
 
       <span className="shrink-0 text-right text-[11px] leading-4 text-ink-muted">
         {done ? (
-          <>Done {format(new Date(followUp.completedAt!), "MMM d")}</>
+          <>Done {format(new Date(reminder.completedAt!), "MMM d")}</>
         ) : (
           <>
             <span className="block font-semibold text-ink">
-              {followUpDueLabel(followUp.dueAt)}
+              {reminderDueLabel(reminder.dueAt)}
             </span>
-            {format(new Date(followUp.dueAt), "MMM d")}
+            {format(new Date(reminder.dueAt), "MMM d")}
           </>
         )}
       </span>

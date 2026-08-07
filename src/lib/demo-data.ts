@@ -1,6 +1,6 @@
 import { addDays, format, subDays, subHours, subYears } from "date-fns";
 import { DEMO_USER_ID } from "@/lib/constants";
-import type { FollowUp, Interaction, Person, Tag } from "@/lib/types";
+import type { Reminder, Interaction, Person, Tag } from "@/lib/types";
 
 const tags: Tag[] = [
   {
@@ -222,7 +222,7 @@ export function createDemoInteractions(now = new Date()): Interaction[] {
   ];
 }
 
-export function createDemoFollowUps(now = new Date()): FollowUp[] {
+export function createDemoReminders(now = new Date()): Reminder[] {
   const people = createDemoPeople(now);
 
   return [

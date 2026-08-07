@@ -73,7 +73,7 @@ export default async function SharedPersonPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[560px] flex-col px-6 py-14 sm:py-20">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
+      <p className="text-xs font-semibold text-ink-muted">
         Shared contact
       </p>
       <h1 className="mt-3 font-display text-5xl leading-[0.95] tracking-[-0.04em] text-ink">
@@ -87,7 +87,7 @@ export default async function SharedPersonPage({
               key={`${row.field}-${index}`}
               className="flex flex-col gap-1 border-t border-black/[0.07] py-4 sm:flex-row sm:items-baseline sm:gap-6"
             >
-              <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-muted sm:w-32 sm:shrink-0">
+              <dt className="text-xs font-semibold text-ink-muted sm:w-32 sm:shrink-0">
                 {row.label}
               </dt>
               <dd className="whitespace-pre-line text-[15px] leading-6 text-ink">

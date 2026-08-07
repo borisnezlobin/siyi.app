@@ -10,7 +10,7 @@ const onboardingSchema = z.object({
   locale: z.string().min(2).max(40),
   overdueContactEnabled: z.boolean(),
   birthdayEnabled: z.boolean(),
-  followUpEnabled: z.boolean(),
+  reminderEnabled: z.boolean(),
   pushEnabled: z.boolean(),
 });
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
           push_enabled: settings.pushEnabled,
           overdue_contact_enabled: settings.overdueContactEnabled,
           birthday_enabled: settings.birthdayEnabled,
-          follow_up_enabled: settings.followUpEnabled,
+          follow_up_enabled: settings.reminderEnabled,
         }),
     ]);
 
