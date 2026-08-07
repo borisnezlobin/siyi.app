@@ -2,15 +2,14 @@ import * as Haptics from "expo-haptics";
 import {
   ArrowLeft,
   Archive,
-  At,
-  Bank,
   Buildings,
   Cake,
-  CalendarCheck,
+  CalendarBlank,
   ChatCircleDots,
   ClockCountdown,
-  Envelope,
+  EnvelopeSimple,
   GraduationCap,
+  Handshake,
   HouseLine,
   InstagramLogo,
   MapPin,
@@ -158,31 +157,24 @@ export default function PersonDetailScreen() {
   const reminder = nextReminderDate(person);
   const age = ageOnDate(person.birthday);
   const facts = [
-    {
-      icon: At,
-      label: "Instagram",
-      value: person.instagramUsername
-        ? `@${person.instagramUsername}`
-        : null,
-    },
     { icon: MapPin, label: "Hometown", value: person.hometown },
     {
       icon: Buildings,
-      label: "Residence",
-      value: person.dormOrResidence,
-    },
-    {
-      icon: Bank,
       label: "University",
       value: person.university,
     },
     { icon: GraduationCap, label: "Major", value: person.major },
     {
-      icon: CalendarCheck,
-      label: "Graduation",
+      icon: CalendarBlank,
+      label: "Graduation year",
       value: person.graduationYear
         ? String(person.graduationYear)
         : null,
+    },
+    {
+      icon: HouseLine,
+      label: "Residence",
+      value: person.dormOrResidence,
     },
     {
       icon: Cake,
@@ -200,7 +192,7 @@ export default function PersonDetailScreen() {
         : null,
     },
     {
-      icon: HouseLine,
+      icon: Handshake,
       label: "First met",
       value: person.firstMetLocation,
     },
@@ -278,13 +270,11 @@ export default function PersonDetailScreen() {
         </View>
 
         <View style={styles.profileHeader}>
-          <View style={styles.avatarFrame}>
-            <Avatar
-              name={person.fullName}
-              size={126}
-              uri={person.profilePhotoUrl}
-            />
-          </View>
+          <Avatar
+            name={person.fullName}
+            size={126}
+            uri={person.profilePhotoUrl}
+          />
           <View style={styles.profileCopy}>
             <AppText style={styles.name} variant="display">
               {person.preferredName || person.fullName}
@@ -328,7 +318,7 @@ export default function PersonDetailScreen() {
           ) : null}
           {person.email ? (
             <ContactAction
-              icon={Envelope}
+              icon={EnvelopeSimple}
               label="Email"
               onPress={() => void Linking.openURL(`mailto:${person.email}`)}
             />
@@ -386,26 +376,20 @@ export default function PersonDetailScreen() {
         {facts.length > 0 ? (
           <View style={styles.section}>
             <SectionHeading title="What you know" />
-            <Card style={styles.facts}>
+            <View style={styles.facts}>
               {facts.map((fact) => {
                 const IconComponent = fact.icon;
                 return (
                   <View key={fact.label} style={styles.fact}>
-                    <View style={styles.factIcon}>
-                      <IconComponent
-                        color={colors.sageStrong}
-                        size={20}
-                        weight="duotone"
-                      />
-                    </View>
-                    <View>
+                    <IconComponent color={colors.inkMuted} size={17} />
+                    <View style={styles.factCopy}>
                       <AppText variant="caption">{fact.label}</AppText>
                       <AppText variant="label">{fact.value}</AppText>
                     </View>
                   </View>
                 );
               })}
-            </Card>
+            </View>
           </View>
         ) : null}
 
@@ -464,7 +448,7 @@ export default function PersonDetailScreen() {
           ) : (
             <Card style={styles.emptyCard}>
               <AppText style={styles.muted}>
-                Nothing is waiting on your list.
+                Nothing open. Add a reminder when something comes up.
               </AppText>
               <Button
                 compact
@@ -552,7 +536,13 @@ export default function PersonDetailScreen() {
                 );
               })}
             </Card>
-          ) : null}
+          ) : (
+            <Card>
+              <AppText style={styles.muted}>
+                Nothing yet. Log who you saw, or add something you learned.
+              </AppText>
+            </Card>
+          )}
         </View>
       </Screen>
 
@@ -637,7 +627,7 @@ function ContactAction({
         pressed && styles.pressed,
       ]}
     >
-      <IconComponent color={colors.ink} size={22} weight="duotone" />
+      <IconComponent color={colors.ink} size={22} />
       <AppText variant="caption">{label}</AppText>
     </Pressable>
   );
@@ -662,7 +652,7 @@ const styles = StyleSheet.create({
   headerButton: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.small,
+    borderRadius: radii.round,
     height: 44,
     justifyContent: "center",
     width: 44,
@@ -670,11 +660,6 @@ const styles = StyleSheet.create({
   profileHeader: {
     alignItems: "center",
     gap: 14,
-  },
-  avatarFrame: {
-    backgroundColor: colors.sage,
-    borderRadius: radii.round,
-    padding: 8,
   },
   profileCopy: {
     alignItems: "center",
@@ -717,7 +702,7 @@ const styles = StyleSheet.create({
   contactAction: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.small,
+    borderRadius: radii.medium,
     gap: 4,
     justifyContent: "center",
     minHeight: 66,
@@ -762,21 +747,17 @@ const styles = StyleSheet.create({
   facts: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 18,
+    gap: 16,
   },
   fact: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     gap: 9,
     minWidth: "44%",
   },
-  factIcon: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.medium,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
+  factCopy: {
+    flexShrink: 1,
+    gap: 1,
   },
   timelineCard: {
     gap: 18,

@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { ArrowDown, ArrowUp, Check, Plus, Trash } from "phosphor-react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { FormField } from "@/components/form-field";
@@ -34,12 +34,14 @@ export function PersonNoteSections({
   available,
   initialSections,
   headingsUsedElsewhere,
+  onSectionCountChange,
 }: {
   userId: string;
   personId: string;
   available: boolean;
   initialSections: PersonNote[];
   headingsUsedElsewhere: string[];
+  onSectionCountChange?: (count: number) => void;
 }) {
   const [sections, setSections] = useState(() =>
     orderedNoteSections(initialSections),
@@ -64,6 +66,10 @@ export function PersonNoteSections({
       }),
     [headingsUsedElsewhere, sections],
   );
+
+  useEffect(() => {
+    onSectionCountChange?.(sections.length);
+  }, [onSectionCountChange, sections.length]);
 
   if (!available) return null;
 

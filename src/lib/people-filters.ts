@@ -21,6 +21,14 @@ export type FilterablePerson = {
 
 export type MissingDetail = "birthday" | "email" | "phone";
 
+/** How new "Added recently" means, on both platforms. */
+export const recentlyAddedWithinDays = 30;
+
+export function wasAddedRecently(createdAt: string, now: Date = new Date()): boolean {
+  const addedAt = new Date(createdAt).getTime();
+  return now.getTime() - addedAt <= recentlyAddedWithinDays * 86_400_000;
+}
+
 export const missingDetailLabels: Record<MissingDetail, string> = {
   birthday: "No birthday",
   email: "No email",

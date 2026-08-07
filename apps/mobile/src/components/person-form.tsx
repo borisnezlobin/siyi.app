@@ -18,6 +18,7 @@ import { Button } from "@/components/button";
 import { ContactMethodField } from "@/components/contact-method-field";
 import { DateField } from "@/components/date-field";
 import { FormField } from "@/components/form-field";
+import { FormSection } from "@/components/form-section";
 import {
   KeyboardAwareForm,
   useFieldChain,
@@ -26,6 +27,7 @@ import { PersonNoteSections } from "@/components/person-note-sections";
 import { colors, radii } from "@/constants/theme";
 import {
   contactFormValues,
+  contactMethodKinds,
   emptyContactDrafts,
   initialContactDrafts,
   type ContactMethodDraft,
@@ -36,6 +38,7 @@ import {
   parseDateInput,
   timestampFromDateInput,
   toDateInputValue,
+  todayDateInputValue,
 } from "@/lib/date-input";
 import { hasUnsavedChanges, type FormValues } from "@/lib/form-changes";
 import { createPerson, getUsedNoteHeadings, updatePerson } from "@/lib/data";
@@ -44,10 +47,13 @@ import {
   maxRelationshipLabelLength,
   relationshipTierLabels,
 } from "@/lib/relationship-labels";
-import type {
-  Person,
-  PersonNoteSections as PersonNoteSectionsData,
-  RelationshipStrength,
+import {
+  personStatuses,
+  relationshipStrengths,
+  type Person,
+  type PersonNoteSections as PersonNoteSectionsData,
+  type PersonStatus,
+  type RelationshipStrength,
 } from "@/lib/types";
 import type { PersonInput } from "@/lib/validation";
 import { useAuth } from "@/providers/auth-provider";
@@ -57,6 +63,21 @@ type PhotoAsset = {
   fileName?: string | null;
   mimeType?: string | null;
 };
+
+const statusLabels: Record<PersonStatus, string> = {
+  active: "Active",
+  muted: "Muted",
+  archived: "Archived",
+};
+
+/** Collapsed headers have to say what is inside, so nobody has to open all
+ * six looking for one field. */
+function listFilled(entries: [string, string | undefined][], empty: string) {
+  const filled = entries
+    .filter(([, value]) => Boolean(value?.trim()))
+    .map(([label]) => label);
+  return filled.length ? filled.join(" · ") : empty;
+}
 
 export function PersonForm({
   person,
@@ -117,11 +138,15 @@ export function PersonForm({
   const [reminderIntervalDays, setReminderIntervalDays] = useState(
     person?.reminderIntervalDays ? String(person.reminderIntervalDays) : "",
   );
+  const [status, setStatus] = useState<PersonStatus>(person?.status ?? "active");
   const [firstMetOn, setFirstMetOn] = useState(
-    toDateInputValue(person?.firstMetAt),
+    person ? toDateInputValue(person.firstMetAt) : todayDateInputValue(),
   );
-  const [advancedOpen, setAdvancedOpen] = useState(Boolean(person));
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [photo, setPhoto] = useState<PhotoAsset | null>(null);
+  const [namedSectionCount, setNamedSectionCount] = useState(
+    noteSections?.sections.length ?? 0,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,6 +205,7 @@ export function PersonForm({
     relationshipLabel,
     remindersEnabled: remindersEnabled ? "on" : "off",
     reminderIntervalDays,
+    status,
     firstMetOn,
     photoUri: photo?.uri ?? "",
   };
@@ -214,7 +240,10 @@ export function PersonForm({
       reminderIntervalDays: person?.reminderIntervalDays
         ? String(person.reminderIntervalDays)
         : "",
-      firstMetOn: toDateInputValue(person?.firstMetAt),
+      status: person?.status ?? "active",
+      firstMetOn: person
+        ? toDateInputValue(person.firstMetAt)
+        : todayDateInputValue(),
       photoUri: "",
     };
   }, [person]);
@@ -228,7 +257,7 @@ export function PersonForm({
     }
     Alert.alert(
       "Leave without saving?",
-      "Your edits here have not been saved yet.",
+      "You have edits here that have not been saved yet.",
       [
         { text: "Keep editing", style: "cancel" },
         {
@@ -272,6 +301,7 @@ export function PersonForm({
       reminderIntervalDays: Number.isNaN(parsedReminderDays)
         ? null
         : parsedReminderDays,
+      status,
       firstMetAt: firstMetChanged
         ? timestampFromDateInput(firstMetDay)
         : person?.firstMetAt,
@@ -337,13 +367,309 @@ export function PersonForm({
 
   const photoUri = photo?.uri || person?.profilePhotoUrl;
   const detailField = useFieldChain([
-    "birthday",
     "hometown",
-    "dormOrResidence",
     "university",
     "major",
     "graduationYear",
+    "dormOrResidence",
+    "birthday",
   ]);
+  const displayName = preferredName.trim() || fullName || "Them";
+
+  const photoBlock = (
+    <View style={styles.photoRow}>
+      <Pressable
+        accessibilityLabel={
+          photoUri ? "Change profile photo" : "Add profile photo"
+        }
+        accessibilityRole="button"
+        onPress={() => void choosePhoto()}
+        style={styles.photoButton}
+      >
+        {photoUri ? (
+          <Image
+            accessibilityLabel={`${fullName || "Person"} profile photo`}
+            alt={`${fullName || "Person"} profile photo`}
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            source={{ uri: photoUri }}
+            style={styles.photo}
+          />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <Camera color={colors.inkMuted} size={26} />
+          </View>
+        )}
+        <View style={styles.photoBadge}>
+          <ImageSquare color={colors.paper} size={14} weight="fill" />
+        </View>
+      </Pressable>
+      <View style={styles.photoCopy}>
+        <AppText variant="label">{person ? "Photo" : "Add a photo"}</AppText>
+        <AppText variant="caption">
+          {person
+            ? "Tap to pick a new one."
+            : "Optional, but useful when you just met."}
+        </AppText>
+      </View>
+    </View>
+  );
+
+  const nameFields = (
+    <>
+      <FormField
+        autoCapitalize="words"
+        autoComplete="name"
+        autoFocus={!person}
+        label="Full name"
+        onChangeText={setFullName}
+        placeholder="Jordan Lee"
+        value={fullName}
+      />
+      <FormField
+        autoCapitalize="words"
+        label="Preferred name"
+        onChangeText={setPreferredName}
+        value={preferredName}
+      />
+    </>
+  );
+
+  const contactFields = contactMethodKinds.map((kind) => (
+    <ContactMethodField
+      drafts={contactDrafts}
+      key={kind}
+      kind={kind}
+      onChange={setContactDrafts}
+    />
+  ));
+
+  const aboutFields = (
+    <>
+      <FormField
+        autoCapitalize="words"
+        label="Hometown"
+        onChangeText={setHometown}
+        value={hometown}
+        {...detailField("hometown")}
+      />
+      <CollegeField
+        onChangeText={setUniversity}
+        value={university}
+        {...detailField("university")}
+      />
+      <FormField
+        autoCapitalize="words"
+        label="Major"
+        onChangeText={setMajor}
+        value={major}
+        {...detailField("major")}
+      />
+      <FormField
+        keyboardType="number-pad"
+        label="Graduation year"
+        maxLength={4}
+        onChangeText={setGraduationYear}
+        value={graduationYear}
+        {...detailField("graduationYear")}
+      />
+      <FormField
+        autoCapitalize="words"
+        label="Dorm or residence"
+        onChangeText={setDormOrResidence}
+        value={dormOrResidence}
+        {...detailField("dormOrResidence")}
+      />
+      <DateField
+        hint="Type it any way you like, or pick it from the calendar."
+        label="Birthday"
+        onChangeText={setBirthday}
+        placeholder="April 18, 2007"
+        value={birthday}
+        {...detailField("birthday")}
+      />
+    </>
+  );
+
+  const metFields = (
+    <>
+      <DateField
+        hint="Type it any way you like, or pick it from the calendar."
+        label="When did you meet?"
+        maximumDate={new Date()}
+        onChangeText={setFirstMetOn}
+        placeholder="February 14, 2026"
+        value={firstMetOn}
+      />
+      <FormField
+        autoCapitalize="sentences"
+        label="Where did you meet?"
+        onChangeText={setFirstMetLocation}
+        placeholder="Birch Hall lounge"
+        value={firstMetLocation}
+      />
+    </>
+  );
+
+  const shortNoteField = (
+    <FormField
+      autoCapitalize="sentences"
+      label="Short note"
+      multiline
+      onChangeText={setGeneralNotes}
+      placeholder="What were you talking about? Anything to remember?"
+      value={generalNotes}
+    />
+  );
+
+  const reminderFields = (
+    <>
+      <View style={styles.strengthGroup}>
+        <AppText variant="label">What are they to you?</AppText>
+        <View style={styles.strengthRow}>
+          {relationshipStrengths.map((strength) => {
+            const selected =
+              !usingCustomLabel && relationshipStrength === strength;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={strength}
+                onPress={() => {
+                  setRelationshipStrength(strength);
+                  setRelationshipLabel("");
+                  void Haptics.selectionAsync();
+                }}
+                style={[styles.strength, selected && styles.strengthSelected]}
+              >
+                {selected ? (
+                  <Check color={colors.paper} size={14} weight="bold" />
+                ) : null}
+                <AppText
+                  style={selected ? styles.lightText : undefined}
+                  variant="caption"
+                >
+                  {relationshipTierLabels[strength]}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+      <FormField
+        hint="Anything you like, up to 40 characters."
+        label="Or call it something of your own"
+        maxLength={maxRelationshipLabelLength}
+        onChangeText={setRelationshipLabel}
+        placeholder="college roommate"
+        value={relationshipLabel}
+      />
+      <View style={styles.reminderPanel}>
+        <View style={styles.reminderHeader}>
+          <View style={styles.flex}>
+            <AppText variant="label">Remind me to keep in touch</AppText>
+            <AppText variant="caption">
+              {remindersEnabled
+                ? "We nudge you when it has been a while."
+                : `No nudges about ${displayName}. Birthdays and reminders still come through.`}
+            </AppText>
+          </View>
+          <Switch
+            accessibilityLabel="Remind me to keep in touch"
+            ios_backgroundColor={colors.mist}
+            onValueChange={(value) => {
+              setRemindersEnabled(value);
+              void Haptics.selectionAsync();
+            }}
+            thumbColor={colors.paper}
+            trackColor={{ false: colors.mist, true: colors.sageStrong }}
+            value={remindersEnabled}
+          />
+        </View>
+
+        {remindersEnabled ? (
+          <View style={styles.reminderBody}>
+            <AppText variant="label">How often should we nudge you?</AppText>
+            <AppText variant="caption">
+              {usingCustomLabel
+                ? `“${relationshipLabel.trim()}” is your name for them. The pace below is what actually sets the timing.`
+                : `Reminders follow your ${relationshipTierLabels[relationshipStrength]} pace, which you can change in settings.`}
+            </AppText>
+            {usingCustomLabel ? (
+              <View style={styles.strengthRow}>
+                {relationshipStrengths.map((strength) => (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      checked: relationshipStrength === strength,
+                    }}
+                    key={strength}
+                    onPress={() => {
+                      setRelationshipStrength(strength);
+                      void Haptics.selectionAsync();
+                    }}
+                    style={[
+                      styles.strength,
+                      relationshipStrength === strength &&
+                        styles.strengthSelected,
+                    ]}
+                  >
+                    <AppText
+                      style={
+                        relationshipStrength === strength
+                          ? styles.lightText
+                          : undefined
+                      }
+                      variant="caption"
+                    >
+                      {relationshipTierLabels[strength]} pace
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            <FormField
+              hint="Leave blank to use the default for the pace you picked."
+              keyboardType="number-pad"
+              label="Custom reminder interval"
+              onChangeText={setReminderIntervalDays}
+              placeholder="Days"
+              value={reminderIntervalDays}
+            />
+          </View>
+        ) : null}
+      </View>
+      {person ? (
+        <View style={styles.strengthGroup}>
+          <AppText variant="label">Reminder status</AppText>
+          <View style={styles.strengthRow}>
+            {personStatuses.map((value) => (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: status === value }}
+                key={value}
+                onPress={() => {
+                  setStatus(value);
+                  void Haptics.selectionAsync();
+                }}
+                style={[
+                  styles.strength,
+                  status === value && styles.strengthSelected,
+                ]}
+              >
+                <AppText
+                  style={status === value ? styles.lightText : undefined}
+                  variant="caption"
+                >
+                  {statusLabels[value]}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </>
+  );
 
   return (
     <KeyboardAwareForm
@@ -367,326 +693,193 @@ export function PersonForm({
       }
     >
       <View style={styles.topBar}>
-          <Pressable
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            onPress={goBack}
-            style={styles.back}
-          >
-            <ArrowLeft color={colors.ink} size={21} />
-          </Pressable>
-          <AppText variant="heading">
-            {person ? "Edit person" : "Add someone"}
-          </AppText>
-          <View style={styles.backSpacer} />
-        </View>
-
-        <View style={styles.hero}>
-          <Pressable
-            accessibilityLabel={
-              photoUri ? "Change profile photo" : "Add profile photo"
-            }
-            accessibilityRole="button"
-            onPress={() => void choosePhoto()}
-            style={styles.photoButton}
-          >
-            {photoUri ? (
-              <Image
-                accessibilityLabel={`${fullName || "Person"} profile photo`}
-                alt={`${fullName || "Person"} profile photo`}
-                cachePolicy="memory-disk"
-                contentFit="cover"
-                source={{ uri: photoUri }}
-                style={styles.photo}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Camera color={colors.sageStrong} size={31} weight="duotone" />
-              </View>
-            )}
-            <View style={styles.photoBadge}>
-              <ImageSquare color={colors.paper} size={15} weight="fill" />
-            </View>
-          </Pressable>
-          <View style={styles.heroCopy}>
-            <AppText variant="title">
-              {person ? "Add what you know" : "Who’d you meet?"}
-            </AppText>
-            {person ? (
-              <AppText style={styles.muted}>
-                Keep their interests, stories, and details close at hand.
-              </AppText>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <FormField
-            autoCapitalize="words"
-            autoComplete="name"
-            autoFocus={!person}
-            label="Name"
-            onChangeText={setFullName}
-            placeholder="Jordan Lee"
-            value={fullName}
-          />
-          <ContactMethodField
-            drafts={contactDrafts}
-            kind="instagram"
-            onChange={setContactDrafts}
-          />
-          <ContactMethodField
-            drafts={contactDrafts}
-            kind="phone"
-            onChange={setContactDrafts}
-          />
-          <FormField
-            autoCapitalize="sentences"
-            label="Where did you meet?"
-            onChangeText={setFirstMetLocation}
-            placeholder="Birch Hall lounge"
-            value={firstMetLocation}
-          />
-          <FormField
-            autoCapitalize="sentences"
-            label="Short note"
-            multiline
-            onChangeText={setGeneralNotes}
-            placeholder="What were you talking about?"
-            value={generalNotes}
-          />
-          {person && userId ? (
-            <PersonNoteSections
-              available={noteSections?.available ?? false}
-              headingsUsedElsewhere={headingsUsedElsewhere}
-              initialSections={noteSections?.sections ?? []}
-              personId={person.id}
-              userId={userId}
-            />
-          ) : null}
-        </View>
-
         <Pressable
+          accessibilityLabel="Go back"
           accessibilityRole="button"
-          accessibilityState={{ expanded: advancedOpen }}
-          onPress={() => {
-            setAdvancedOpen((open) => !open);
-            void Haptics.selectionAsync();
-          }}
-          style={styles.advancedToggle}
+          onPress={goBack}
+          style={styles.back}
         >
-          <View>
-            <AppText variant="heading">More details</AppText>
-            <AppText variant="caption">
-              Birthday, school context, and reminders
-            </AppText>
-          </View>
-          {advancedOpen ? (
-            <CaretUp color={colors.inkMuted} size={20} />
-          ) : (
-            <CaretDown color={colors.inkMuted} size={20} />
-          )}
+          <ArrowLeft color={colors.ink} size={21} />
         </Pressable>
+        <AppText variant="heading">
+          {person ? `Edit ${displayName}` : "Add someone"}
+        </AppText>
+        <View style={styles.backSpacer} />
+      </View>
 
-        {advancedOpen ? (
+      <AppText style={styles.muted}>
+        {person
+          ? "Update the details that make the next conversation easier."
+          : "Start with the details you remember now. You can fill in the rest later."}
+      </AppText>
+
+      {person ? (
+        <>
+          <FormSection defaultOpen summary={displayName} title="Who they are">
+            {photoBlock}
+            {nameFields}
+          </FormSection>
+
+          <FormSection
+            summary={listFilled(
+              [
+                ["Phone", contactValues.phoneNumber],
+                ["Email", contactValues.email],
+                ["Instagram", contactValues.instagramUsername],
+              ],
+              "Nothing saved yet",
+            )}
+            title="How to reach them"
+          >
+            {contactFields}
+          </FormSection>
+
+          <FormSection
+            summary={listFilled(
+              [
+                ["Hometown", hometown],
+                ["University", university],
+                ["Major", major],
+                ["Class year", graduationYear],
+                ["Residence", dormOrResidence],
+                ["Birthday", birthday],
+              ],
+              "Nothing saved yet",
+            )}
+            title="About them"
+          >
+            {aboutFields}
+          </FormSection>
+
+          <FormSection
+            summary={listFilled(
+              [
+                ["Date", firstMetOn],
+                ["Place", firstMetLocation],
+              ],
+              "Nothing saved yet",
+            )}
+            title="How you met"
+          >
+            {metFields}
+          </FormSection>
+
+          <FormSection
+            summary={
+              namedSectionCount
+                ? `${namedSectionCount} ${namedSectionCount === 1 ? "section" : "sections"}`
+                : generalNotes.trim()
+                  ? "Written down"
+                  : "Nothing saved yet"
+            }
+            title="Notes"
+          >
+            {shortNoteField}
+            {userId ? (
+              <PersonNoteSections
+                available={noteSections?.available ?? false}
+                headingsUsedElsewhere={headingsUsedElsewhere}
+                initialSections={noteSections?.sections ?? []}
+                onSectionCountChange={setNamedSectionCount}
+                personId={person.id}
+                userId={userId}
+              />
+            ) : null}
+          </FormSection>
+
+          <FormSection
+            summary={`${
+              relationshipLabel.trim() ||
+              relationshipTierLabels[relationshipStrength]
+            } · ${remindersEnabled ? "Nudges on" : "Nudges off"}`}
+            title="Reminders"
+          >
+            {reminderFields}
+          </FormSection>
+        </>
+      ) : (
+        <>
           <View style={styles.card}>
+            {photoBlock}
             <FormField
               autoCapitalize="words"
-              label="Preferred name"
-              onChangeText={setPreferredName}
-              value={preferredName}
+              autoComplete="name"
+              autoFocus
+              label="Full name"
+              onChangeText={setFullName}
+              placeholder="Jordan Lee"
+              value={fullName}
             />
-            <ContactMethodField
-              drafts={contactDrafts}
-              kind="email"
-              onChange={setContactDrafts}
+            {contactFields}
+            <FormField
+              autoCapitalize="sentences"
+              label="Where did you meet?"
+              onChangeText={setFirstMetLocation}
+              placeholder="Birch Hall lounge"
+              value={firstMetLocation}
             />
             <DateField
               hint="Type it any way you like, or pick it from the calendar."
-              label="Birthday"
-              onChangeText={setBirthday}
-              placeholder="April 18, 2007"
-              value={birthday}
-              {...detailField("birthday")}
+              label="When did you meet?"
+              maximumDate={new Date()}
+              onChangeText={setFirstMetOn}
+              placeholder="February 14, 2026"
+              value={firstMetOn}
             />
-            <FormField
-              autoCapitalize="words"
-              label="Hometown"
-              onChangeText={setHometown}
-              value={hometown}
-              {...detailField("hometown")}
-            />
-            <FormField
-              autoCapitalize="words"
-              label="Dorm or residence"
-              onChangeText={setDormOrResidence}
-              value={dormOrResidence}
-              {...detailField("dormOrResidence")}
-            />
-            <CollegeField
-              onChangeText={setUniversity}
-              value={university}
-              {...detailField("university")}
-            />
-            <FormField
-              autoCapitalize="words"
-              label="Major"
-              onChangeText={setMajor}
-              value={major}
-              {...detailField("major")}
-            />
-            <FormField
-              keyboardType="number-pad"
-              label="Graduation year"
-              maxLength={4}
-              onChangeText={setGraduationYear}
-              value={graduationYear}
-              {...detailField("graduationYear")}
-            />
-            <View style={styles.strengthGroup}>
-              <AppText variant="label">What are they to you?</AppText>
-              <View style={styles.strengthRow}>
-                {([1, 2, 3, 4] as const).map((strength) => {
-                  const selected =
-                    !usingCustomLabel && relationshipStrength === strength;
-                  return (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: selected }}
-                      key={strength}
-                      onPress={() => {
-                        setRelationshipStrength(strength);
-                        setRelationshipLabel("");
-                        void Haptics.selectionAsync();
-                      }}
-                      style={[
-                        styles.strength,
-                        selected && styles.strengthSelected,
-                      ]}
-                    >
-                      {selected ? (
-                        <Check color={colors.paper} size={14} weight="bold" />
-                      ) : null}
-                      <AppText
-                        style={selected ? styles.lightText : undefined}
-                        variant="caption"
-                      >
-                        {relationshipTierLabels[strength]}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <FormField
-              hint="Anything you like, up to 40 characters."
-              label="Or call it something of your own"
-              maxLength={maxRelationshipLabelLength}
-              onChangeText={setRelationshipLabel}
-              placeholder="college roommate"
-              value={relationshipLabel}
-            />
-            <View style={styles.reminderPanel}>
-              <View style={styles.reminderHeader}>
-                <View style={styles.flex}>
-                  <AppText variant="label">Remind me to keep in touch</AppText>
-                  <AppText variant="caption">
-                    {remindersEnabled
-                      ? "We nudge you when it has been a while."
-                      : "No nudges about them. Birthdays and reminders still come through."}
-                  </AppText>
-                </View>
-                <Switch
-                  accessibilityLabel="Remind me to keep in touch"
-                  ios_backgroundColor={colors.mist}
-                  onValueChange={(value) => {
-                    setRemindersEnabled(value);
-                    void Haptics.selectionAsync();
-                  }}
-                  thumbColor={colors.paper}
-                  trackColor={{ false: colors.mist, true: colors.sageStrong }}
-                  value={remindersEnabled}
-                />
-              </View>
+            {shortNoteField}
+          </View>
 
-              {remindersEnabled ? (
-                <View style={styles.reminderBody}>
-                  <AppText variant="caption">
-                    {usingCustomLabel
-                      ? `“${relationshipLabel.trim()}” is your name for them. The pace below is what sets the timing.`
-                      : `Reminders follow your ${relationshipTierLabels[relationshipStrength]} pace, which you can change in settings.`}
-                  </AppText>
-                  {usingCustomLabel ? (
-                    <View style={styles.strengthRow}>
-                      {([1, 2, 3, 4] as const).map((strength) => (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{
-                            checked: relationshipStrength === strength,
-                          }}
-                          key={strength}
-                          onPress={() => {
-                            setRelationshipStrength(strength);
-                            void Haptics.selectionAsync();
-                          }}
-                          style={[
-                            styles.strength,
-                            relationshipStrength === strength &&
-                              styles.strengthSelected,
-                          ]}
-                        >
-                          <AppText
-                            style={
-                              relationshipStrength === strength
-                                ? styles.lightText
-                                : undefined
-                            }
-                            variant="caption"
-                          >
-                            {relationshipTierLabels[strength]}
-                          </AppText>
-                        </Pressable>
-                      ))}
-                    </View>
-                  ) : null}
-                  <FormField
-                    hint="Leave blank to use your default for that pace."
-                    keyboardType="number-pad"
-                    label="Custom reminder interval"
-                    onChangeText={setReminderIntervalDays}
-                    placeholder="Days"
-                    value={reminderIntervalDays}
-                  />
-                </View>
-              ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: advancedOpen }}
+            onPress={() => {
+              setAdvancedOpen((open) => !open);
+              void Haptics.selectionAsync();
+            }}
+            style={styles.advancedToggle}
+          >
+            <View>
+              <AppText variant="label">More details</AppText>
+              <AppText variant="caption">
+                Preferred name, birthday, school, reminders
+              </AppText>
             </View>
-            {person ? (
-              <DateField
-                hint="Type it any way you like, or pick it from the calendar."
-                label="First met"
-                maximumDate={new Date()}
-                onChangeText={setFirstMetOn}
-                placeholder="February 14, 2026"
-                value={firstMetOn}
+            {advancedOpen ? (
+              <CaretUp color={colors.inkMuted} size={20} />
+            ) : (
+              <CaretDown color={colors.inkMuted} size={20} />
+            )}
+          </Pressable>
+
+          {advancedOpen ? (
+            <View style={styles.card}>
+              <FormField
+                autoCapitalize="words"
+                label="Preferred name"
+                onChangeText={setPreferredName}
+                value={preferredName}
               />
-            ) : null}
-          </View>
-        ) : null}
+              {aboutFields}
+              {reminderFields}
+            </View>
+          ) : null}
+        </>
+      )}
 
-        {error ? (
-          <View style={styles.error}>
-            <AppText style={styles.errorText} variant="caption">
-              {error}
-            </AppText>
-          </View>
-        ) : null}
+      {error ? (
+        <View style={styles.error}>
+          <AppText style={styles.errorText} variant="caption">
+            {error}
+          </AppText>
+        </View>
+      ) : null}
     </KeyboardAwareForm>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    gap: 18,
+    gap: 14,
   },
   footerRow: {
     flexDirection: "row",
@@ -700,7 +893,7 @@ const styles = StyleSheet.create({
   back: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.small,
+    borderRadius: radii.round,
     height: 44,
     justifyContent: "center",
     width: 44,
@@ -708,45 +901,45 @@ const styles = StyleSheet.create({
   backSpacer: {
     width: 44,
   },
-  hero: {
+  muted: {
+    color: colors.inkMuted,
+  },
+  photoRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 15,
+    gap: 14,
   },
   photoButton: {
-    height: 76,
-    width: 76,
+    height: 64,
+    width: 64,
   },
   photo: {
-    borderRadius: 38,
-    height: 76,
-    width: 76,
+    borderRadius: 32,
+    height: 64,
+    width: 64,
   },
   photoPlaceholder: {
     alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: 38,
-    height: 76,
+    backgroundColor: colors.porcelain,
+    borderRadius: 32,
+    height: 64,
     justifyContent: "center",
-    width: 76,
+    width: 64,
   },
   photoBadge: {
     alignItems: "center",
     backgroundColor: colors.ink,
     borderRadius: radii.round,
     bottom: 0,
-    height: 28,
+    height: 24,
     justifyContent: "center",
     position: "absolute",
     right: 0,
-    width: 28,
+    width: 24,
   },
-  heroCopy: {
+  photoCopy: {
     flex: 1,
-    gap: 4,
-  },
-  muted: {
-    color: colors.inkMuted,
+    gap: 3,
   },
   card: {
     backgroundColor: colors.paper,
@@ -756,8 +949,8 @@ const styles = StyleSheet.create({
   },
   advancedToggle: {
     alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.small,
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 17,
@@ -780,7 +973,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reminderBody: {
-    gap: 12,
+    gap: 10,
   },
   strengthRow: {
     flexDirection: "row",

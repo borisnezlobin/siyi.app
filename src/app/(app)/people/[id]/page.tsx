@@ -3,18 +3,18 @@ import { PersonClasses } from "@/components/person-classes";
 import {
   ArrowLeft,
   ArrowSquareOut,
-  At,
   Buildings,
   Cake,
   CalendarBlank,
+  ChatCircleDots,
   EnvelopeSimple,
   GraduationCap,
+  Handshake,
   HouseLine,
+  InstagramLogo,
   MapPin,
-  NotePencil,
   PencilSimple,
   Phone,
-  Tag as TagIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import type { Metadata } from "next";
@@ -52,6 +52,8 @@ export async function generateMetadata({
   return { title: person.fullName };
 }
 
+const sectionHeadingClassName = "text-sm font-bold";
+
 export default async function PersonDetailPage({
   params,
 }: {
@@ -65,19 +67,14 @@ export default async function PersonDetailPage({
 
   // Everything below is keyed by the uuid, not the URL, so a slug visit reads
   // the same rows a uuid visit does.
-  const [
-    interactions,
-    personUpdates,
-    allReminders,
-    noteSections,
-    allClasses,
-  ] = await Promise.all([
-    getInteractions(person.id),
-    getPersonUpdates(person.id),
-    getReminders(),
-    getPersonNoteSections(person.id),
-    getAllClasses(),
-  ]);
+  const [interactions, personUpdates, allReminders, noteSections, allClasses] =
+    await Promise.all([
+      getInteractions(person.id),
+      getPersonUpdates(person.id),
+      getReminders(),
+      getPersonNoteSections(person.id),
+      getAllClasses(),
+    ]);
 
   const classesByPerson = new Map<string, typeof allClasses>();
   for (const entry of allClasses) {
@@ -93,8 +90,8 @@ export default async function PersonDetailPage({
   const visibleNoteSections = noteSections.sections.filter((noteSection) =>
     noteSection.body.trim(),
   );
-  // The three big buttons stay on the primary of each kind. Anything else they
-  // gave you sits underneath as a quiet second row rather than crowding them.
+  // The big buttons stay on the primary of each kind. Anything else they gave
+  // you sits underneath rather than crowding them.
   const otherWaysToReachThem = contactDraftsOf(person)
     .filter((method) => !method.isPrimary)
     .map((method) => ({
@@ -115,11 +112,34 @@ export default async function PersonDetailPage({
     ? formatDistanceToNowStrict(new Date(person.lastInteractionAt), {
         addSuffix: true,
       })
-    : "No updates yet";
+    : "No interactions yet";
 
   const age = ageOnDate(person.birthday);
 
+  const contactActions = [
+    person.phoneNumber
+      ? { label: "Call", icon: Phone, href: `tel:${person.phoneNumber}` }
+      : null,
+    person.phoneNumber
+      ? { label: "Text", icon: ChatCircleDots, href: `sms:${person.phoneNumber}` }
+      : null,
+    person.email
+      ? { label: "Email", icon: EnvelopeSimple, href: `mailto:${person.email}` }
+      : null,
+    person.instagramUsername
+      ? {
+          label: "Instagram",
+          icon: InstagramLogo,
+          href: `https://instagram.com/${person.instagramUsername}`,
+          external: true,
+        }
+      : null,
+  ].filter(Boolean);
+
   const facts = [
+    person.hometown
+      ? { label: "Hometown", value: person.hometown, icon: MapPin }
+      : null,
     person.university
       ? { label: "University", value: person.university, icon: Buildings }
       : null,
@@ -127,13 +147,14 @@ export default async function PersonDetailPage({
       ? { label: "Major", value: person.major, icon: GraduationCap }
       : null,
     person.graduationYear
-      ? { label: "Class", value: String(person.graduationYear), icon: CalendarBlank }
+      ? {
+          label: "Graduation year",
+          value: String(person.graduationYear),
+          icon: CalendarBlank,
+        }
       : null,
     person.dormOrResidence
       ? { label: "Residence", value: person.dormOrResidence, icon: HouseLine }
-      : null,
-    person.hometown
-      ? { label: "Hometown", value: person.hometown, icon: MapPin }
       : null,
     person.birthday
       ? {
@@ -148,352 +169,269 @@ export default async function PersonDetailPage({
         }
       : null,
     person.firstMetLocation
-      ? { label: "First met", value: person.firstMetLocation, icon: MapPin }
+      ? { label: "First met", value: person.firstMetLocation, icon: Handshake }
       : null,
   ].filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-[980px] px-4 py-5 sm:px-7 sm:py-9 lg:px-10 lg:py-12">
+    <div className="mx-auto max-w-[760px] px-4 py-5 sm:px-7 sm:py-9 lg:px-10 lg:py-12">
       <div className="flex items-center justify-between">
         <Link
           href="/people"
-          className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          className="inline-flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
           <ArrowLeft size={17} aria-hidden="true" />
           People
         </Link>
         <div className="flex items-center gap-2">
+          <SharePersonButton person={person} />
           <Link
             href={`/people/${person.id}/edit`}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-semibold text-ink shadow-card ring-1 ring-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="grid size-11 place-items-center rounded-full bg-white text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            aria-label="Edit person"
           >
-            <PencilSimple size={16} aria-hidden="true" />
-            Edit
+            <PencilSimple size={18} aria-hidden="true" />
           </Link>
-          <SharePersonButton person={person} />
           <ArchivePersonButton personId={person.id} personName={displayName} />
         </div>
       </div>
 
-      <section className="relative mt-4 overflow-hidden rounded-[2rem] bg-ink px-5 pb-6 pt-7 text-white shadow-float sm:px-8 sm:pb-8 sm:pt-9">
-        <div
-          className="absolute right-[-3rem] top-[-4rem] size-44 rounded-full bg-sage/10"
-          aria-hidden="true"
-        />
-        <div className="relative flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left">
-          <Avatar
-            name={person.fullName}
-            imageUrl={person.profilePhotoUrl}
-            size="hero"
-            className="ring-4 ring-white/10"
-          />
-          <div className="mt-5 min-w-0 flex-1 sm:mb-2 sm:ml-7 sm:mt-0">
-            <p className="text-xs font-semibold text-sun">
-              {lastInteractionLabel}
-            </p>
-            <h1 className="mt-2 font-display text-[2.75rem] leading-[0.9] tracking-[-0.04em] sm:text-6xl">
-              {displayName}
-            </h1>
-            {person.preferredName && person.preferredName !== person.fullName ? (
-              <p className="mt-2 text-xs text-white/55">{person.fullName}</p>
-            ) : null}
-            <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
-              {person.tags?.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/78"
-                >
-                  {tag.name}
-                </span>
-              ))}
-              <span className="rounded-full bg-coral px-3 py-1.5 text-[11px] font-semibold text-white">
-                {relationshipLabelFor(person)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative mt-6 grid grid-cols-3 gap-2">
-          {person.phoneNumber ? (
-            <a
-              href={`tel:${person.phoneNumber}`}
-              className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/10 text-[10px] font-semibold transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-            >
-              <Phone size={20} weight="fill" aria-hidden="true" />
-              Call
-            </a>
-          ) : (
-            <span className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/5 text-[10px] text-white/35">
-              <Phone size={20} aria-hidden="true" />
-              No phone
-            </span>
-          )}
-          {person.email ? (
-            <a
-              href={`mailto:${person.email}`}
-              className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/10 text-[10px] font-semibold transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-            >
-              <EnvelopeSimple size={20} weight="fill" aria-hidden="true" />
-              Email
-            </a>
-          ) : (
-            <span className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/5 text-[10px] text-white/35">
-              <EnvelopeSimple size={20} aria-hidden="true" />
-              No email
-            </span>
-          )}
-          {person.instagramUsername ? (
-            <a
-              href={`https://instagram.com/${person.instagramUsername}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/10 text-[10px] font-semibold transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-            >
-              <At size={20} weight="bold" aria-hidden="true" />
-              Instagram
-            </a>
-          ) : (
-            <span className="flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/5 text-[10px] text-white/35">
-              <At size={20} aria-hidden="true" />
-              No username
-            </span>
-          )}
-        </div>
-
-        {otherWaysToReachThem.length ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {otherWaysToReachThem.map((method) => (
-              <a
-                key={`${method.kind}-${method.value}`}
-                href={method.href}
-                {...(method.kind === "instagram"
-                  ? { target: "_blank", rel: "noreferrer" }
-                  : {})}
-                className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white/78 transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-              >
-                {method.kind === "phone" ? (
-                  <Phone size={13} weight="fill" aria-hidden="true" />
-                ) : method.kind === "email" ? (
-                  <EnvelopeSimple size={13} weight="fill" aria-hidden="true" />
-                ) : (
-                  <At size={13} weight="bold" aria-hidden="true" />
-                )}
-                {method.label ? (
-                  <span className="text-white/50">{method.label}</span>
-                ) : null}
-                {method.display}
-              </a>
-            ))}
-          </div>
+      <section className="mt-6 flex flex-col items-center text-center">
+        <Avatar name={person.fullName} imageUrl={person.profilePhotoUrl} size="hero" />
+        <h1 className="mt-4 font-display text-[2.75rem] leading-[0.95] tracking-[-0.04em]">
+          {displayName}
+        </h1>
+        {person.preferredName && person.preferredName !== person.fullName ? (
+          <p className="mt-1 text-sm text-ink-muted">{person.fullName}</p>
         ) : null}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <span className="rounded-full bg-coral-soft px-3 py-1.5 text-[11px] font-semibold text-coral-strong">
+            {relationshipLabelFor(person)}
+          </span>
+          {person.tags?.map((tag) => (
+            <span
+              key={tag.id}
+              className="rounded-full bg-mist px-3 py-1.5 text-[11px] font-medium text-ink-muted"
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
       </section>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-5">
-            <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-              <div className="flex items-center gap-2">
-                <GraduationCap size={18} className="text-coral" aria-hidden="true" />
-                <h2 className="text-sm font-bold">Classes</h2>
-              </div>
-              <div className="mt-4">
-                <PersonClasses
-                  classes={classesByPerson.get(person.id) ?? []}
-                  knownClasses={allClasses}
-                  personId={person.id}
-                />
-              </div>
-            </section>
-
-          {person.generalNotes || visibleNoteSections.length ? (
-            <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-              <div className="flex items-center gap-2">
-                <NotePencil size={18} className="text-coral" aria-hidden="true" />
-                <h2 className="text-sm font-bold">What to remember</h2>
-              </div>
-              {person.generalNotes ? (
-                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-ink/78">
-                  {person.generalNotes}
-                </p>
-              ) : null}
-              {visibleNoteSections.map((noteSection) => (
-                <div key={noteSection.id} className="mt-5">
-                  <h3 className="text-xs font-bold text-ink-muted">
-                    {noteSection.heading}
-                  </h3>
-                  <p className="mt-1.5 whitespace-pre-line text-sm leading-7 text-ink/78">
-                    {noteSection.body}
-                  </p>
-                </div>
-              ))}
-            </section>
-          ) : null}
-
-          <section>
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-bold">History</h2>
-                <p className="mt-1 text-xs text-ink-muted">
-                  Time you spent together, and what you have learned
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <QuickCaptureTrigger
-                  mode="interaction"
-                  personId={person.id}
-                  label="Log interaction"
-                  compact
-                />
-                <QuickCaptureTrigger
-                  mode="update"
-                  personId={person.id}
-                  label="Add update"
-                  surface="quiet"
-                />
-              </div>
-            </div>
-            <ol className="mt-2">
-              {timeline.length ? (
-                timeline.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex gap-3 border-t border-ink/[0.08] py-4"
-                  >
-                    <span className="mt-0.5 shrink-0 text-ink-muted">
-                      <CustomTypeIcon
-                        iconKey={
-                          isCustomTypeIconKey(entry.icon) ? entry.icon : null
-                        }
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className="text-sm font-semibold">{entry.title}</p>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <time
-                            dateTime={entry.at}
-                            className="text-[11px] text-ink-muted"
-                          >
-                            {format(new Date(entry.at), "MMM d, yyyy")}
-                          </time>
-                          <UpdateSheet
-                            personName={displayName}
-                            entry={entry.editable}
-                          />
-                        </div>
-                      </div>
-                      {entry.body ? (
-                        <p className="mt-1 text-sm leading-6 text-ink/78">
-                          {entry.body}
-                        </p>
-                      ) : null}
-                    </div>
-                  </li>
-                ))
-              ) : (
-                <li className="border-t border-ink/[0.08] py-5 text-sm text-ink-muted">
-                  Nothing yet. Log who you saw, or add something you learned.
-                </li>
-              )}
-            </ol>
-          </section>
+      {contactActions.length ? (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {contactActions.map((action) => {
+            if (!action) return null;
+            const Icon = action.icon;
+            return (
+              <a
+                key={action.label}
+                href={action.href}
+                {...("external" in action && action.external
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
+                className="flex min-h-16 min-w-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-2xl bg-white px-3 text-[11px] font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              >
+                <Icon size={22} aria-hidden="true" />
+                {action.label}
+              </a>
+            );
+          })}
         </div>
+      ) : null}
 
-        <aside className="space-y-5">
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
-            <p className="text-xs font-semibold text-coral-strong">Next reminder</p>
-            <p className="mt-1 font-display text-2xl tracking-[-0.025em]">
-              {reminder ? format(reminder.dueAt, "MMMM d") : "Paused"}
-            </p>
-            <p className="mt-2 text-[11px] leading-5 text-ink-muted">
-              {reminder
-                ? `Every ${reminder.intervalDays} days. Logging an interaction resets it.`
-                : person.remindersEnabled === false
-                  ? "Reminders are off for them. Turn them back on when you edit."
-                  : "Muted and archived people do not appear in reminders."}
-            </p>
-          </section>
+      {otherWaysToReachThem.length ? (
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          {otherWaysToReachThem.map((method) => (
+            <a
+              key={`${method.kind}-${method.value}`}
+              href={method.href}
+              {...(method.kind === "instagram"
+                ? { target: "_blank", rel: "noreferrer" }
+                : {})}
+              className="flex min-h-9 items-center rounded-full bg-white px-3.5 text-xs text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              {method.label ? `${method.label} · ${method.display}` : method.display}
+            </a>
+          ))}
+        </div>
+      ) : null}
 
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
-            <h2 className="text-sm font-bold">Quick facts</h2>
-            <dl className="mt-4 space-y-4">
-              {facts.map((fact) => {
-                if (!fact) return null;
-                const Icon = fact.icon;
-                return (
-                  <div key={fact.label} className="flex gap-3">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-porcelain text-ink-muted">
-                      <Icon size={15} aria-hidden="true" />
-                    </span>
-                    <div>
-                      <dt className="text-[10px] text-ink-muted">{fact.label}</dt>
-                      <dd className="mt-0.5 text-xs font-semibold">{fact.value}</dd>
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="rounded-[1.5rem] bg-white p-4">
+          <p className="text-xs text-ink-muted">Last interaction</p>
+          <p className="mt-1 text-sm font-bold">{lastInteractionLabel}</p>
+        </div>
+        <div className="rounded-[1.5rem] bg-white p-4">
+          <p className="text-xs text-ink-muted">Next reminder</p>
+          <p className="mt-1 text-sm font-bold">
+            {reminder ? format(reminder.dueAt, "MMMM d") : "Paused"}
+          </p>
+        </div>
+      </div>
+
+      {facts.length ? (
+        <section className="mt-8">
+          <h2 className={sectionHeadingClassName}>What you know</h2>
+          <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+            {facts.map((fact) => {
+              if (!fact) return null;
+              const Icon = fact.icon;
+              return (
+                <div key={fact.label} className="flex items-start gap-2.5">
+                  <Icon
+                    size={17}
+                    className="mt-0.5 shrink-0 text-ink-muted"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <dt className="text-xs text-ink-muted">{fact.label}</dt>
+                    <dd className="mt-0.5 text-sm font-semibold">{fact.value}</dd>
+                  </div>
+                </div>
+              );
+            })}
+          </dl>
+        </section>
+      ) : null}
+
+      <section className="mt-8">
+        <h2 className={sectionHeadingClassName}>Classes</h2>
+        <div className="mt-3">
+          <PersonClasses
+            classes={classesByPerson.get(person.id) ?? []}
+            knownClasses={allClasses}
+            personId={person.id}
+          />
+        </div>
+      </section>
+
+      {person.generalNotes || visibleNoteSections.length ? (
+        <section className="mt-8">
+          <h2 className={sectionHeadingClassName}>Notes</h2>
+          {person.generalNotes ? (
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-ink/78">
+              {person.generalNotes}
+            </p>
+          ) : null}
+          {visibleNoteSections.map((noteSection) => (
+            <div key={noteSection.id} className="mt-5">
+              <h3 className="text-xs font-bold text-ink-muted">
+                {noteSection.heading}
+              </h3>
+              <p className="mt-1.5 whitespace-pre-line text-sm leading-7 text-ink/78">
+                {noteSection.body}
+              </p>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      <section className="mt-8">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className={sectionHeadingClassName}>
+            Reminders
+            <span className="ml-2 font-normal text-ink-muted">
+              {openReminders.length} open
+            </span>
+          </h2>
+          <div className="flex items-center gap-2">
+            <QuickCaptureTrigger
+              mode="reminder"
+              personId={person.id}
+              label={`Add a reminder for ${displayName}`}
+              compact
+            />
+            <Link
+              href={`/reminders?person=${person.id}`}
+              className="grid size-9 place-items-center rounded-full bg-white text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              aria-label="Open all reminders"
+            >
+              <ArrowSquareOut size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+        <div className="mt-2">
+          {openReminders.length ? (
+            <ul>
+              {openReminders.map((openReminder) => (
+                <li
+                  key={openReminder.id}
+                  className="border-t border-ink/[0.08] py-3"
+                >
+                  <p className="text-sm font-semibold leading-5">
+                    {openReminder.text}
+                  </p>
+                  <p className="mt-1 text-xs text-coral-strong">
+                    Due {format(new Date(openReminder.dueAt), "MMM d")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="border-t border-ink/[0.08] py-4 text-sm text-ink-muted">
+              Nothing open. Add a reminder when something comes up.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className={sectionHeadingClassName}>
+            History
+            <span className="ml-2 font-normal text-ink-muted">
+              {timeline.length}
+            </span>
+          </h2>
+          <div className="flex items-center gap-1">
+            <QuickCaptureTrigger
+              mode="interaction"
+              personId={person.id}
+              label="Log interaction"
+              compact
+            />
+            <QuickCaptureTrigger
+              mode="update"
+              personId={person.id}
+              label="Add update"
+              surface="quiet"
+            />
+          </div>
+        </div>
+        <ol className="mt-2">
+          {timeline.length ? (
+            timeline.map((entry) => (
+              <li key={entry.id} className="flex gap-3 border-t border-ink/[0.08] py-4">
+                <span className="mt-0.5 shrink-0 text-ink-muted">
+                  <CustomTypeIcon
+                    iconKey={isCustomTypeIconKey(entry.icon) ? entry.icon : null}
+                  />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm font-semibold">{entry.title}</p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <time dateTime={entry.at} className="text-[11px] text-ink-muted">
+                        {format(new Date(entry.at), "MMM d, yyyy")}
+                      </time>
+                      <UpdateSheet personName={displayName} entry={entry.editable} />
                     </div>
                   </div>
-                );
-              })}
-            </dl>
-          </section>
-
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold">Open reminders</h2>
-              <div className="flex items-center gap-2">
-                <QuickCaptureTrigger
-                  mode="reminder"
-                  personId={person.id}
-                  label={`Add a reminder for ${displayName}`}
-                  compact
-                />
-                <Link
-                  href={`/reminders?person=${person.id}`}
-                  className="grid size-9 place-items-center rounded-full bg-porcelain text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                  aria-label="Open all reminders"
-                >
-                  <ArrowSquareOut size={14} aria-hidden="true" />
-                </Link>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {openReminders.length ? (
-                openReminders.map((reminder) => (
-                  <div
-                    key={reminder.id}
-                    className="rounded-2xl bg-porcelain px-3 py-3"
-                  >
-                    <p className="text-xs font-semibold leading-5">{reminder.text}</p>
-                    <p className="mt-1 text-[10px] text-coral-strong">
-                      Due {format(new Date(reminder.dueAt), "MMM d")}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs leading-5 text-ink-muted">
-                  Nothing open. Add a reminder when something comes up.
-                </p>
-              )}
-            </div>
-          </section>
-
-          {person.tags?.length ? (
-            <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035]">
-              <div className="flex items-center gap-2">
-                <TagIcon size={16} className="text-coral" aria-hidden="true" />
-                <h2 className="text-sm font-bold">Tags</h2>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {person.tags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className="rounded-full bg-sage px-3 py-1.5 text-[11px] font-semibold text-sage-strong"
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </aside>
-      </div>
+                  {entry.body ? (
+                    <p className="mt-1 text-sm leading-6 text-ink/78">{entry.body}</p>
+                  ) : null}
+                </div>
+              </li>
+            ))
+          ) : (
+            <li className="border-t border-ink/[0.08] py-5 text-sm text-ink-muted">
+              Nothing yet. Log who you saw, or add something you learned.
+            </li>
+          )}
+        </ol>
+      </section>
     </div>
   );
 }

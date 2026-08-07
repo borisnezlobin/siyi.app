@@ -458,7 +458,7 @@ export function EditPersonForm({
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClassName}>
-            First met
+            When did you meet?
             <input
               name="firstMetAt"
               type="date"
@@ -468,9 +468,10 @@ export function EditPersonForm({
             />
           </label>
           <label className={labelClassName}>
-            Where you met
+            Where did you meet?
             <input
               name="firstMetLocation"
+              placeholder="Birch Hall lounge"
               defaultValue={person.firstMetLocation ?? ""}
               className={inputClassName}
             />
@@ -489,10 +490,12 @@ export function EditPersonForm({
         }
       >
         <label className={labelClassName}>
-          What to remember
+          Short note
           <textarea
             name="generalNotes"
             rows={5}
+            maxLength={1000}
+            placeholder="What were you talking about? Anything to remember?"
             defaultValue={person.generalNotes ?? ""}
             className="mt-1.5 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
           />

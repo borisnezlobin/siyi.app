@@ -234,7 +234,7 @@ test("completed reminders stay one tap away", async ({ page }) => {
 test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await page.goto("/people/new");
 
-  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Full name", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Instagram", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Phone", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Where did you meet?", { exact: true })).toBeVisible();
@@ -242,7 +242,7 @@ test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await expect(page.getByLabel("Major", { exact: true })).not.toBeVisible();
   await expect(page.getByLabel("University", { exact: true })).not.toBeVisible();
 
-  await page.getByLabel("Name", { exact: true }).fill("Jordan Lee");
+  await page.getByLabel("Full name", { exact: true }).fill("Jordan Lee");
   await page.getByLabel("Instagram", { exact: true }).fill("instagram.com/Jordan.Lee/");
   await page.getByLabel("Where did you meet?", { exact: true }).fill("Library lobby");
   await page.getByRole("button", { name: "Save person" }).click();

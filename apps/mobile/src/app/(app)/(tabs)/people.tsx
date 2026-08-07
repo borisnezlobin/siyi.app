@@ -1,11 +1,11 @@
 import {
   ArrowsDownUp,
   Cake,
+  Funnel,
   GraduationCap,
   MagnifyingGlass,
   MapPin,
-  SlidersHorizontal,
-  UsersThree,
+  X,
   XCircle,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
@@ -15,7 +15,6 @@ import { AppText } from "@/components/app-text";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
-import { EmptyState } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
 import { personMatchesClassQuery, type PersonClass } from "@/lib/classes";
 import { getClasses } from "@/lib/classes-data";
@@ -27,13 +26,15 @@ import {
   matchesPeopleQuery,
   missingDetailLabels,
   sectionPeopleAlphabetically,
+  wasAddedRecently,
 } from "@/lib/people-filters";
 import { relationshipTierLabels } from "@/lib/relationship-labels";
 import { overdueDays } from "@/lib/reminders";
-import type {
-  Person,
-  RelationshipStrength,
-  ReminderDefaults,
+import {
+  relationshipStrengths,
+  type Person,
+  type RelationshipStrength,
+  type ReminderDefaults,
 } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
@@ -103,7 +104,6 @@ export default function PeopleScreen() {
       else classesByPerson.set(entry.personId, [entry]);
     }
     const now = new Date();
-    const thirtyDaysAgo = now.getTime() - 30 * 86_400_000;
     const filtered = people.filter((person) => {
       if (person.status === "archived") return false;
       // The whole table is already on the device, so acronym search is free here.
@@ -122,10 +122,7 @@ export default function PeopleScreen() {
       ) {
         return false;
       }
-      if (
-        overdueFilter === "recent" &&
-        new Date(person.createdAt).getTime() < thirtyDaysAgo
-      ) {
+      if (overdueFilter === "recent" && !wasAddedRecently(person.createdAt, now)) {
         return false;
       }
       return true;
@@ -171,6 +168,19 @@ export default function PeopleScreen() {
     );
   }
 
+  const activeFilterCount =
+    Number(overdueFilter !== "all") +
+    Number(strength !== null) +
+    Number(tagId !== null) +
+    missing.length;
+
+  function clearFilters() {
+    setOverdueFilter("all");
+    setStrength(null);
+    setTagId(null);
+    setMissing([]);
+  }
+
   const tags = Array.from(
     new Map(
       screenData.data!.people
@@ -183,7 +193,7 @@ export default function PeopleScreen() {
     <Screen
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="Search by name, school, class, hometown, major, dorm, or tag."
+      subtitle="Names, context, and the small details that make reconnecting easy."
       title="People"
     >
       <View style={styles.shortcuts}>
@@ -213,7 +223,7 @@ export default function PeopleScreen() {
             accessibilityLabel="Search people"
             autoCapitalize="none"
             onChangeText={setQuery}
-            placeholder="Search…"
+            placeholder="Name, school, class, hometown, major, dorm, or tag"
             placeholderTextColor={colors.inkMuted}
             returnKeyType="search"
             selectionColor={colors.coral}
@@ -238,31 +248,32 @@ export default function PeopleScreen() {
           onPress={() => setShowFilters((visible) => !visible)}
           style={[
             styles.filterButton,
-            showFilters && styles.filterButtonSelected,
+            (showFilters || activeFilterCount > 0) && styles.filterButtonSelected,
           ]}
         >
-          <SlidersHorizontal
-            color={showFilters ? colors.paper : colors.ink}
+          <Funnel
+            color={showFilters || activeFilterCount ? colors.paper : colors.ink}
             size={21}
-            weight="bold"
+            weight={activeFilterCount ? "fill" : "regular"}
           />
+          {activeFilterCount ? (
+            <View style={styles.filterBadge}>
+              <AppText style={styles.filterBadgeText} variant="caption">
+                {activeFilterCount}
+              </AppText>
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
       {showFilters ? (
         <View style={styles.filters}>
           <FilterGroup label="Reminder pace">
-            {([1, 2, 3, 4] as const).map((value) => (
+            {relationshipStrengths.map((value) => (
               <FilterChip
                 key={value}
                 label={relationshipTierLabels[value]}
-                onPress={() =>
-                  setStrength(
-                    strength === value
-                      ? null
-                      : (value as RelationshipStrength),
-                  )
-                }
+                onPress={() => setStrength(strength === value ? null : value)}
                 selected={strength === value}
               />
             ))}
@@ -326,6 +337,18 @@ export default function PeopleScreen() {
               />
             ))}
           </FilterGroup>
+          {activeFilterCount ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={clearFilters}
+              style={styles.clear}
+            >
+              <X color={colors.coralStrong} size={13} weight="bold" />
+              <AppText style={styles.clearLabel} variant="caption">
+                Clear
+              </AppText>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
@@ -370,19 +393,18 @@ export default function PeopleScreen() {
           </View>
         )
       ) : (
-        <EmptyState
-          body={
-            screenData.data!.people.length === 0
-              ? "Use the coral plus button when you meet someone."
-              : "Try removing a filter or searching for something broader."
-          }
-          icon={UsersThree}
-          title={
-            screenData.data!.people.length === 0
+        <View style={styles.empty}>
+          <AppText variant="title">
+            {screenData.data!.people.length === 0
               ? "Add your first person"
-              : "No matches yet"
-          }
-        />
+              : "No matches yet"}
+          </AppText>
+          <AppText style={styles.emptyBody}>
+            {screenData.data!.people.length === 0
+              ? "Use the coral plus button when you meet someone."
+              : "Try removing a filter or searching for something broader."}
+          </AppText>
+        </View>
       )}
     </Screen>
   );
@@ -466,7 +488,7 @@ const styles = StyleSheet.create({
   filterButton: {
     alignItems: "center",
     backgroundColor: colors.paper,
-    borderRadius: radii.small,
+    borderRadius: radii.round,
     height: 52,
     justifyContent: "center",
     width: 52,
@@ -474,11 +496,45 @@ const styles = StyleSheet.create({
   filterButtonSelected: {
     backgroundColor: colors.ink,
   },
+  filterBadge: {
+    alignItems: "center",
+    backgroundColor: colors.coral,
+    borderRadius: radii.round,
+    height: 20,
+    justifyContent: "center",
+    position: "absolute",
+    right: -2,
+    top: -2,
+    width: 20,
+  },
+  filterBadgeText: {
+    color: colors.paper,
+  },
   filters: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.large,
     gap: 17,
-    paddingVertical: 18,
+    paddingTop: 4,
+  },
+  clear: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 5,
+    minHeight: 32,
+    paddingHorizontal: 2,
+  },
+  clearLabel: {
+    color: colors.coralStrong,
+  },
+  empty: {
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  emptyBody: {
+    color: colors.inkMuted,
+    maxWidth: 320,
+    textAlign: "center",
   },
   filterGroup: {
     gap: 8,
@@ -487,11 +543,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 6,
-    paddingHorizontal: 18,
+    paddingHorizontal: 2,
   },
   chipRow: {
     gap: 8,
-    paddingHorizontal: 18,
+    paddingHorizontal: 2,
   },
   chip: {
     backgroundColor: colors.mist,
@@ -511,7 +567,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   list: {
-    gap: 9,
+    gap: 0,
   },
   shortcuts: {
     flexDirection: "row",
