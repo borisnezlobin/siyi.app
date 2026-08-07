@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
-import { normalizeCourseCode } from "@/lib/classes";
+import { addClassForUser, removeClassForUser } from "@/lib/classes-server";
 import { createClient } from "@/lib/supabase/server";
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -42,25 +42,20 @@ export async function POST(request: NextRequest) {
 
     if (!person) return apiError("That person could not be found.", 404);
 
-    const { data, error } = await supabase
-      .from("person_classes")
-      .insert({
-        user_id: user.id,
-        person_id: input.personId,
-        course_code: normalizeCourseCode(input.courseCode),
-        course_title: blankToNull(input.courseTitle),
-        professor: blankToNull(input.professor),
-        term: blankToNull(input.term),
-        days: blankToNull(input.days),
-        starts_at: input.startsAt || null,
-        ends_at: input.endsAt || null,
-        location: blankToNull(input.location),
-      })
-      .select("*")
-      .single();
+    const created = await addClassForUser(user.id, {
+      personId: input.personId,
+      courseCode: input.courseCode,
+      courseTitle: blankToNull(input.courseTitle),
+      professor: blankToNull(input.professor),
+      term: blankToNull(input.term),
+      days: blankToNull(input.days),
+      startsAt: input.startsAt || null,
+      endsAt: input.endsAt || null,
+      location: blankToNull(input.location),
+    });
 
-    if (error) return apiError(error.message, 400);
-    return NextResponse.json({ class: data }, { status: 201 });
+    if ("error" in created) return apiError(created.error, 400);
+    return NextResponse.json({ class: created }, { status: 201 });
   } catch (error) {
     return apiError(errorMessage(error), 401);
   }
@@ -74,14 +69,8 @@ export async function DELETE(request: NextRequest) {
       .safeParse(await request.json());
     if (!parsed.success) return apiError("That class is not valid.");
 
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("person_classes")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("id", parsed.data.id);
-
-    if (error) return apiError(error.message, 400);
+    const failure = await removeClassForUser(user.id, parsed.data.id);
+    if (failure) return apiError(failure, 400);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiError(errorMessage(error), 401);
