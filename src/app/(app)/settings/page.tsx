@@ -1,6 +1,7 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
 import { DefaultUniversityControl } from "@/components/default-university-control";
 import { OwnCardControls } from "@/components/own-card-controls";
+import { ProfileControls } from "@/components/profile-controls";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { SettingsControls } from "@/components/settings-controls";
@@ -28,6 +29,10 @@ export default async function SettingsPage() {
   const authMethods = providers?.length
     ? providers.map((provider) => (provider === "email" ? "Email" : "Google"))
     : ["Preview mode"];
+  let initialHandle = "";
+  let initialHandleTag = "";
+  let initialProfilePublic = false;
+  let initialPublicFields: Record<string, boolean> = {};
   let initialOwnCard: OwnCard = {};
   let initialOwnCardEnabled = false;
   let initialDefaultUniversity = "";
@@ -42,7 +47,7 @@ export default async function SettingsPage() {
     const [{ data: profile }, { data: settings }] = await Promise.all([
       supabase
         .from("user_profiles")
-        .select("timezone")
+        .select("timezone,handle,handle_tag,profile_public,public_fields")
         .eq("auth_user_id", user.id)
         .maybeSingle(),
       supabase
@@ -54,6 +59,10 @@ export default async function SettingsPage() {
         .maybeSingle(),
     ]);
     initialTimezone = profile?.timezone ?? "UTC";
+    initialHandle = profile?.handle ?? "";
+    initialHandleTag = profile?.handle_tag ?? "";
+    initialProfilePublic = profile?.profile_public ?? false;
+    initialPublicFields = (profile?.public_fields ?? {}) as Record<string, boolean>;
 
     // Read consent on its own so a deployment that lands before migration
     // 0007 cannot null out the whole profile row and reset the timezone.
@@ -101,6 +110,22 @@ export default async function SettingsPage() {
         </p>
         <div className="mt-4">
           <DefaultUniversityControl initialValue={initialDefaultUniversity} />
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+        <h2 className="text-base font-bold">Your page</h2>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          An address you can say out loud, and a code people can scan.
+        </p>
+        <div className="mt-5">
+          <ProfileControls
+            card={initialOwnCard}
+            initialHandle={initialHandle}
+            initialPublic={initialProfilePublic}
+            initialPublicFields={initialPublicFields}
+            initialTag={initialHandleTag}
+          />
         </div>
       </section>
 
