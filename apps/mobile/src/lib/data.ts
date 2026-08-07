@@ -179,6 +179,7 @@ export type AccountSettings = {
   ownCard: OwnCard;
   ownCardEnabled: boolean;
   defaultUniversity: string;
+  marketingOptIn: boolean;
 };
 
 const avatarCacheDirectory = new Directory(
@@ -1620,7 +1621,7 @@ export async function getAccountSettings(userId: string) {
   const [profileResult, settingsResult, preferencesResult] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("timezone")
+      .select("timezone,marketing_opt_in")
       .eq("auth_user_id", userId)
       .single(),
     supabase.from("user_settings").select("*").eq("user_id", userId).single(),
@@ -1644,6 +1645,7 @@ export async function getAccountSettings(userId: string) {
     ownCard: normalizeOwnCard(settingsResult.data.own_card),
     ownCardEnabled: settingsResult.data.own_card_enabled ?? false,
     defaultUniversity: settingsResult.data.default_university ?? "",
+    marketingOptIn: profileResult.data.marketing_opt_in ?? false,
     reminderDefaults: {
       1: settingsResult.data.strength_1_days,
       2: settingsResult.data.strength_2_days,
@@ -1702,6 +1704,22 @@ export async function saveOwnCard(
         }
       : snapshot.accountSettings,
   }));
+}
+
+/**
+ * Consent, so it is written straight through rather than queued: agreeing to
+ * marketing email while offline and having it apply silently later is not
+ * consent anybody gave.
+ */
+export async function saveMarketingOptIn(userId: string, optIn: boolean) {
+  const { error } = await supabase
+    .from("user_profiles")
+    .update({
+      marketing_opt_in: optIn,
+      marketing_opt_in_at: optIn ? new Date().toISOString() : null,
+    })
+    .eq("auth_user_id", userId);
+  if (error) throw error;
 }
 
 export async function saveAccountSettings(

@@ -367,7 +367,7 @@ export function SettingsControls({
   return (
     <div className="mt-7 divide-y divide-ink/[0.08]">
       <section className="py-7 first:pt-0">
-        <h2 className="text-sm font-bold">How often to check in</h2>
+        <h2 className="text-sm font-bold">Check-in defaults</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           After this many days without an update, a person shows up as due. Any
           person can override this on their own profile.
@@ -397,10 +397,8 @@ export function SettingsControls({
             </label>
           ))}
         </div>
-      </section>
-
-      <section className="py-7 first:pt-0">
-        <h2 className="text-sm font-bold">Local time</h2>
+        <div className="mt-7 border-t border-ink/[0.08] pt-6">
+        <h3 className="text-sm font-bold">Your local time</h3>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           Used to evaluate reminder dates and delivery times.
         </p>
@@ -428,17 +426,15 @@ export function SettingsControls({
           </span>
           <CaretRight size={15} className="text-ink-muted" aria-hidden="true" />
         </Link>
+        </div>
       </section>
-
-
-
       <section className="py-7 first:pt-0">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
             <LockKey size={19} weight="fill" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-sm font-bold">Your account</h2>
+            <h2 className="text-sm font-bold">Account and access</h2>
             <p className="mt-0.5 text-xs text-ink-muted">
               {accountEmail || "Preview mode"}
               {authMethods.length ? ` · signs in with ${authMethods.join(" and ").toLowerCase()}` : ""}
@@ -584,7 +580,7 @@ export function SettingsControls({
             <CloudArrowDown size={20} weight="fill" aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-sm font-bold">Take your data with you</h2>
+            <h2 className="text-sm font-bold">Your data</h2>
             <p className="mt-0.5 text-xs text-ink-muted">Download a complete copy anytime.</p>
           </div>
         </div>
@@ -614,11 +610,10 @@ export function SettingsControls({
             Updates CSV
           </button>
         </div>
-      </section>
-      <section className="py-7 first:pt-0">
+        <div className="mt-7 border-t border-ink/[0.08] pt-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-bold">Import from JSON</h2>
+            <h3 className="text-sm font-bold">Import from JSON</h3>
             <p className="mt-1 text-xs leading-5 text-ink-muted">
               Files are validated before anything is added.
             </p>
@@ -674,6 +669,7 @@ export function SettingsControls({
             {importError}
           </p>
         ) : null}
+        </div>
       </section>
       <section className="py-7 text-coral-strong">
         <h2 className="text-sm font-bold">Delete account</h2>

@@ -28,6 +28,7 @@ import {
   getAccountSettings,
   importAccountData,
   saveAccountSettings,
+  saveMarketingOptIn,
   shareAccountExport,
   type ExportFormat,
 } from "@/lib/data";
@@ -59,6 +60,7 @@ export default function SettingsScreen() {
   const [intervalDraft, setIntervalDraft] = useState<ReminderDefaults | null>(
     null,
   );
+  const [marketingDraft, setMarketingDraft] = useState<boolean | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -83,6 +85,7 @@ export default function SettingsScreen() {
   const settings = accountData.data!;
   const timezone = timezoneDraft ?? settings.timezone;
   const intervals = intervalDraft ?? settings.reminderDefaults;
+  const marketingOptIn = marketingDraft ?? settings.marketingOptIn;
   const providers = Array.from(
     new Set(
       (
@@ -91,6 +94,24 @@ export default function SettingsScreen() {
       ).filter(Boolean),
     ),
   );
+
+  async function saveMarketing(optIn: boolean) {
+    setBusyAction("marketing");
+    setError(null);
+    setMessage(null);
+    const previous = marketingOptIn;
+    setMarketingDraft(optIn);
+    try {
+      await saveMarketingOptIn(auth.session!.user.id, optIn);
+      setMessage(optIn ? "You are on the list." : "You are off the list.");
+    } catch (caught) {
+      setMarketingDraft(previous);
+      setError(
+        caught instanceof Error ? caught.message : "That could not be saved.",
+      );
+    }
+    setBusyAction(null);
+  }
 
   async function savePreferences() {
     setBusyAction("save");
@@ -326,6 +347,31 @@ export default function SettingsScreen() {
             onPress={() => void savePreferences()}
           />
         </View>
+      </Section>
+
+      <Section title="Emails from us">
+        <AppText style={styles.sectionNote} variant="caption">
+          Occasional notes about what is new. Nothing else.
+        </AppText>
+        <Row style={styles.columnRow}>
+          <View style={styles.grow}>
+            <AppText variant="label">Send me product updates</AppText>
+            <AppText variant="caption">
+              A few times a year at most, and you can turn this off here or from
+              any email. Your reminders are separate and keep working either
+              way.
+            </AppText>
+          </View>
+          <Switch
+            accessibilityLabel="Send me product updates"
+            disabled={busyAction === "marketing"}
+            ios_backgroundColor={colors.mist}
+            onValueChange={(value) => void saveMarketing(value)}
+            thumbColor={colors.paper}
+            trackColor={{ false: colors.mist, true: colors.sageStrong }}
+            value={marketingOptIn}
+          />
+        </Row>
       </Section>
 
       <Section title="Account and access">
