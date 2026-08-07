@@ -84,7 +84,7 @@ describe("share tokens", () => {
     const firstCharacters = new Set(
       Array.from(
         { length: 500 },
-        () => createShareToken(secureRandomBytes).split("-")[1][0],
+        () => createShareToken(secureRandomBytes)[0],
       ),
     );
     expect(firstCharacters.size).toBeGreaterThan(20);
