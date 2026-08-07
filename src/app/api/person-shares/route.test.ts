@@ -121,7 +121,7 @@ describe("creating a share link once the table exists", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(inserted[0].token).toMatch(/^zhang-[A-Za-z0-9_-]{12}$/);
+    expect(inserted[0].token).toMatch(/^[A-Za-z0-9_-]{32}$/);
     expect(inserted[0].fields).toEqual({
       preferredName: false,
       phoneNumber: false,
