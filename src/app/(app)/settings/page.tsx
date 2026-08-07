@@ -88,7 +88,7 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-[720px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
         title="Settings"
-        description="How often to check in, your account, and a full copy of your data."
+        description="Your card, notifications, how often to check in, and a full copy of your data."
       />
       {/* Ordered to match the phone exactly: your card, then notifications,
           then the check-in defaults, account, data and deletion. */}

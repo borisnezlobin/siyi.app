@@ -20,6 +20,7 @@ import { CollegeField } from "@/components/college-field";
 import { FormField } from "@/components/form-field";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
+import { SectionHeading } from "@/components/surface";
 import { TimezonePicker } from "@/components/timezone-picker";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
@@ -652,9 +653,7 @@ function Section({
 }) {
   return (
     <View style={styles.section}>
-      <AppText style={styles.sectionTitle} variant="label">
-        {title}
-      </AppText>
+      <SectionHeading title={title} />
       {children}
     </View>
   );
@@ -741,12 +740,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 0,
-  },
-  sectionTitle: {
-    color: colors.inkMuted,
-    fontSize: 11,
-    letterSpacing: 1.1,
-    paddingBottom: 6,
   },
   sectionNote: {
     paddingBottom: 10,
