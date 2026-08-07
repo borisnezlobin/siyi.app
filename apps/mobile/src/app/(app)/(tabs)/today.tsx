@@ -1,11 +1,10 @@
 import * as Haptics from "expo-haptics";
 import {
-  CalendarBlank,
   Cake,
   CaretRight,
+  ChatCircleDots,
   Check,
   CheckCircle,
-  ChatCircleDots,
   ClockCountdown,
   HandWaving,
   UsersThree,
@@ -17,7 +16,6 @@ import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
-import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
 import {
   Card,
@@ -28,26 +26,34 @@ import {
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
+import { lastSeenLabel } from "@/lib/daily-check-in";
 import {
   getAccountSettings,
   getReminders,
   getPeople,
   setReminderComplete,
 } from "@/lib/data";
-import { relativeDayLabel } from "@/lib/date-labels";
 import { refreshHomeWidgets } from "@/lib/home-widgets";
+import { daysBetween, daysUntilBirthday, overdueDays } from "@/lib/reminders";
 import {
-  daysUntilBirthday,
-  nextBirthday,
-  overdueDays,
-  reminderDueDate,
-} from "@/lib/reminders";
-import type { Reminder, Person } from "@/lib/types";
+  agendaCounts,
+  agendaLimit,
+  buildTodayAgenda,
+  pickCheckInSuggestions,
+  recentlyMetPeople,
+  type AgendaItem,
+} from "@/lib/today-agenda";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
 type TodayData = Awaited<ReturnType<typeof loadToday>>;
+
+const agendaIcons = {
+  reminder: ClockCountdown,
+  "check-in": UsersThree,
+  birthday: Cake,
+};
 
 async function loadToday(userId: string) {
   const [people, reminders, settings] = await Promise.all([
@@ -58,116 +64,60 @@ async function loadToday(userId: string) {
   return { people, reminders, settings };
 }
 
-function stableDailyScore(personId: string) {
-  const day = new Date().toISOString().slice(0, 10);
-  const text = `${day}:${personId}`;
-  let score = 2166136261;
-  for (let index = 0; index < text.length; index += 1) {
-    score ^= text.charCodeAt(index);
-    score = Math.imul(score, 16777619);
-  }
-  return score >>> 0;
-}
-
-function ReminderItem({
-  reminder,
+function AgendaRow({
+  item,
   onComplete,
   onOpen,
+  showDivider,
 }: {
-  reminder: Reminder;
+  item: AgendaItem;
   onComplete: () => void;
   onOpen: () => void;
+  showDivider: boolean;
 }) {
-  const overdue = new Date(reminder.dueAt) < new Date();
+  const Icon = agendaIcons[item.kind];
+  const overdue = item.status === "overdue";
+
   return (
-    <PressableCard onPress={onOpen} style={styles.actionRow}>
-      <View
-        style={[
-          styles.actionIcon,
-          overdue ? styles.urgentIcon : styles.upcomingIcon,
-        ]}
-      >
-        <ClockCountdown
-          color={overdue ? colors.coralStrong : colors.sageStrong}
-          size={22}
-          weight="duotone"
-        />
-      </View>
-      <View style={styles.actionCopy}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={[styles.agendaRow, showDivider && styles.divider]}
+    >
+      <Icon color={overdue ? colors.coralStrong : colors.inkMuted} size={20} />
+      <View style={styles.rowCopy}>
         <AppText numberOfLines={2} variant="label">
-          {reminder.text}
+          {item.title}
         </AppText>
         <AppText
-          style={overdue ? styles.urgentText : undefined}
+          numberOfLines={1}
+          style={overdue ? styles.overdueText : undefined}
           variant="caption"
         >
-          {reminder.person?.preferredName ||
-            reminder.person?.fullName ||
-            "Someone"}{" "}
-          · {relativeDayLabel(reminder.dueAt)}
+          {item.detail}
         </AppText>
       </View>
-      <Pressable
-        accessibilityLabel={`Complete ${reminder.text}`}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: false }}
-        hitSlop={10}
-        onPress={(event) => {
-          event.stopPropagation();
-          onComplete();
-        }}
-        style={styles.check}
-      >
-        <Check color={colors.sageStrong} size={20} weight="bold" />
-      </Pressable>
-    </PressableCard>
-  );
-}
-
-function BirthdayItem({
-  person,
-  onOpen,
-}: {
-  person: Person;
-  onOpen: () => void;
-}) {
-  const days = daysUntilBirthday(person.birthday);
-  const birthday = nextBirthday(person.birthday);
-  const turning = ageAtNextBirthday(person.birthday);
-  return (
-    <PressableCard onPress={onOpen} style={styles.actionRow}>
-      <View style={[styles.actionIcon, styles.birthdayIcon]}>
-        <Cake color={colors.ink} size={22} weight="duotone" />
-      </View>
-      <Avatar
-        name={person.fullName}
-        size={42}
-        uri={person.profilePhotoUrl}
-      />
-      <View style={styles.actionCopy}>
-        <AppText variant="label">
-          {person.preferredName || person.fullName}
-        </AppText>
-        <AppText variant="caption">
-          {days === 0
-            ? "Birthday today"
-            : `${days} day${days === 1 ? "" : "s"} away`}
-          {birthday
-            ? ` · ${birthday.toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })}`
-            : ""}
-          {turning === null ? "" : ` · turns ${turning}`}
-        </AppText>
-      </View>
-    </PressableCard>
+      {item.reminderId ? (
+        <Pressable
+          accessibilityLabel={`Complete ${item.title}`}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: false }}
+          hitSlop={10}
+          onPress={(event) => {
+            event.stopPropagation();
+            onComplete();
+          }}
+        >
+          <Check color={colors.inkMuted} size={18} weight="bold" />
+        </Pressable>
+      ) : null}
+    </Pressable>
   );
 }
 
 export default function TodayScreen() {
   const router = useRouter();
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
   const quickCapture = useQuickCapture();
   const screenData = useRefreshableData<TodayData>(() =>
     loadToday(session!.user.id),
@@ -202,103 +152,58 @@ export default function TodayScreen() {
 
   const { people, reminders, settings } = screenData.data!;
   const now = new Date();
-  const upcomingCutoff = new Date(now);
-  upcomingCutoff.setDate(upcomingCutoff.getDate() + 14);
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-  const openReminders = reminders.filter((item) => !item.completedAt);
-  const overdueReminders = openReminders.filter(
-    (item) => new Date(item.dueAt).getTime() < now.getTime(),
+  const agenda = buildTodayAgenda({
+    reminders: reminders
+      .filter((reminder) => !reminder.completedAt)
+      .map((reminder) => ({
+        id: reminder.id,
+        personId: reminder.personId,
+        text: reminder.text,
+        personName:
+          reminder.person?.preferredName ||
+          reminder.person?.fullName ||
+          "Someone",
+        daysAway: daysBetween(now, new Date(reminder.dueAt)),
+      })),
+    overdueCheckIns: people.flatMap((person) => {
+      const daysOverdue = overdueDays(person, now, settings.reminderDefaults);
+      if (daysOverdue <= 0) return [];
+      return [
+        {
+          personId: person.id,
+          name: person.preferredName || person.fullName,
+          daysOverdue,
+        },
+      ];
+    }),
+    birthdays: people.flatMap((person) => {
+      if (person.status !== "active") return [];
+      const daysAway = daysUntilBirthday(person.birthday, now);
+      if (daysAway === null) return [];
+      return [
+        {
+          personId: person.id,
+          name: person.preferredName || person.fullName,
+          daysAway,
+          turningAge: ageAtNextBirthday(person.birthday, now),
+        },
+      ];
+    }),
+  });
+  const counts = agendaCounts(agenda);
+  const visibleAgenda = agenda.slice(0, agendaLimit);
+  const recentlyMet = recentlyMetPeople(people, now);
+  const checkInPeople = pickCheckInSuggestions(
+    people,
+    [
+      ...agenda
+        .filter((item) => item.kind === "check-in")
+        .map((item) => item.personId),
+      ...recentlyMet.map((person) => person.id),
+    ],
+    now,
   );
-  const upcomingReminders = openReminders
-    .filter((item) => {
-      const dueAt = new Date(item.dueAt).getTime();
-      return (
-        dueAt >= now.getTime() && dueAt <= upcomingCutoff.getTime()
-      );
-    })
-    .slice(0, 5);
-  const birthdays = people
-    .filter((person) => {
-      const days = daysUntilBirthday(person.birthday, now);
-      return days !== null && days <= 14 && person.status === "active";
-    })
-    .sort(
-      (left, right) =>
-        (daysUntilBirthday(left.birthday, now) || 0) -
-        (daysUntilBirthday(right.birthday, now) || 0),
-    );
-  const overduePeople = people
-    .filter(
-      (person) =>
-        overdueDays(person, now, settings.reminderDefaults) > 0,
-    )
-    .sort(
-      (left, right) =>
-        overdueDays(right, now, settings.reminderDefaults) -
-        overdueDays(left, now, settings.reminderDefaults),
-    );
   const activePeople = people.filter((person) => person.status === "active");
-  const checkInPeople = [...activePeople]
-    .sort((left, right) => {
-      const leftContactedAt = new Date(
-        left.lastInteractionAt || left.firstMetAt,
-      ).getTime();
-      const rightContactedAt = new Date(
-        right.lastInteractionAt || right.firstMetAt,
-      ).getTime();
-      return (
-        leftContactedAt - rightContactedAt ||
-        stableDailyScore(left.id) - stableDailyScore(right.id)
-      );
-    })
-    .slice(0, 3);
-  const recentlyMet = people
-    .filter(
-      (person) =>
-        now.getTime() - new Date(person.firstMetAt).getTime() <=
-        7 * 86_400_000,
-    )
-    .slice(0, 4);
-  const reminderItems = [
-    ...overdueReminders.map((reminder) => ({
-      kind: "reminder" as const,
-      id: reminder.id,
-      at: new Date(reminder.dueAt).getTime(),
-      reminder,
-    })),
-    ...overduePeople.map((person) => ({
-      kind: "person" as const,
-      id: person.id,
-      at: reminderDueDate(person, settings.reminderDefaults).getTime(),
-      person,
-    })),
-    ...birthdays.map((person) => ({
-      kind: "birthday" as const,
-      id: person.id,
-      at: nextBirthday(person.birthday, now)?.getTime() ?? Infinity,
-      person,
-    })),
-    ...upcomingReminders.map((reminder) => ({
-      kind: "reminder" as const,
-      id: reminder.id,
-      at: new Date(reminder.dueAt).getTime(),
-      reminder,
-    })),
-  ]
-    .sort((left, right) => left.at - right.at)
-    .slice(0, 12);
-  const hasTimeSensitive = reminderItems.length > 0;
-  const hasImmediateAttention =
-    overdueReminders.length > 0 ||
-    overduePeople.length > 0 ||
-    upcomingReminders.some(
-      (reminder) =>
-        new Date(reminder.dueAt).getTime() <= endOfToday.getTime(),
-    ) ||
-    birthdays.some(
-      (person) => (daysUntilBirthday(person.birthday, now) ?? 99) <= 1,
-    );
 
   async function complete(reminderId: string) {
     try {
@@ -317,18 +222,14 @@ export default function TodayScreen() {
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="Here’s what needs attention and who might appreciate a hello."
-      title={
-        profile?.displayName
-          ? `Hi, ${profile.displayName.split(" ")[0]}`
-          : "Today"
-      }
+      title="Today"
     >
       <PressableCard
         onPress={() => router.push("/check-in")}
         style={styles.checkInPrompt}
       >
         <View style={styles.checkInBody}>
-          <AppText variant="body">Who did you talk to today?</AppText>
+          <AppText variant="label">Who did you talk to today?</AppText>
           <AppText variant="caption">
             One pass, one tap each — log everyone you saw.
           </AppText>
@@ -338,94 +239,45 @@ export default function TodayScreen() {
 
       <Card style={styles.overview}>
         <View style={styles.overviewItem}>
-          <View style={[styles.overviewIcon, styles.summaryUrgent]}>
-            <ClockCountdown
-              color={colors.coralStrong}
-              size={21}
-              weight="duotone"
-            />
-          </View>
-          <View style={styles.overviewCopy}>
-            <AppText variant="heading">
-              {overdueReminders.length + overduePeople.length}
-            </AppText>
-            <AppText variant="caption">need attention</AppText>
-          </View>
+          <AppText variant="title">{counts.needAttention}</AppText>
+          <AppText variant="caption">need attention</AppText>
         </View>
         <View style={styles.overviewDivider} />
         <View style={styles.overviewItem}>
-          <View style={[styles.overviewIcon, styles.summaryUpcoming]}>
-            <CalendarBlank
-              color={colors.sageStrong}
-              size={21}
-              weight="duotone"
-            />
-          </View>
-          <View style={styles.overviewCopy}>
-            <AppText variant="heading">
-              {birthdays.length + upcomingReminders.length}
-            </AppText>
-            <AppText variant="caption">coming up</AppText>
-          </View>
+          <AppText variant="title">{counts.comingUp}</AppText>
+          <AppText variant="caption">coming up</AppText>
         </View>
       </Card>
 
       <View style={styles.section}>
-        <SectionHeading title="Reminders" />
-        {hasTimeSensitive ? (
-          <View style={styles.list}>
-            {reminderItems.map((item) => {
-              if (item.kind === "reminder") {
-                return (
-                  <ReminderItem
-                    reminder={item.reminder}
-                    key={`reminder-${item.id}`}
-                    onComplete={() => void complete(item.reminder.id)}
-                    onOpen={() =>
-                      router.push(`/people/${item.reminder.personId}`)
-                    }
-                  />
-                );
-              }
-              if (item.kind === "birthday") {
-                return (
-                  <BirthdayItem
-                    key={`birthday-${item.id}`}
-                    onOpen={() => router.push(`/people/${item.person.id}`)}
-                    person={item.person}
-                  />
-                );
-              }
-              return (
-                <PersonRow
-                  key={`person-${item.id}`}
-                  onPress={() => router.push(`/people/${item.person.id}`)}
-                  person={item.person}
-                  trailing={
-                    <Button
-                      compact
-                      icon={UsersThree}
-                      label="Saw them"
-                      onPress={() =>
-                        quickCapture.logInteraction(item.person.id)
-                      }
-                      variant="secondary"
-                    />
-                  }
-                />
-              );
-            })}
+        <SectionHeading
+          subtitle="Overdue first, then what’s coming up"
+          title="Time-sensitive"
+        />
+        {visibleAgenda.length > 0 ? (
+          <View>
+            {visibleAgenda.map((item, index) => (
+              <AgendaRow
+                item={item}
+                key={item.key}
+                onComplete={() =>
+                  item.reminderId ? void complete(item.reminderId) : undefined
+                }
+                onOpen={() => router.push(`/people/${item.personId}`)}
+                showDivider={index < visibleAgenda.length - 1}
+              />
+            ))}
           </View>
         ) : (
           <EmptyState
-            body="Nothing is overdue and there are no birthdays or reminders in the next two weeks."
+            body="Nothing is overdue, and there are no birthdays or reminders in the next two weeks."
             icon={CheckCircle}
-            title="You are comfortably caught up"
+            title="You’re caught up"
           />
         )}
       </View>
 
-      {!hasImmediateAttention && activePeople.length > 0 ? (
+      {counts.needAttention === 0 && activePeople.length > 0 ? (
         <Card style={styles.catchUpPrompt}>
           <View style={styles.catchUpCopy}>
             <AppText variant="heading">Have a little room today?</AppText>
@@ -445,15 +297,15 @@ export default function TodayScreen() {
       {checkInPeople.length > 0 ? (
         <View style={styles.section}>
           <SectionHeading title="Have you checked in recently?" />
-          <View style={styles.checkInCard}>
+          <View style={styles.groupedCard}>
             {checkInPeople.map((person, index) => (
               <Pressable
                 accessibilityRole="button"
                 key={person.id}
                 onPress={() => quickCapture.sayHello(person.id)}
                 style={[
-                  styles.checkInRow,
-                  index < checkInPeople.length - 1 && styles.checkInDivider,
+                  styles.personRow,
+                  index < checkInPeople.length - 1 && styles.divider,
                 ]}
               >
                 <Avatar
@@ -461,19 +313,15 @@ export default function TodayScreen() {
                   size={46}
                   uri={person.profilePhotoUrl}
                 />
-                <View style={styles.actionCopy}>
+                <View style={styles.rowCopy}>
                   <AppText variant="label">
                     {person.preferredName || person.fullName}
                   </AppText>
                   <AppText variant="caption">
-                    Choose how to say hello
+                    {lastSeenLabel(person, now)}
                   </AppText>
                 </View>
-                <HandWaving
-                  color={colors.coralStrong}
-                  size={22}
-                  weight="duotone"
-                />
+                <HandWaving color={colors.inkMuted} size={20} />
               </Pressable>
             ))}
           </View>
@@ -482,17 +330,35 @@ export default function TodayScreen() {
 
       {recentlyMet.length > 0 ? (
         <View style={styles.section}>
-          <SectionHeading
-            detail="Past 7 days"
-            title="New in your circle"
-          />
-          <View style={styles.list}>
-            {recentlyMet.map((person) => (
-              <PersonRow
+          <SectionHeading detail="Past 7 days" title="New in your circle" />
+          <View style={styles.groupedCard}>
+            {recentlyMet.map((person, index) => (
+              <Pressable
+                accessibilityRole="button"
                 key={person.id}
                 onPress={() => router.push(`/people/${person.id}`)}
-                person={person}
-              />
+                style={[
+                  styles.personRow,
+                  index < recentlyMet.length - 1 && styles.divider,
+                ]}
+              >
+                <Avatar
+                  name={person.fullName}
+                  size={46}
+                  uri={person.profilePhotoUrl}
+                />
+                <View style={styles.rowCopy}>
+                  <AppText variant="label">
+                    {person.preferredName || person.fullName}
+                  </AppText>
+                  <AppText numberOfLines={1} variant="caption">
+                    {person.firstMetLocation
+                      ? `Met at ${person.firstMetLocation}`
+                      : "Ready for a first note"}
+                  </AppText>
+                </View>
+                <CaretRight color={colors.inkMuted} size={16} />
+              </Pressable>
             ))}
           </View>
         </View>
@@ -524,97 +390,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 14,
-    padding: 15,
+    padding: 18,
   },
   overviewItem: {
-    alignItems: "center",
     flex: 1,
-    flexDirection: "row",
-    gap: 10,
+    gap: 4,
     minWidth: 0,
-  },
-  overviewIcon: {
-    alignItems: "center",
-    borderRadius: radii.small,
-    height: 42,
-    justifyContent: "center",
-    width: 42,
-  },
-  overviewCopy: {
-    flex: 1,
-    gap: 1,
   },
   overviewDivider: {
     backgroundColor: colors.mist,
     height: 38,
     width: StyleSheet.hairlineWidth,
   },
-  summaryUrgent: {
-    backgroundColor: colors.coralSoft,
-  },
-  summaryUpcoming: {
-    backgroundColor: colors.sage,
-  },
   section: {
     gap: 12,
   },
-  list: {
-    gap: 10,
-  },
-  actionRow: {
+  agendaRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: 12,
-    padding: 14,
+    paddingVertical: 12,
   },
-  actionIcon: {
+  personRow: {
     alignItems: "center",
-    borderRadius: radii.medium,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
+    flexDirection: "row",
+    gap: 12,
+    minHeight: 70,
+    paddingVertical: 10,
   },
-  urgentIcon: {
-    backgroundColor: colors.coralSoft,
-  },
-  upcomingIcon: {
-    backgroundColor: colors.sage,
-  },
-  birthdayIcon: {
-    backgroundColor: colors.sunSoft,
-  },
-  actionCopy: {
+  rowCopy: {
     flex: 1,
     gap: 2,
     minWidth: 0,
   },
-  urgentText: {
+  divider: {
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  overdueText: {
     color: colors.coralStrong,
   },
-  check: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.small,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
-  checkInCard: {
+  groupedCard: {
     backgroundColor: colors.paper,
     borderRadius: radii.large,
     overflow: "hidden",
     paddingHorizontal: 14,
-  },
-  checkInRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    minHeight: 74,
-    paddingVertical: 10,
-  },
-  checkInDivider: {
-    borderBottomColor: colors.mist,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   catchUpPrompt: {
     gap: 15,

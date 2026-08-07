@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { EmptyState } from "@/components/empty-state";
 import {
   alreadyLoggedIds,
   checkInCandidates,
@@ -65,12 +66,12 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
 
   if (candidates.length === 0) {
     return (
-      <div className="mt-8 rounded-3xl bg-white px-6 py-14 text-center">
-        <UsersThree size={30} className="mx-auto text-ink-muted" aria-hidden="true" />
-        <p className="mt-3 font-display text-2xl">Nobody to log yet</p>
-        <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-ink-muted">
-          Add someone to your circle and they will show up here.
-        </p>
+      <div className="mt-8">
+        <EmptyState
+          icon={UsersThree}
+          title="Nobody to log yet"
+          body="Add someone to your circle and they will show up here."
+        />
       </div>
     );
   }

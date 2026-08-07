@@ -1,197 +1,149 @@
 import {
   Cake,
   CaretRight,
+  CheckCircle,
   ClockCountdown,
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
-import {
-  differenceInCalendarDays,
-  format,
-  formatDistanceToNowStrict,
-  isAfter,
-  isBefore,
-  startOfDay,
-  subDays,
-} from "date-fns";
+import { differenceInCalendarDays, startOfDay } from "date-fns";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
+import { CompleteReminderButton } from "@/components/complete-reminder-button";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { LogInteractionPanel } from "@/components/log-interaction-panel";
 import { QuickInteractionSheet } from "@/components/quick-interaction-sheet";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
-import { getReminders, getPeople, getQuickPeople } from "@/lib/data";
+import { daysUntilBirthday } from "@/lib/birthday-calendar";
+import { lastSeenLabel } from "@/lib/daily-check-in";
+import { getPeople, getReminders } from "@/lib/data";
 import { getContactReminderState } from "@/lib/reminders";
+import {
+  agendaCounts,
+  agendaLimit,
+  buildTodayAgenda,
+  pickCheckInSuggestions,
+  recentlyMetPeople,
+  type AgendaItem,
+} from "@/lib/today-agenda";
 import type { Person } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-type TimeSensitiveItem = {
-  key: string;
-  kind: "reminder" | "birthday" | "check-in";
-  status: "overdue" | "today" | "upcoming";
-  dueAt: Date;
-  href: string;
-  title: string;
-  personName: string;
-  dueLabel: string;
+const agendaIcons = {
+  reminder: ClockCountdown,
+  "check-in": UsersThree,
+  birthday: Cake,
 };
 
-function getNextBirthday(birthday: string, now: Date) {
-  const [, month, day] = birthday.split("-").map(Number);
-  let nextBirthday = new Date(now.getFullYear(), month - 1, day);
-
-  if (isBefore(nextBirthday, startOfDay(now))) {
-    nextBirthday = new Date(now.getFullYear() + 1, month - 1, day);
-  }
-
-  return nextBirthday;
-}
-
-function getDailyRotationScore(personId: string, dateKey: string) {
-  let score = 2166136261;
-
-  for (const character of `${dateKey}:${personId}`) {
-    score ^= character.charCodeAt(0);
-    score = Math.imul(score, 16777619);
-  }
-
-  return score >>> 0;
-}
-
-function getDisplayName(person: Person) {
+function displayNameOf(person: Person) {
   return person.preferredName ?? person.fullName;
+}
+
+function AgendaRow({ item }: { item: AgendaItem }) {
+  const Icon = agendaIcons[item.kind];
+
+  return (
+    <div className="flex items-center gap-3 py-3.5">
+      <Link
+        href={`/people/${item.personId}`}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        <Icon
+          size={20}
+          aria-hidden="true"
+          className={
+            item.status === "overdue" ? "shrink-0 text-coral-strong" : "shrink-0 text-ink-muted"
+          }
+        />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold">
+            {item.title}
+          </span>
+          <span
+            className={
+              item.status === "overdue"
+                ? "mt-0.5 block truncate text-xs text-coral-strong"
+                : "mt-0.5 block truncate text-xs text-ink-muted"
+            }
+          >
+            {item.detail}
+          </span>
+        </span>
+      </Link>
+      {item.reminderId ? (
+        <CompleteReminderButton
+          reminderId={item.reminderId}
+          label={item.title}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export default async function TodayPage() {
   const now = new Date();
   const today = startOfDay(now);
-  const [people, reminders, quickPeople] = await Promise.all([
-    getPeople(),
-    getReminders(),
-    getQuickPeople(),
-  ]);
-  const timeSensitiveItems: TimeSensitiveItem[] = [];
+  const [people, reminders] = await Promise.all([getPeople(), getReminders()]);
 
-  for (const reminder of reminders.filter(({ completedAt }) => !completedAt)) {
-    const dueAt = startOfDay(new Date(reminder.dueAt));
-    const daysFromToday = differenceInCalendarDays(dueAt, today);
-    const status =
-      daysFromToday < 0
-        ? "overdue"
-        : daysFromToday === 0
-          ? "today"
-          : "upcoming";
-
-    timeSensitiveItems.push({
-      key: `reminder-${reminder.id}`,
-      kind: "reminder",
-      status,
-      dueAt,
-      href: `/reminders?person=${reminder.personId}`,
-      title: reminder.text,
-      personName:
-        reminder.person?.preferredName ??
-        reminder.person?.fullName ??
-        "Reminder",
-      dueLabel:
-        status === "overdue"
-          ? `${Math.abs(daysFromToday)} ${
-              Math.abs(daysFromToday) === 1 ? "day" : "days"
-            } overdue`
-          : status === "today"
-            ? "Due today"
-            : daysFromToday === 1
-              ? "Due tomorrow"
-              : `Due ${format(dueAt, "MMM d")}`,
-    });
-  }
-
-  for (const person of people) {
-    const reminder = getContactReminderState(person, now);
-    if (!reminder?.isOverdue) continue;
-
-    timeSensitiveItems.push({
-      key: `check-in-${person.id}`,
-      kind: "check-in",
-      status: "overdue",
-      dueAt: reminder.dueAt,
-      href: `/people/${person.id}`,
-      title: `Check in with ${getDisplayName(person)}`,
-      personName: person.firstMetLocation ?? "Contact reminder",
-      dueLabel: `${reminder.overdueDays} ${
-        reminder.overdueDays === 1 ? "day" : "days"
-      } past your reminder`,
-    });
-  }
-
-  for (const person of people) {
-    if (!person.birthday) continue;
-    const nextBirthday = getNextBirthday(person.birthday, now);
-    const daysAway = differenceInCalendarDays(nextBirthday, today);
-    if (daysAway > 14) continue;
-    const turning = ageAtNextBirthday(person.birthday, now);
-
-    timeSensitiveItems.push({
-      key: `birthday-${person.id}`,
-      kind: "birthday",
-      status: daysAway === 0 ? "today" : "upcoming",
-      dueAt: nextBirthday,
-      href: `/people/${person.id}`,
-      title: `${getDisplayName(person)}’s birthday`,
-      personName: turning === null ? "Birthday" : `Turning ${turning}`,
-      dueLabel:
-        daysAway === 0
-          ? "Today"
-          : daysAway === 1
-            ? "Tomorrow"
-            : `In ${daysAway} days`,
-    });
-  }
-
-  const statusOrder = { overdue: 0, today: 1, upcoming: 2 };
-  timeSensitiveItems.sort(
-    (firstItem, secondItem) =>
-      statusOrder[firstItem.status] - statusOrder[secondItem.status] ||
-      firstItem.dueAt.getTime() - secondItem.dueAt.getTime(),
-  );
-
-  const urgentPersonIds = new Set(
-    timeSensitiveItems
-      .filter(({ kind }) => kind === "check-in")
-      .map(({ key }) => key.replace("check-in-", "")),
-  );
-  const dateKey = format(now, "yyyy-MM-dd");
-  const checkInPeople = people
-    .filter(
-      (person) =>
-        person.status === "active" &&
-        !urgentPersonIds.has(person.id) &&
-        !isAfter(new Date(person.createdAt), subDays(now, 7)),
-    )
-    .sort(
-      (firstPerson, secondPerson) =>
-        getDailyRotationScore(firstPerson.id, dateKey) -
-        getDailyRotationScore(secondPerson.id, dateKey),
-    )
-    .slice(0, 3);
-  const recentPeople = people.filter(({ createdAt }) =>
-    isAfter(new Date(createdAt), subDays(now, 7)),
+  const agenda = buildTodayAgenda({
+    reminders: reminders
+      .filter(({ completedAt }) => !completedAt)
+      .map((reminder) => ({
+        id: reminder.id,
+        personId: reminder.personId,
+        text: reminder.text,
+        personName:
+          reminder.person?.preferredName ??
+          reminder.person?.fullName ??
+          "Someone",
+        daysAway: differenceInCalendarDays(
+          startOfDay(new Date(reminder.dueAt)),
+          today,
+        ),
+      })),
+    overdueCheckIns: people.flatMap((person) => {
+      const state = getContactReminderState(person, now);
+      if (!state?.isOverdue) return [];
+      return [
+        {
+          personId: person.id,
+          name: displayNameOf(person),
+          daysOverdue: state.overdueDays,
+        },
+      ];
+    }),
+    birthdays: people.flatMap((person) => {
+      if (person.status !== "active") return [];
+      const daysAway = daysUntilBirthday(person.birthday, now);
+      if (daysAway === null) return [];
+      return [
+        {
+          personId: person.id,
+          name: displayNameOf(person),
+          daysAway,
+          turningAge: ageAtNextBirthday(person.birthday, now),
+        },
+      ];
+    }),
+  });
+  const counts = agendaCounts(agenda);
+  const recentlyMet = recentlyMetPeople(people, now);
+  const checkInPeople = pickCheckInSuggestions(
+    people,
+    [
+      ...agenda
+        .filter((item) => item.kind === "check-in")
+        .map((item) => item.personId),
+      ...recentlyMet.map((person) => person.id),
+    ],
+    now,
   );
 
   return (
     <div className="mx-auto max-w-[980px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
-        title="What needs your attention?"
-        description="Log who you saw, then everything that needs you today."
-        action={
-          <Link
-            href="/notifications"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-ink shadow-card ring-1 ring-black/[0.035] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            aria-label="Notification settings"
-          >
-            <ClockCountdown size={21} aria-hidden="true" />
-          </Link>
-        }
+        title="Today"
+        description="Here’s what needs attention and who might appreciate a hello."
       />
 
       <Link
@@ -199,191 +151,151 @@ export default async function TodayPage() {
         className="mt-9 flex items-center justify-between gap-4 rounded-2xl bg-white p-4 transition-colors hover:bg-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <span>
-          <span className="block text-sm font-bold">Select who you saw today</span>
+          <span className="block text-sm font-bold">
+            Who did you talk to today?
+          </span>
           <span className="mt-0.5 block text-xs text-ink-muted">
-            Easily log an interaction with everyone you talked to today.
+            One pass, one tap each — log everyone you saw.
           </span>
         </span>
-        <CaretRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-ink-muted" />
+        <CaretRight
+          size={16}
+          weight="bold"
+          aria-hidden="true"
+          className="shrink-0 text-ink-muted"
+        />
       </Link>
 
+      <div className="mt-4 flex items-center gap-4 rounded-3xl bg-white p-5 shadow-card">
+        <p className="flex-1">
+          <span className="block font-display text-3xl leading-none">
+            {counts.needAttention}
+          </span>
+          <span className="mt-1.5 block text-xs text-ink-muted">
+            need attention
+          </span>
+        </p>
+        <span className="h-10 w-px bg-mist" aria-hidden="true" />
+        <p className="flex-1">
+          <span className="block font-display text-3xl leading-none">
+            {counts.comingUp}
+          </span>
+          <span className="mt-1.5 block text-xs text-ink-muted">coming up</span>
+        </p>
+      </div>
 
       <section className="mt-9" aria-labelledby="time-sensitive-heading">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 id="time-sensitive-heading" className="text-sm font-bold">
-              Time-sensitive
-            </h2>
-            <p className="mt-1 text-xs text-ink-muted">
-              Overdue first, then what’s coming up
-            </p>
-          </div>
-          <Link
-            href="/reminders"
-            className="text-xs font-semibold text-coral-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-          >
-            All reminders
-          </Link>
-        </div>
+        <h2 id="time-sensitive-heading" className="text-base font-bold">
+          Time-sensitive
+        </h2>
+        <p className="mt-0.5 text-xs text-ink-muted">
+          Overdue first, then what’s coming up
+        </p>
 
-        <div className="mt-4 overflow-hidden rounded-[1.75rem] bg-white p-2 shadow-card ring-1 ring-black/[0.035]">
-          {timeSensitiveItems.length ? (
-            timeSensitiveItems.slice(0, 7).map((item, index) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[1.25rem] px-3 py-3.5 transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              >
-                <span
-                  className={`
-                    grid size-10 place-items-center rounded-full
-                    ${
-                      item.status === "overdue"
-                        ? "bg-[#fbe5e0] text-coral-strong"
-                        : item.status === "today"
-                          ? "bg-[#fff5d8] text-[#705513]"
-                          : "bg-sage text-sage-strong"
-                    }
-                  `}
-                >
-                  {item.kind === "reminder" ? (
-                    <ClockCountdown size={19} weight="fill" aria-hidden="true" />
-                  ) : item.kind === "birthday" ? (
-                    <Cake size={19} weight="fill" aria-hidden="true" />
-                  ) : (
-                    <UsersThree size={19} weight="fill" aria-hidden="true" />
-                  )}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">
-                    {item.title}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-ink-muted">
-                    {item.personName}
-                  </span>
-                </span>
-                <span
-                  className={`
-                    max-w-24 shrink-0 rounded-full px-2.5 py-1.5 text-right text-[10px] font-semibold leading-4
-                    ${
-                      item.status === "overdue"
-                        ? "bg-[#fbe5e0] text-coral-strong"
-                        : item.status === "today"
-                          ? "bg-[#fff5d8] text-[#705513]"
-                          : "bg-sage text-sage-strong"
-                    }
-                  `}
-                >
-                  {item.dueLabel}
-                </span>
-                {index < Math.min(timeSensitiveItems.length, 7) - 1 ? (
-                  <span
-                    className="col-start-2 col-end-4 -mb-3.5 h-px bg-ink/[0.055]"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </Link>
-            ))
-          ) : (
-            <div className="px-5 py-8 text-center">
-              <span className="mx-auto grid size-11 place-items-center rounded-full bg-sage text-sage-strong">
-                <ClockCountdown size={21} weight="fill" aria-hidden="true" />
-              </span>
-              <p className="mt-3 text-sm font-semibold">Nothing has a deadline.</p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Reminders and birthdays will appear here.
-              </p>
+        <div className="mt-3">
+          {agenda.length ? (
+            <div className="divide-y divide-ink/[0.055]">
+              {agenda.slice(0, agendaLimit).map((item) => (
+                <AgendaRow item={item} key={item.key} />
+              ))}
             </div>
+          ) : (
+            <EmptyState
+              icon={CheckCircle}
+              title="You’re caught up"
+              body="Nothing is overdue, and there are no birthdays or reminders in the next two weeks."
+            />
           )}
         </div>
       </section>
 
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">
-          <h2 id="check-in-heading" className="text-sm font-bold">
-            A few people to check in on
+          <h2 id="check-in-heading" className="text-base font-bold">
+            Have you checked in recently?
           </h2>
-          <p className="mt-1 text-xs text-ink-muted">
-            A small rotating selection—not another to-do list
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {checkInPeople.map((person) => {
-              const lastContactAt = new Date(
-                person.lastInteractionAt ?? person.firstMetAt,
-              );
-
-              return (
-                <article
-                  key={person.id}
-                  className="flex items-center gap-3 rounded-[1.4rem] bg-ink p-3 text-white shadow-card"
+          <div className="mt-3 divide-y divide-ink/[0.055] overflow-hidden rounded-3xl bg-white px-4">
+            {checkInPeople.map((person) => (
+              <div key={person.id} className="flex items-center gap-3 py-3">
+                <Link
+                  href={`/people/${person.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
-                  <Link
-                    href={`/people/${person.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-                  >
-                    <Avatar
-                      name={person.fullName}
-                      imageUrl={person.profilePhotoUrl}
-                      size="md"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-xs leading-5 text-white/65">
-                        Have you checked in with
-                      </span>
-                      <span className="block truncate text-sm font-bold">
-                        {getDisplayName(person)} recently?
-                      </span>
-                      <span className="mt-1 block truncate text-[10px] text-white/48">
-                        Last logged{" "}
-                        {formatDistanceToNowStrict(lastContactAt, {
-                          addSuffix: true,
-                        })}
-                      </span>
-                    </span>
-                  </Link>
-                  <QuickInteractionSheet
-                    personId={person.id}
-                    personName={getDisplayName(person)}
-                    compact
+                  <Avatar
+                    name={person.fullName}
+                    imageUrl={person.profilePhotoUrl}
+                    size="md"
                   />
-                </article>
-              );
-            })}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">
+                      {displayNameOf(person)}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-muted">
+                      {lastSeenLabel(person, now)}
+                    </span>
+                  </span>
+                </Link>
+                <QuickInteractionSheet
+                  personId={person.id}
+                  personName={displayNameOf(person)}
+                  compact
+                />
+              </div>
+            ))}
           </div>
         </section>
       ) : null}
 
-      {recentPeople.length ? (
+      {recentlyMet.length ? (
         <section className="mt-9" aria-labelledby="new-people-heading">
-          <h2 id="new-people-heading" className="text-sm font-bold">
-            Just met
-          </h2>
-          <p className="mt-1 text-xs text-ink-muted">Added in the last 7 days</p>
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-            {recentPeople.map((person) => (
+          <div className="flex items-start justify-between gap-4">
+            <h2 id="new-people-heading" className="text-base font-bold">
+              New in your circle
+            </h2>
+            <p className="text-xs text-ink-muted">Past 7 days</p>
+          </div>
+          <div className="mt-3 divide-y divide-ink/[0.055] overflow-hidden rounded-3xl bg-white px-4">
+            {recentlyMet.map((person) => (
               <Link
                 key={person.id}
                 href={`/people/${person.id}`}
-                className="flex w-36 shrink-0 flex-col items-center rounded-3xl bg-white px-3 py-5 text-center shadow-card ring-1 ring-black/[0.035] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                className="flex items-center gap-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
               >
                 <Avatar
                   name={person.fullName}
                   imageUrl={person.profilePhotoUrl}
-                  size="lg"
+                  size="md"
                 />
-                <span className="mt-3 truncate text-sm font-bold">
-                  {getDisplayName(person)}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {displayNameOf(person)}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-ink-muted">
+                    {person.firstMetLocation
+                      ? `Met at ${person.firstMetLocation}`
+                      : "Ready for a first note"}
+                  </span>
                 </span>
-                <span className="mt-1 line-clamp-2 text-[10px] leading-4 text-ink-muted">
-                  {person.firstMetLocation}
-                </span>
+                <CaretRight
+                  size={16}
+                  aria-hidden="true"
+                  className="shrink-0 text-ink-muted"
+                />
               </Link>
             ))}
           </div>
         </section>
       ) : null}
-      {quickPeople.length ? <LogInteractionPanel people={quickPeople} /> : null}
 
+      {people.length === 0 ? (
+        <div className="mt-9">
+          <EmptyState
+            icon={UsersThree}
+            title="Your circle starts here"
+            body="Add the next person you meet. The quick form takes only a few seconds."
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
