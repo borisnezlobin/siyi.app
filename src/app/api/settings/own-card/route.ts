@@ -3,7 +3,6 @@ import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { normalizeOwnCard, ownCardLabels, type OwnCardField } from "@/lib/own-card";
-import { fallbackKey, readFallback } from "@/lib/schema-fallback";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -41,20 +40,7 @@ export async function PATCH(request: NextRequest) {
     const supabase = await createClient();
     const update: Record<string, unknown> = { user_id: user.id };
 
-    if (card !== undefined) {
-      // Before migration 0019 the fallback blob shared this column, so anything
-      // already in it is carried across rather than written over.
-      const existing = await supabase
-        .from("user_settings")
-        .select("own_card")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const stored = readFallback(existing?.data?.own_card);
-      update.own_card = {
-        ...normalizeOwnCard(card),
-        ...(stored.profile || stored.classes ? { [fallbackKey]: stored } : {}),
-      };
-    }
+    if (card !== undefined) update.own_card = normalizeOwnCard(card);
 
     if (enabled !== undefined) update.own_card_enabled = enabled;
     if (defaultUniversity !== undefined) {
