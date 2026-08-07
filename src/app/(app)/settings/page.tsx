@@ -2,7 +2,9 @@ import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
 import { DefaultUniversityControl } from "@/components/default-university-control";
 import { OwnCardControls } from "@/components/own-card-controls";
 import { ProfileControls } from "@/components/profile-controls";
+import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { SettingsControls } from "@/components/settings-controls";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -91,6 +93,56 @@ export default async function SettingsPage() {
         title="Settings"
         description="How often to check in, your account, and a full copy of your data."
       />
+      {/* Ordered to match the phone exactly: your card, then notifications,
+          then the check-in defaults, account, data and deletion. */}
+      <div className="mt-7 divide-y divide-ink/[0.08]">
+        <section className="py-7 first:pt-0">
+          <h2 className="text-sm font-bold">Your card</h2>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            What you hand out about yourself, the address people can find you
+            at, and a code they can scan.
+          </p>
+          <div className="mt-5">
+            <ProfileControls
+              card={initialOwnCard}
+              initialHandle={initialHandle}
+              initialPublic={initialProfilePublic}
+              initialPublicFields={initialPublicFields}
+              initialTag={initialHandleTag}
+            />
+          </div>
+          <div className="mt-7 border-t border-ink/[0.08] pt-6">
+            <OwnCardControls
+              initialCard={initialOwnCard}
+              initialEnabled={initialOwnCardEnabled}
+            />
+          </div>
+          <div className="mt-7 border-t border-ink/[0.08] pt-6">
+            <h3 className="text-sm font-bold">Default university</h3>
+            <p className="mt-1 text-xs leading-5 text-ink-muted">
+              Filled in for you when you add someone new. Leave blank for none.
+            </p>
+            <div className="mt-4">
+              <DefaultUniversityControl initialValue={initialDefaultUniversity} />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-7">
+          <h2 className="text-sm font-bold">Notifications</h2>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            Permission, categories, preferred hour, and a test.
+          </p>
+          <Link
+            href="/notifications"
+            className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-ink hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            Push and reminder timing
+            <CaretRight size={14} aria-hidden="true" />
+          </Link>
+        </section>
+      </div>
+
       <SettingsControls
         people={people}
         interactions={interactions}
@@ -102,38 +154,6 @@ export default async function SettingsPage() {
         initialMarketingOptIn={initialMarketingOptIn}
       />
 
-      <section className="mt-10 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-sm font-bold">Default university</h2>
-        <p className="mt-1 text-xs leading-5 text-ink-muted">
-          Filled in for you when you add someone new. Leave blank for none.
-        </p>
-        <div className="mt-4">
-          <DefaultUniversityControl initialValue={initialDefaultUniversity} />
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
-        <h2 className="text-sm font-bold">Your card</h2>
-        <p className="mt-1 text-xs leading-5 text-ink-muted">
-          What you hand out about yourself, the address people can find you at,
-          and a code they can scan.
-        </p>
-        <div className="mt-5">
-          <ProfileControls
-            card={initialOwnCard}
-            initialHandle={initialHandle}
-            initialPublic={initialProfilePublic}
-            initialPublicFields={initialPublicFields}
-            initialTag={initialHandleTag}
-          />
-        </div>
-        <div className="mt-6 border-t border-black/[0.07] pt-6">
-          <OwnCardControls
-            initialCard={initialOwnCard}
-            initialEnabled={initialOwnCardEnabled}
-          />
-        </div>
-      </section>
     </div>
   );
 }
