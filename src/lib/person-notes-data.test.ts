@@ -28,28 +28,6 @@ beforeEach(() => {
   queryResult.error = null;
 });
 
-describe("named note sections before migration 0010 has run", () => {
-  it("reports the feature as unavailable instead of throwing", async () => {
-    queryResult.error = { code: "42P01", message: "relation does not exist" };
-    await expect(getPersonNoteSections("person-1")).resolves.toEqual({
-      available: false,
-      sections: [],
-    });
-  });
-
-  it("suggests nothing rather than failing the page", async () => {
-    queryResult.error = { code: "PGRST205", message: "unknown table" };
-    await expect(getUsedNoteHeadings()).resolves.toEqual([]);
-  });
-
-  it("still surfaces real database problems", async () => {
-    queryResult.error = { code: "23505", message: "duplicate key" };
-    await expect(getPersonNoteSections("person-1")).rejects.toThrow(
-      "duplicate key",
-    );
-  });
-});
-
 describe("named note sections once the table exists", () => {
   it("returns sections in saved order", async () => {
     queryResult.data = [

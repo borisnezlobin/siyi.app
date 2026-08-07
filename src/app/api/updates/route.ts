@@ -7,11 +7,6 @@ import {
 } from "@/lib/capture-validation";
 import { createClient } from "@/lib/supabase/server";
 
-/** Older deployments may not have the person_updates tables yet. */
-function isMissingUpdatesSchema(code: string | undefined) {
-  return ["42P01", "42883", "PGRST202", "PGRST205"].includes(code ?? "");
-}
-
 /**
  * An update records something you learned, not that you spoke. It is written
  * with is_interaction = false, so no interactions row appears and the person's
@@ -40,9 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return apiError(
-        isMissingUpdatesSchema(error.code)
-          ? "Updates are not available on this deployment yet."
-          : error.message,
+        error.message,
         400,
       );
     }

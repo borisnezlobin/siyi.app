@@ -4,7 +4,6 @@ import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
 import {
   createShareToken,
-  isMissingPersonSharesSchema,
   mapPersonShare,
   shareExpiryFromChoice,
 } from "@/lib/person-share";
@@ -14,15 +13,6 @@ export const dynamic = "force-dynamic";
 
 const shareColumns =
   "id, person_id, token, fields, expires_at, revoked_at, last_viewed_at, view_count, created_at";
-
-/**
- * Until migration 0015 has been applied there is no table to write to. Saying
- * so plainly lets the share sheet hide the link option and fall back to the
- * vCard file, which is exactly what it did before links existed.
- */
-function linksUnavailable() {
-  return NextResponse.json({ available: false, shares: [] }, { status: 200 });
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,7 +28,6 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      if (isMissingPersonSharesSchema(error.code)) return linksUnavailable();
       return apiError(error.message, 400);
     }
 
@@ -91,7 +80,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      if (isMissingPersonSharesSchema(error.code)) return linksUnavailable();
       return apiError(error.message, 400);
     }
 

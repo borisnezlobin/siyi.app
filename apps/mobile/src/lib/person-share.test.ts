@@ -3,7 +3,6 @@ import {
   buildShareUrl,
   createShareToken,
   defaultShareExpiryChoiceId,
-  isMissingPersonSharesSchema,
   isValidShareToken,
   mapPersonShare,
   normalizeShareSelection,
@@ -209,14 +208,6 @@ describe("the rows a viewer sees", () => {
     expect(labels).toContain("Hometown");
     expect(labels).not.toContain("Phone");
     expect(labels).not.toContain("Notes");
-  });
-});
-
-describe("links before migration 0015", () => {
-  it("recognises a missing table", () => {
-    expect(isMissingPersonSharesSchema("42P01")).toBe(true);
-    expect(isMissingPersonSharesSchema("PGRST205")).toBe(true);
-    expect(isMissingPersonSharesSchema("23505")).toBe(false);
   });
 });
 

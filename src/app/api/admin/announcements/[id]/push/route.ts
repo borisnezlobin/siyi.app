@@ -5,7 +5,6 @@ import { adminNotFound, resolveAdminRequest } from "@/lib/admin-access";
 import {
   announcementColumns,
   getAdminUserFacts,
-  isMissingAdminSchema,
   mapAnnouncement,
 } from "@/lib/admin-data";
 import { sendPushToUser } from "@/lib/push";
@@ -38,12 +37,6 @@ export async function POST(
       .maybeSingle();
 
     if (claimError) {
-      if (isMissingAdminSchema(claimError.code)) {
-        return apiError(
-          "The announcements tables are not in the database yet. Run migration 0011.",
-          503,
-        );
-      }
       return apiError(claimError.message, 500);
     }
 

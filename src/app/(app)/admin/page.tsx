@@ -47,13 +47,10 @@ export default async function AdminPage() {
   }
 
   let announcements: Announcement[] = [];
-  let announcementsReady = false;
   try {
     const listing = await listAnnouncements();
     announcements = listing.announcements;
-    announcementsReady = listing.schemaReady;
   } catch {
-    announcementsReady = false;
   }
 
   return (
@@ -67,7 +64,6 @@ export default async function AdminPage() {
           stats={stats}
           segments={segments}
           initialAnnouncements={announcements}
-          announcementsReady={announcementsReady}
           statsError={statsError}
         />
       </div>

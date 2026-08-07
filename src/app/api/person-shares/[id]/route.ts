@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
-import { isMissingPersonSharesSchema } from "@/lib/person-share";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +24,6 @@ export async function DELETE(
       .is("revoked_at", null);
 
     if (error) {
-      if (isMissingPersonSharesSchema(error.code)) {
-        return NextResponse.json({ available: false }, { status: 200 });
-      }
       return apiError(error.message, 400);
     }
 

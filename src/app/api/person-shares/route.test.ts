@@ -11,7 +11,7 @@ vi.mock("@/lib/api-auth", () => ({
   }),
 }));
 
-const { GET, POST } = await import("@/app/api/person-shares/route");
+const { POST } = await import("@/app/api/person-shares/route");
 
 type Result = { data: unknown; error: { code?: string; message?: string } | null };
 
@@ -60,41 +60,6 @@ const personId = "11111111-1111-4111-8111-111111111111";
 
 beforeEach(() => {
   authState.supabase = null;
-});
-
-describe("creating a share link before migration 0015 has run", () => {
-  it("reports links as unavailable rather than failing", async () => {
-    const { client } = supabaseReturning({
-      data: null,
-      error: { code: "42P01", message: 'relation "person_shares" does not exist' },
-    });
-    authState.supabase = client;
-
-    const response = await POST(createRequest({ personId }));
-    const payload = await response.json();
-
-    // 200 with available:false is what lets the sheet quietly hide the link
-    // option and keep offering the vCard, exactly as it did before.
-    expect(response.status).toBe(200);
-    expect(payload).toEqual({ available: false, shares: [] });
-  });
-
-  it("reports the same from the listing the sheet opens with", async () => {
-    const { client } = supabaseReturning({
-      data: null,
-      error: { code: "PGRST205", message: "schema cache" },
-    });
-    authState.supabase = client;
-
-    const response = await GET(
-      new NextRequest(
-        `http://localhost/api/person-shares?personId=${personId}`,
-      ),
-    );
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ available: false, shares: [] });
-  });
 });
 
 describe("creating a share link once the table exists", () => {

@@ -8,7 +8,6 @@ import { normalizeOwnCard, ownCardIsEmpty, type OwnCard } from "@/lib/own-card";
  */
 
 import {
-  isMissingPersonSharesSchema,
   isValidShareToken,
   mapPersonShare,
   normalizeShareSelection,
@@ -153,7 +152,6 @@ export async function resolveSharedPerson(
     .maybeSingle();
 
   if (shareResult.error) {
-    if (isMissingPersonSharesSchema(shareResult.error.code)) return null;
     return null;
   }
   if (!shareResult.data) return null;

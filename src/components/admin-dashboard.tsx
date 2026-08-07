@@ -5,7 +5,6 @@ import {
   CheckCircle,
   Megaphone,
   PaperPlaneTilt,
-  Warning,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { getApiResponseError } from "@/lib/http";
@@ -82,13 +81,11 @@ export function AdminDashboard({
   stats,
   segments,
   initialAnnouncements,
-  announcementsReady,
   statsError,
 }: {
   stats: AdminStats;
   segments: AdminSegmentSummary[];
   initialAnnouncements: Announcement[];
-  announcementsReady: boolean;
   statsError: string | null;
 }) {
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
@@ -212,16 +209,6 @@ export function AdminDashboard({
         </p>
       ) : null}
 
-      {!announcementsReady ? (
-        <div className="flex items-start gap-3 rounded-2xl bg-sun/40 px-4 py-3.5 text-sm text-ink">
-          <Warning size={20} weight="fill" className="mt-0.5 shrink-0" aria-hidden="true" />
-          <p>
-            The announcements tables are not in the database yet. Run migration
-            0011 in the Supabase SQL editor and this section starts working.
-            Everything else on this page, and the rest of the app, is unaffected.
-          </p>
-        </div>
-      ) : null}
 
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" className="font-display text-2xl text-ink">
@@ -354,7 +341,7 @@ export function AdminDashboard({
             </div>
             <button
               type="button"
-              disabled={!canReview || !announcementsReady}
+              disabled={!canReview}
               onClick={() => setStep("confirming")}
               className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
             >

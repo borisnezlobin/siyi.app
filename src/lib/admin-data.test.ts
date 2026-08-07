@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AdminUserFacts } from "@/lib/admin";
-import { isMissingAdminSchema, summariseUsers } from "@/lib/admin-data";
+import { summariseUsers } from "@/lib/admin-data";
 
 const now = new Date("2026-08-06T12:00:00.000Z");
 
@@ -75,13 +75,5 @@ describe("aggregate stats", () => {
     expect(
       stats.signupsByWeek.reduce((total, week) => total + week.users, 0),
     ).toBe(2);
-  });
-
-  it("treats a missing table or column as no data, not an error", () => {
-    for (const code of ["42P01", "42883", "42703", "PGRST202", "PGRST205"]) {
-      expect(isMissingAdminSchema(code)).toBe(true);
-    }
-    expect(isMissingAdminSchema("42501")).toBe(false);
-    expect(isMissingAdminSchema(undefined)).toBe(false);
   });
 });

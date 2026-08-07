@@ -2,9 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import {
-  isMissingNoteSchema,
   maxNoteSectionsPerPerson,
-  missingNoteSectionsMessage,
   nextNotePosition,
 } from "@/lib/note-sections";
 import { createClient } from "@/lib/supabase/server";
@@ -28,9 +26,6 @@ export async function POST(request: NextRequest) {
       .eq("person_id", validation.data.personId);
 
     if (existingError) {
-      if (isMissingNoteSchema(existingError.code)) {
-        return apiError(missingNoteSectionsMessage, 503);
-      }
       return apiError(existingError.message, 400);
     }
 
@@ -53,9 +48,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      if (isMissingNoteSchema(error.code)) {
-        return apiError(missingNoteSectionsMessage, 503);
-      }
       return apiError(error.message, 400);
     }
 

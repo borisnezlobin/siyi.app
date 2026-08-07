@@ -14,7 +14,6 @@ import type { ContactShareSelection } from "@/lib/contact-card";
 import {
   buildShareUrl,
   createShareToken,
-  isMissingPersonSharesSchema,
   mapPersonShare,
   shareExpiryFromChoice,
   shareIsLive,
@@ -102,9 +101,6 @@ export async function createPersonShare(
       .single();
 
     if (error) {
-      if (isMissingPersonSharesSchema(error.code)) {
-        return { share: null, unavailable: true };
-      }
       return {
         share: null,
         error: "That link couldn't be created. Try again in a moment.",
