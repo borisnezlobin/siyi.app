@@ -1,8 +1,7 @@
 "use client";
 
-import { CaretDown, Check, ClockCountdown } from "@phosphor-icons/react";
+import { Check, ClockCountdown, MagnifyingGlass } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
@@ -15,19 +14,32 @@ import {
   groupRemindersByBucket,
   type ReminderBucket,
 } from "@/lib/reminder-buckets";
-import type { Reminder, Person } from "@/lib/types";
+import type { Reminder } from "@/lib/types";
+
+function matchesQuery(reminder: Reminder, query: string) {
+  return [
+    reminder.text,
+    reminder.person?.fullName,
+    reminder.person?.preferredName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(query);
+}
 
 export function ReminderBoard({
   initialReminders,
-  people,
-  initialPersonId = "all",
+  initialQuery = "",
 }: {
   initialReminders: Reminder[];
-  people: Person[];
-  initialPersonId?: string;
+  initialQuery?: string;
 }) {
   const [reminders, setReminders] = useState(initialReminders);
-  const [personId, setPersonId] = useState(initialPersonId);
+  const [query, setQuery] = useState(initialQuery);
+  const [focusedBucket, setFocusedBucket] = useState<ReminderBucket | null>(
+    null,
+  );
   const [showCompleted, setShowCompleted] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
 
@@ -39,44 +51,38 @@ export function ReminderBoard({
     setReminders(initialReminders);
   }, [initialReminders]);
 
-  const forPerson = useMemo(
-    () =>
-      personId === "all"
-        ? reminders
-        : reminders.filter((reminder) => reminder.personId === personId),
-    [reminders, personId],
-  );
-
-  const { groups, completed } = useMemo(() => {
-    const stayingInPlace = forPerson.filter(
+  const { groups, completed, counts } = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const visible = reminders.filter((reminder) =>
+      matchesQuery(reminder, normalized),
+    );
+    const stayingInPlace = visible.filter(
       (reminder) => !reminder.completedAt || settledIds.current.has(reminder.id),
     );
     const { groups: openGroups } = groupRemindersByBucket(
       stayingInPlace.map((reminder) => ({ ...reminder, completedAt: null })),
     );
-    const byId = new Map(forPerson.map((reminder) => [reminder.id, reminder]));
+    const byId = new Map(visible.map((reminder) => [reminder.id, reminder]));
     const restored = {} as Record<ReminderBucket, Reminder[]>;
     for (const bucket of reminderBucketOrder) {
       restored[bucket] = openGroups[bucket].map(
         (reminder) => byId.get(reminder.id)!,
       );
     }
-    const doneItems = forPerson.filter(
-      (reminder) => reminder.completedAt && !settledIds.current.has(reminder.id),
-    );
-    return { groups: restored, completed: doneItems };
-  }, [forPerson]);
-
-  const counts = countsByBucket({
-    overdue: groups.overdue.filter((item) => !item.completedAt),
-    today: groups.today.filter((item) => !item.completedAt),
-    week: groups.week.filter((item) => !item.completedAt),
-    later: groups.later.filter((item) => !item.completedAt),
-  });
-  const listedTotal = reminderBucketOrder.reduce(
-    (total, bucket) => total + groups[bucket].length,
-    0,
-  );
+    return {
+      groups: restored,
+      completed: visible.filter(
+        (reminder) =>
+          reminder.completedAt && !settledIds.current.has(reminder.id),
+      ),
+      counts: countsByBucket({
+        overdue: restored.overdue.filter((item) => !item.completedAt),
+        today: restored.today.filter((item) => !item.completedAt),
+        week: restored.week.filter((item) => !item.completedAt),
+        later: restored.later.filter((item) => !item.completedAt),
+      }),
+    };
+  }, [query, reminders]);
 
   async function toggleComplete(reminder: Reminder) {
     setWorkingId(reminder.id);
@@ -107,156 +113,163 @@ export function ReminderBoard({
     setWorkingId(null);
   }
 
+  const shownBuckets = focusedBucket ? [focusedBucket] : reminderBucketOrder;
+  const openTotal = reminderBucketOrder.reduce(
+    (total, bucket) => total + counts[bucket],
+    0,
+  );
+
   return (
     <div>
-      <section
+      <div
+        role="tablist"
         aria-label="How your reminders are spread out"
         className="mt-7 grid grid-cols-4 border-y border-ink/[0.08]"
       >
-        {reminderBucketOrder.map((bucket) => (
-          <a
-            key={bucket}
-            href={`#reminders-${bucket}`}
-            className={clsx(
-              "flex min-h-[5.25rem] flex-col justify-center gap-1 py-4 pr-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-              bucket !== "overdue" && "border-l border-ink/[0.08] pl-3",
-            )}
-          >
-            <span
+        {reminderBucketOrder.map((bucket) => {
+          const focused = focusedBucket === bucket;
+          return (
+            <button
+              key={bucket}
+              type="button"
+              role="tab"
+              aria-selected={focused}
+              onClick={() => setFocusedBucket(focused ? null : bucket)}
               className={clsx(
-                "font-display text-3xl leading-none tabular-nums",
-                counts[bucket] === 0 && "text-ink/25",
-                bucket === "overdue" &&
-                  counts[bucket] > 0 &&
-                  "text-coral-strong",
+                "flex min-h-[5.25rem] flex-col justify-center gap-1 py-4 pr-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                bucket !== "overdue" && "border-l border-ink/[0.08] pl-3",
+                focused && "border-b-2 border-b-ink",
               )}
             >
-              {counts[bucket]}
-            </span>
-            <span className="text-[11px] font-semibold leading-4 text-ink-muted">
-              {reminderBucketLabels[bucket]}
-            </span>
-          </a>
-        ))}
-      </section>
+              <span
+                className={clsx(
+                  "font-display text-3xl leading-none tabular-nums",
+                  counts[bucket] === 0 && "text-ink/25",
+                  bucket === "overdue" &&
+                    counts[bucket] > 0 &&
+                    "text-coral-strong",
+                )}
+              >
+                {counts[bucket]}
+              </span>
+              <span className="text-[11px] font-semibold leading-4 text-ink-muted">
+                {reminderBucketLabels[bucket]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="mt-4 flex items-center gap-3">
         <label className="relative flex-1">
-          <span className="sr-only">Filter by person</span>
-          <select
-            value={personId}
-            onChange={(event) => setPersonId(event.target.value)}
-            className="h-10 w-full appearance-none rounded-lg border border-black/10 bg-white pl-3 pr-9 text-xs text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-          >
-            <option value="all">Every person</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.preferredName ?? person.fullName}
-              </option>
-            ))}
-          </select>
-          <CaretDown
-            size={13}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted"
+          <span className="sr-only">Filter reminders</span>
+          <MagnifyingGlass
+            size={16}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
             aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Person or reminder"
+            className="h-11 w-full rounded-lg border border-black/10 bg-white pl-9 pr-3 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
         </label>
         <button
           type="button"
           onClick={() => setShowCompleted((value) => !value)}
-          aria-pressed={showCompleted}
-          className="shrink-0 text-xs font-semibold text-ink-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          aria-expanded={showCompleted}
+          className="shrink-0 text-xs font-semibold text-ink-muted underline underline-offset-4 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
           {showCompleted ? "Hide done" : `Done (${completed.length})`}
         </button>
       </div>
 
-      {listedTotal === 0 && !showCompleted ? (
-        <div className="mt-10 py-10 text-center">
-          <ClockCountdown
-            size={30}
-            className="mx-auto text-ink/30"
-            aria-hidden="true"
-          />
-          <p className="mt-4 font-display text-2xl">Nothing is waiting.</p>
-          <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-ink-muted">
-            Reminders land here when you add something you want to remember.
+      {openTotal === 0 && !showCompleted ? (
+        <div className="py-10">
+          <ClockCountdown size={28} className="text-ink-muted" aria-hidden="true" />
+          <p className="mt-3 font-display text-2xl">
+            {reminders.length === 0 ? "No reminders yet" : "Nothing is waiting"}
+          </p>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-ink-muted">
+            {reminders.length === 0
+              ? "Add a reminder and it will show up here."
+              : "Everything here is either done or filtered out."}
           </p>
         </div>
       ) : (
-        <div className="mt-2">
-          {reminderBucketOrder.map((bucket) => (
-            <section
-              key={bucket}
-              id={`reminders-${bucket}`}
-              className="scroll-mt-6 pt-6"
-              aria-labelledby={`reminders-${bucket}-heading`}
-            >
-              <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
-                <h2
-                  id={`reminders-${bucket}-heading`}
-                  className={clsx(
-                    "text-sm font-bold",
-                    bucket === "overdue" &&
-                      counts[bucket] > 0 &&
-                      "text-coral-strong",
-                  )}
-                >
-                  {reminderBucketLabels[bucket]}
-                </h2>
-                <span className="text-[11px] font-semibold tabular-nums text-ink-muted">
-                  {counts[bucket]}
-                </span>
-              </div>
-              {groups[bucket].length ? (
-                <ul className="divide-y divide-ink/[0.055]">
-                  {groups[bucket].map((reminder) => (
-                    <ReminderRow
-                      key={reminder.id}
-                      reminder={reminder}
-                      busy={workingId === reminder.id}
-                      onToggle={() => toggleComplete(reminder)}
-                    />
-                  ))}
-                </ul>
-              ) : (
-                <p className="flex min-h-[3.5rem] items-center text-xs text-ink-muted">
-                  {reminderBucketEmptyLabels[bucket]}
-                </p>
-              )}
-            </section>
-          ))}
-
-          {showCompleted ? (
-            <section className="pt-6" aria-labelledby="reminders-done-heading">
-              <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
-                <h2 id="reminders-done-heading" className="text-sm font-bold">
-                  Done
-                </h2>
-                <span className="text-[11px] font-semibold tabular-nums text-ink-muted">
-                  {completed.length}
-                </span>
-              </div>
-              {completed.length ? (
-                <ul className="divide-y divide-ink/[0.055]">
-                  {completed.map((reminder) => (
-                    <ReminderRow
-                      key={reminder.id}
-                      reminder={reminder}
-                      busy={workingId === reminder.id}
-                      onToggle={() => toggleComplete(reminder)}
-                    />
-                  ))}
-                </ul>
-              ) : (
-                <p className="flex min-h-[3.5rem] items-center text-xs text-ink-muted">
-                  Nothing finished yet.
-                </p>
-              )}
-            </section>
-          ) : null}
-        </div>
+        shownBuckets.map((bucket) => (
+          <section
+            key={bucket}
+            className="pt-6"
+            aria-labelledby={`reminders-${bucket}-heading`}
+          >
+            <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
+              <h2
+                id={`reminders-${bucket}-heading`}
+                className={clsx(
+                  "text-sm font-bold",
+                  bucket === "overdue" &&
+                    counts[bucket] > 0 &&
+                    "text-coral-strong",
+                )}
+              >
+                {reminderBucketLabels[bucket]}
+              </h2>
+              <span className="text-[11px] font-semibold tabular-nums text-ink-muted">
+                {counts[bucket]}
+              </span>
+            </div>
+            {groups[bucket].length ? (
+              <ul>
+                {groups[bucket].map((reminder) => (
+                  <ReminderRow
+                    key={reminder.id}
+                    reminder={reminder}
+                    busy={workingId === reminder.id}
+                    onToggle={() => toggleComplete(reminder)}
+                    overdue={bucket === "overdue"}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="flex min-h-[3.5rem] items-center text-xs text-ink-muted">
+                {reminderBucketEmptyLabels[bucket]}
+              </p>
+            )}
+          </section>
+        ))
       )}
+
+      {showCompleted ? (
+        <section className="pt-6" aria-labelledby="reminders-done-heading">
+          <div className="flex items-baseline justify-between gap-3 border-b border-ink/[0.08] pb-2">
+            <h2 id="reminders-done-heading" className="text-sm font-bold">
+              Done
+            </h2>
+            <span className="text-[11px] font-semibold tabular-nums text-ink-muted">
+              {completed.length}
+            </span>
+          </div>
+          {completed.length ? (
+            <ul>
+              {completed.map((reminder) => (
+                <ReminderRow
+                  key={reminder.id}
+                  reminder={reminder}
+                  busy={workingId === reminder.id}
+                  onToggle={() => toggleComplete(reminder)}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="flex min-h-[3.5rem] items-center text-xs text-ink-muted">
+              Nothing finished yet.
+            </p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -265,25 +278,63 @@ function ReminderRow({
   reminder,
   busy,
   onToggle,
+  overdue = false,
 }: {
   reminder: Reminder;
   busy: boolean;
   onToggle: () => void;
+  overdue?: boolean;
 }) {
   const person = reminder.person;
+  const name = person?.preferredName || person?.fullName || "Someone";
   const done = Boolean(reminder.completedAt);
 
+  const copy = (
+    <>
+      <span
+        className={clsx(
+          "block text-sm font-semibold leading-5",
+          done && "text-ink-muted line-through",
+        )}
+      >
+        {reminder.text}
+      </span>
+      <span className="mt-1 block truncate text-[11px] text-ink-muted">
+        {name}
+        {done ? "" : ` · ${reminderDueLabel(reminder.dueAt)}`}
+      </span>
+    </>
+  );
+
   return (
-    <li className="flex min-h-[4.25rem] items-center gap-3 py-3">
+    <li className="flex min-h-[4.25rem] items-center gap-3 border-b border-ink/[0.055] py-3">
+      <Avatar
+        name={person?.fullName ?? "Someone"}
+        imageUrl={person?.profilePhotoUrl}
+        size="sm"
+      />
+
+      <div className="min-w-0 flex-1">
+        {person ? (
+          <Link
+            href={`/people/${person.id}`}
+            className="block rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            {copy}
+          </Link>
+        ) : (
+          copy
+        )}
+      </div>
+
       <button
         type="button"
         onClick={onToggle}
         disabled={busy}
         className={clsx(
-          "grid size-8 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-          done
-            ? "bg-sage-strong text-white"
-            : "bg-mist text-ink/40 hover:bg-sage-strong hover:text-white",
+          "grid size-9 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+          done ? "bg-sage-strong text-white" : "bg-mist",
+          !done && (overdue ? "text-coral-strong" : "text-ink-muted"),
         )}
         aria-label={
           done
@@ -291,47 +342,8 @@ function ReminderRow({
             : `Mark “${reminder.text}” complete`
         }
       >
-        <Check size={16} weight="bold" aria-hidden="true" />
+        <Check size={17} weight="bold" aria-hidden="true" />
       </button>
-
-      <div className="min-w-0 flex-1">
-        <p
-          className={clsx(
-            "text-sm font-semibold leading-5",
-            done && "text-ink-muted line-through",
-          )}
-        >
-          {reminder.text}
-        </p>
-        {person ? (
-          <Link
-            href={`/people/${person.id}`}
-            className="mt-1.5 flex min-w-0 items-center gap-1.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-          >
-            <Avatar
-              name={person.fullName}
-              imageUrl={person.profilePhotoUrl}
-              size="xs"
-            />
-            <span className="truncate text-[11px] text-ink-muted">
-              {person.preferredName ?? person.fullName}
-            </span>
-          </Link>
-        ) : null}
-      </div>
-
-      <span className="shrink-0 text-right text-[11px] leading-4 text-ink-muted">
-        {done ? (
-          <>Done {format(new Date(reminder.completedAt!), "MMM d")}</>
-        ) : (
-          <>
-            <span className="block font-semibold text-ink">
-              {reminderDueLabel(reminder.dueAt)}
-            </span>
-            {format(new Date(reminder.dueAt), "MMM d")}
-          </>
-        )}
-      </span>
     </li>
   );
 }

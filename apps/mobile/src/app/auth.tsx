@@ -188,7 +188,7 @@ export default function AuthScreen() {
             error={fieldErrors.displayName}
             label="Your name"
             onChangeText={setDisplayName}
-            placeholder="How should we greet you?"
+            placeholder="What should we call you?"
             textContentType="name"
             value={displayName}
             {...fieldProps("displayName")}
@@ -329,7 +329,7 @@ export default function AuthScreen() {
           style={styles.link}
           variant="caption"
         >
-          Privacy Policy
+          Privacy policy
         </AppText>
         .
       </AppText>

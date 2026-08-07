@@ -21,23 +21,30 @@ export default async function RemindersPage({
     searchParams,
   ]);
 
+  // Notifications and person pages link here with ?person=, so that arrives as
+  // a filled-in search rather than as a second, web-only filter control.
+  const requestedPerson = people.find((person) => person.id === parameters.person);
+
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
         title="Reminders"
-        description="A practical list of the things you said you’d send, ask, or do."
+        description="What is coming up, and when it lands."
         action={
           <QuickCaptureTrigger
             mode="reminder"
-            label="Add reminder"
+            label="Add a reminder"
             compact
           />
         }
       />
       <ReminderBoard
         initialReminders={reminders}
-        people={people}
-        initialPersonId={parameters.person ?? "all"}
+        initialQuery={
+          requestedPerson
+            ? requestedPerson.preferredName || requestedPerson.fullName
+            : ""
+        }
       />
     </div>
   );

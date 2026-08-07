@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { Check, ClockCountdown, MagnifyingGlass } from "phosphor-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
@@ -33,6 +33,10 @@ export default function RemindersScreen() {
   );
   const [showCompleted, setShowCompleted] = useState(false);
 
+  // A reminder completed in this session keeps its place in the list so it
+  // never jumps out from under the tap that completed it.
+  const settledIds = useRef(new Set<string>());
+
   useEffect(() => {
     if (quickCapture.revision > 0) void screenData.reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,8 +55,32 @@ export default function RemindersScreen() {
         .toLowerCase()
         .includes(normalized),
     );
-    const bucketed = groupRemindersByBucket(visible);
-    return { ...bucketed, counts: countsByBucket(bucketed.groups) };
+    const stayingInPlace = visible.filter(
+      (reminder) => !reminder.completedAt || settledIds.current.has(reminder.id),
+    );
+    const bucketed = groupRemindersByBucket(
+      stayingInPlace.map((reminder) => ({ ...reminder, completedAt: null })),
+    );
+    const byId = new Map(visible.map((reminder) => [reminder.id, reminder]));
+    const restored = {} as Record<ReminderBucket, Reminder[]>;
+    for (const bucket of reminderBucketOrder) {
+      restored[bucket] = bucketed.groups[bucket].map(
+        (reminder) => byId.get(reminder.id)!,
+      );
+    }
+    return {
+      groups: restored,
+      completed: visible.filter(
+        (reminder) =>
+          reminder.completedAt && !settledIds.current.has(reminder.id),
+      ),
+      counts: countsByBucket({
+        overdue: restored.overdue.filter((item) => !item.completedAt),
+        today: restored.today.filter((item) => !item.completedAt),
+        week: restored.week.filter((item) => !item.completedAt),
+        later: restored.later.filter((item) => !item.completedAt),
+      }),
+    };
   }, [query, screenData.data]);
 
   if (screenData.loading && !screenData.data) {
@@ -69,6 +97,7 @@ export default function RemindersScreen() {
 
   async function toggleComplete(reminder: Reminder) {
     try {
+      settledIds.current.add(reminder.id);
       await setReminderComplete(reminder.id, !reminder.completedAt);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await screenData.reload();
@@ -129,19 +158,31 @@ export default function RemindersScreen() {
         })}
       </View>
 
-      <View style={styles.search}>
-        <MagnifyingGlass color={colors.inkMuted} size={18} />
-        <TextInput
-          accessibilityLabel="Filter reminders"
-          onChangeText={setQuery}
-          onSubmitEditing={() => Keyboard.dismiss()}
-          placeholder="Person or reminder"
-          placeholderTextColor={colors.inkMuted}
-          returnKeyType="search"
-          selectionColor={colors.coral}
-          style={styles.searchInput}
-          value={query}
-        />
+      <View style={styles.filters}>
+        <View style={styles.search}>
+          <MagnifyingGlass color={colors.inkMuted} size={18} />
+          <TextInput
+            accessibilityLabel="Filter reminders"
+            onChangeText={setQuery}
+            onSubmitEditing={() => Keyboard.dismiss()}
+            placeholder="Person or reminder"
+            placeholderTextColor={colors.inkMuted}
+            returnKeyType="search"
+            selectionColor={colors.coral}
+            style={styles.searchInput}
+            value={query}
+          />
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showCompleted }}
+          onPress={() => setShowCompleted((value) => !value)}
+          style={styles.doneToggle}
+        >
+          <AppText style={styles.doneToggleText} variant="label">
+            {showCompleted ? "Hide done" : `Done (${completed.length})`}
+          </AppText>
+        </Pressable>
       </View>
 
       {openTotal === 0 && !showCompleted ? (
@@ -154,7 +195,7 @@ export default function RemindersScreen() {
           </AppText>
           <AppText style={styles.emptyBody}>
             {(screenData.data || []).length === 0
-              ? "Use the coral plus button to attach a thoughtful next step to someone."
+              ? "Add a reminder and it will show up here."
               : "Everything here is either done or filtered out."}
           </AppText>
         </View>
@@ -195,19 +236,14 @@ export default function RemindersScreen() {
         ))
       )}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: showCompleted }}
-        onPress={() => setShowCompleted((value) => !value)}
-        style={styles.doneToggle}
-      >
-        <AppText style={styles.doneToggleText} variant="label">
-          {showCompleted ? "Hide done" : `Done (${completed.length})`}
-        </AppText>
-      </Pressable>
-
       {showCompleted ? (
         <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <AppText variant="heading">Done</AppText>
+            <AppText style={styles.sectionCount} variant="caption">
+              {completed.length}
+            </AppText>
+          </View>
           {completed.length === 0 ? (
             <AppText style={styles.sectionEmpty} variant="caption">
               Nothing finished yet.
@@ -274,7 +310,11 @@ function ReminderRow({
         </AppText>
       </View>
       <Pressable
-        accessibilityLabel={done ? "Mark as open" : "Mark complete"}
+        accessibilityLabel={
+          done
+            ? `Mark “${reminder.text}” incomplete`
+            : `Mark “${reminder.text}” complete`
+        }
         accessibilityRole="checkbox"
         accessibilityState={{ checked: done }}
         hitSlop={10}
@@ -333,8 +373,14 @@ const styles = StyleSheet.create({
   overdueText: {
     color: colors.coralStrong,
   },
+  filters: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+  },
   search: {
     alignItems: "center",
+    flex: 1,
     backgroundColor: colors.paper,
     borderColor: colors.mist,
     borderRadius: radii.medium,
@@ -400,7 +446,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sageStrong,
   },
   doneToggle: {
-    alignSelf: "flex-start",
     paddingVertical: 4,
   },
   doneToggleText: {

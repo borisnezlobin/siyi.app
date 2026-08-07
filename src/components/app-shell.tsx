@@ -23,7 +23,7 @@ import { InstallPrompt } from "@/components/install-prompt";
 const primaryNavigation = [
   { href: "/today", label: "Today", icon: House },
   { href: "/people", label: "People", icon: UsersThree },
-  { href: "/reminders", label: "Follow-ups", icon: ClockCountdown },
+  { href: "/reminders", label: "Reminders", icon: ClockCountdown },
 ] as const;
 
 const secondaryNavigation = [

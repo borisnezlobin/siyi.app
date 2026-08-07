@@ -50,7 +50,7 @@ export default async function NotificationsPage() {
     <div className="mx-auto max-w-[680px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
         title="Notifications"
-        description="Choose what is useful, when it arrives, and whether this browser can send it."
+        description="Useful timing, clear controls, and no attention tricks."
       />
       <NotificationControls initialPreferences={initialPreferences} />
     </div>
