@@ -148,7 +148,37 @@ export function PersonForm({
     noteSections?.sections.length ?? 0,
   );
   const [saving, setSaving] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Everything except the photo is taken from the person as stored, not from
+   * the form. Picking a photo should not also commit a half-typed name that
+   * the user has not decided about yet.
+   */
+  function storedInput(current: Person): PersonInput {
+    return {
+      fullName: current.fullName,
+      preferredName: current.preferredName,
+      instagramUsername: current.instagramUsername,
+      phoneNumber: current.phoneNumber,
+      email: current.email,
+      birthday: current.birthday ?? "",
+      hometown: current.hometown,
+      dormOrResidence: current.dormOrResidence,
+      university: current.university,
+      major: current.major,
+      graduationYear: current.graduationYear,
+      relationshipStrength: current.relationshipStrength,
+      relationshipLabel: current.relationshipLabel,
+      remindersEnabled: current.remindersEnabled,
+      reminderIntervalDays: current.reminderIntervalDays,
+      status: current.status,
+      firstMetAt: current.firstMetAt,
+      firstMetLocation: current.firstMetLocation,
+      generalNotes: current.generalNotes,
+    };
+  }
 
   async function choosePhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -159,12 +189,35 @@ export function PersonForm({
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    setPhoto({
+    const picked = {
       uri: asset.uri,
       fileName: asset.fileName,
       mimeType: asset.mimeType,
-    });
+    };
+    setPhoto(picked);
     void Haptics.selectionAsync();
+
+    // A photo is a whole decision on its own, so it saves the moment it is
+    // chosen. A new person has no row to attach it to yet, so theirs still
+    // goes up with the rest of the form.
+    if (!person || !session) return;
+    setSavingPhoto(true);
+    setError(null);
+    try {
+      await updatePerson(
+        session.user.id,
+        person.id,
+        storedInput(person),
+        picked,
+        person.profilePhotoPath,
+      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "That photo did not save.",
+      );
+    }
+    setSavingPhoto(false);
   }
 
   // The default arrives after the form is on screen, so it is applied then —
@@ -407,9 +460,11 @@ export function PersonForm({
       <View style={styles.photoCopy}>
         <AppText variant="label">{person ? "Photo" : "Add a photo"}</AppText>
         <AppText variant="caption">
-          {person
-            ? "Tap to pick a new one."
-            : "Optional, but useful when you just met."}
+          {savingPhoto
+            ? "Saving…"
+            : person
+              ? "Tap to pick a new one. It saves on its own."
+              : "Optional, but useful when you just met."}
         </AppText>
       </View>
     </View>

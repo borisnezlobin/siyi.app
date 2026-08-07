@@ -21,6 +21,7 @@ import {
   UsersThree,
 } from "phosphor-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { GlassIconButton } from "@/components/glass-surface";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -238,23 +239,23 @@ export default function PersonDetailScreen() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.topBar}>
-          <Pressable
+          <GlassIconButton
             accessibilityLabel="Go back"
-            accessibilityRole="button"
+            fallbackStyle={styles.headerButtonFallback}
             onPress={() => router.back()}
             style={styles.headerButton}
           >
             <ArrowLeft color={colors.ink} size={21} />
-          </Pressable>
+          </GlassIconButton>
           <View style={styles.topActions}>
-            <Pressable
+            <GlassIconButton
               accessibilityLabel="Share person"
-              accessibilityRole="button"
+              fallbackStyle={styles.headerButtonFallback}
               onPress={() => setSharing(true)}
               style={styles.headerButton}
             >
               <Share color={colors.ink} size={20} />
-            </Pressable>
+            </GlassIconButton>
             <Pressable
               accessibilityLabel="Edit person"
               accessibilityRole="button"
@@ -263,14 +264,14 @@ export default function PersonDetailScreen() {
             >
               <PencilSimple color={colors.ink} size={20} />
             </Pressable>
-            <Pressable
+            <GlassIconButton
               accessibilityLabel="Archive person"
-              accessibilityRole="button"
+              fallbackStyle={styles.headerButtonFallback}
               onPress={archive}
               style={styles.headerButton}
             >
               <Archive color={colors.coralStrong} size={20} />
-            </Pressable>
+            </GlassIconButton>
           </View>
         </View>
 
@@ -687,9 +688,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  headerButtonFallback: {
+    backgroundColor: colors.paper,
+  },
   headerButton: {
     alignItems: "center",
-    backgroundColor: colors.paper,
     borderRadius: radii.round,
     height: 44,
     justifyContent: "center",

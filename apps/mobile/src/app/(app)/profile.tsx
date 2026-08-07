@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import { GlassIconButton } from "@/components/glass-surface";
 import { ArrowLeft, Copy, QrCode } from "phosphor-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Animated, Pressable, StyleSheet, Switch, View } from "react-native";
@@ -101,14 +102,14 @@ export default function ProfileScreen() {
   return (
     <Screen bottomInset={56}>
       <View style={styles.topBar}>
-        <Pressable
+        <GlassIconButton
           accessibilityLabel="Go back"
-          accessibilityRole="button"
+          fallbackStyle={styles.backFallback}
           onPress={() => router.back()}
           style={styles.back}
         >
           <ArrowLeft color={colors.ink} size={21} />
-        </Pressable>
+        </GlassIconButton>
       </View>
       <View style={styles.header}>
         <AppText variant="display">Your card</AppText>
@@ -256,10 +257,12 @@ const styles = StyleSheet.create({
   topBar: {
     alignItems: "flex-start",
   },
+  backFallback: {
+    backgroundColor: colors.paper,
+  },
   back: {
     alignItems: "center",
-    backgroundColor: colors.paper,
-    borderRadius: radii.small,
+    borderRadius: radii.round,
     height: 44,
     justifyContent: "center",
     width: 44,

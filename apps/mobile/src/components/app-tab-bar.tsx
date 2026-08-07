@@ -10,6 +10,7 @@ import {
 } from "phosphor-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GlassSurface } from "@/components/glass-surface";
 import { AppText } from "@/components/app-text";
 import {
   colors,
@@ -47,7 +48,7 @@ export function AppTabBar({
         },
       ]}
     >
-      <View style={styles.tabs}>
+      <GlassSurface fallbackStyle={styles.tabsFallback} style={styles.tabs}>
         {state.routes.map((route, index) => {
           const details = tabDetails[route.name];
           if (!details) return null;
@@ -109,7 +110,7 @@ export function AppTabBar({
         >
           <Plus color={colors.paper} size={29} weight="bold" />
         </Pressable>
-      </View>
+      </GlassSurface>
     </View>
   );
 }
@@ -122,10 +123,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
   },
-  tabs: {
+  tabsFallback: {
     ...floatShadow,
-    alignItems: "center",
     backgroundColor: colors.paper,
+  },
+  tabs: {
+    alignItems: "center",
     borderRadius: radii.xlarge,
     flex: 1,
     flexDirection: "row",
