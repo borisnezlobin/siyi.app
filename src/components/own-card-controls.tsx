@@ -32,17 +32,12 @@ const placeholders: Partial<Record<(typeof ownCardFields)[number], string>> = {
 export function OwnCardControls({
   initialCard,
   initialEnabled,
-  initialDefaultUniversity,
 }: {
   initialCard: OwnCard;
   initialEnabled: boolean;
-  initialDefaultUniversity: string;
 }) {
   const [card, setCard] = useState<OwnCard>(initialCard);
   const [enabled, setEnabled] = useState(initialEnabled);
-  const [defaultUniversity, setDefaultUniversity] = useState(
-    initialDefaultUniversity,
-  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -57,7 +52,6 @@ export function OwnCardControls({
         body: JSON.stringify({
           card,
           enabled: overrides?.enabled ?? enabled,
-          defaultUniversity,
         }),
       });
       if (!response.ok) {
@@ -78,20 +72,7 @@ export function OwnCardControls({
 
   return (
     <div>
-      <label className={labelClassName}>
-        Default university
-        <span className="mt-1 block text-[11px] font-normal leading-4 text-ink-muted">
-          Filled in for you when you add someone new. Leave blank for none.
-        </span>
-        <CollegeInput
-          name="defaultUniversity"
-          defaultValue={defaultUniversity}
-          className={inputClassName}
-          onValueChange={setDefaultUniversity}
-        />
-      </label>
-
-      <div className="mt-6 flex items-start justify-between gap-4 rounded-2xl bg-porcelain p-4">
+      <div className="flex items-start justify-between gap-4 rounded-2xl bg-porcelain p-4">
         <div>
           <p className="text-xs font-semibold text-ink">Offer my details when sharing</p>
           <p className="mt-1 text-[11px] leading-4 text-ink-muted">

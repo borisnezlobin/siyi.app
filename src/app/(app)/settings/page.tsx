@@ -1,4 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { DefaultUniversityControl } from "@/components/default-university-control";
 import { OwnCardControls } from "@/components/own-card-controls";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
@@ -94,6 +95,16 @@ export default async function SettingsPage() {
       />
 
       <section className="mt-10 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+        <h2 className="text-base font-bold">Default university</h2>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          Filled in for you when you add someone new. Leave blank for none.
+        </p>
+        <div className="mt-4">
+          <DefaultUniversityControl initialValue={initialDefaultUniversity} />
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[1.75rem] bg-white p-4 shadow-card ring-1 ring-black/[0.035] sm:p-6">
         <h2 className="text-base font-bold">Your own details</h2>
         <p className="mt-1 text-xs leading-5 text-ink-muted">
           What you hand out about yourself, so you are not retyping it every time
@@ -103,7 +114,6 @@ export default async function SettingsPage() {
           <OwnCardControls
             initialCard={initialOwnCard}
             initialEnabled={initialOwnCardEnabled}
-            initialDefaultUniversity={initialDefaultUniversity}
           />
         </div>
       </section>
