@@ -33,16 +33,23 @@ export function PressableCard({ style, ...props }: PressableProps) {
 
 export function SectionHeading({
   title,
+  subtitle,
   detail,
 }: {
   title: string;
+  subtitle?: string;
   detail?: string;
 }) {
   return (
     <View style={styles.sectionHeading}>
-      <AppText style={styles.sectionTitle} variant="heading">
-        {title}
-      </AppText>
+      <View style={styles.sectionTitle}>
+        <AppText variant="heading">{title}</AppText>
+        {subtitle ? (
+          <AppText style={styles.sectionSubtitle} variant="caption">
+            {subtitle}
+          </AppText>
+        ) : null}
+      </View>
       {detail ? (
         <AppText style={styles.sectionDetail} variant="caption">
           {detail}
@@ -63,9 +70,7 @@ export function EmptyState({
 }) {
   return (
     <Card style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        <IconComponent color={colors.sageStrong} size={24} weight="duotone" />
-      </View>
+      <IconComponent color={colors.inkMuted} size={26} />
       <View style={styles.emptyCopy}>
         <AppText variant="heading">{title}</AppText>
         <AppText style={styles.muted}>{body}</AppText>
@@ -94,6 +99,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     flexShrink: 1,
+    gap: 3,
+  },
+  sectionSubtitle: {
+    color: colors.inkMuted,
   },
   sectionDetail: {
     flexShrink: 1,
@@ -105,14 +114,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 14,
-  },
-  emptyIcon: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.round,
-    height: 46,
-    justifyContent: "center",
-    width: 46,
   },
   emptyCopy: {
     flex: 1,

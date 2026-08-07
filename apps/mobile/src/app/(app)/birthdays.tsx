@@ -78,34 +78,39 @@ export default function BirthdaysScreen() {
           title="No birthdays saved yet"
         />
       ) : view === "upcoming" ? (
-        <View style={styles.list}>
-          {upcoming.map((entry) => (
-            <Pressable
-              key={entry.person.id}
-              onPress={() => router.push(`/people/${entry.person.id}`)}
-              style={styles.row}
-            >
-              <View style={styles.date}>
-                <AppText variant="label">{monthShort(entry.month)}</AppText>
-                <AppText variant="heading">{entry.day}</AppText>
-              </View>
-              <View style={styles.rowBody}>
-                <AppText variant="body">
-                  {entry.person.preferredName || entry.person.fullName}
-                </AppText>
-                <AppText variant="caption">
-                  {birthdayCountdownLabel(entry.daysAway)}
-                  {entry.turningAge ? ` · turning ${entry.turningAge}` : ""}
-                </AppText>
-              </View>
-            </Pressable>
-          ))}
-          {upcoming.length === 0 ? (
-            <AppText variant="caption">
-              Nothing in the next four months. Switch to the whole year.
-            </AppText>
-          ) : null}
-        </View>
+        upcoming.length === 0 ? (
+          <AppText variant="caption">
+            Nothing in the next four months. Switch to the whole year.
+          </AppText>
+        ) : (
+          <View style={styles.groupedCard}>
+            {upcoming.map((entry, index) => (
+              <Pressable
+                accessibilityRole="button"
+                key={entry.person.id}
+                onPress={() => router.push(`/people/${entry.person.id}`)}
+                style={[
+                  styles.row,
+                  index < upcoming.length - 1 && styles.divider,
+                ]}
+              >
+                <View style={styles.date}>
+                  <AppText variant="caption">{monthShort(entry.month)}</AppText>
+                  <AppText variant="heading">{entry.day}</AppText>
+                </View>
+                <View style={styles.rowBody}>
+                  <AppText variant="label">
+                    {entry.person.preferredName || entry.person.fullName}
+                  </AppText>
+                  <AppText variant="caption">
+                    {birthdayCountdownLabel(entry.daysAway)}
+                    {entry.turningAge ? ` · turning ${entry.turningAge}` : ""}
+                  </AppText>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )
       ) : (
         <View style={styles.months}>
           {months.map((month) => (
@@ -170,16 +175,21 @@ const styles = StyleSheet.create({
   toggleTextSelected: {
     color: colors.ink,
   },
-  list: {
-    gap: 9,
+  groupedCard: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
+    overflow: "hidden",
+    paddingHorizontal: 14,
   },
   row: {
     alignItems: "center",
-    backgroundColor: colors.paper,
-    borderRadius: radii.medium,
     flexDirection: "row",
     gap: 14,
-    padding: 15,
+    paddingVertical: 11,
+  },
+  divider: {
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   date: {
     alignItems: "center",

@@ -18,14 +18,18 @@ test("the public homepage explains the product and offers clear entry points", a
 test("Today prioritizes actionable reminders", async ({ page }) => {
   await page.goto("/today");
 
+  await expect(page.getByRole("heading", { name: "Today" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "What needs your attention?" }),
+    page.getByText("Who did you talk to today?", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Time-sensitive" })).toBeVisible();
   await expect(page.getByText("Overdue first, then what’s coming up")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "A few people to check in on" }),
+    page.getByRole("heading", { name: "Have you checked in recently?" }),
   ).toBeVisible();
+  // The same sections, in the same order, as the phone's Today tab.
+  await expect(page.getByText("need attention")).toBeVisible();
+  await expect(page.getByText("coming up", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
