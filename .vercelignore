@@ -3,8 +3,7 @@
 # makes the upload fail on files that vanish mid-read.
 .claude
 .claude/**
-.next-e2e*/
-.next-dev/
+.next*/
 test-results/
 playwright-report/
 apps/mobile/

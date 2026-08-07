@@ -65,7 +65,7 @@ export function DefaultUniversityControl({
         type="button"
         onClick={() => void save()}
         disabled={saving}
-        className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#28332e] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
       >
         {saving ? (
           <SpinnerGap size={15} className="animate-spin" aria-hidden="true" />

@@ -1,22 +1,17 @@
 "use client";
 
 import {
-  CaretRight,
-  BellSimple,
+  LockKey,
   CheckCircle,
-  CloudArrowDown,
   DownloadSimple,
-  EnvelopeSimple,
   FileCsv,
   FileJs,
-  LockKey,
   SignOut,
   SpinnerGap,
   Trash,
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
-import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
@@ -416,31 +411,25 @@ export function SettingsControls({
             </option>
           ))}
         </select>
-        <Link
-          href="/notifications"
-          className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-porcelain px-4 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-        >
-          <span className="flex items-center gap-2">
-            <BellSimple size={17} className="text-coral" aria-hidden="true" />
-            Notification preferences
-          </span>
-          <CaretRight size={15} className="text-ink-muted" aria-hidden="true" />
-        </Link>
         </div>
+        <button
+          type="button"
+          onClick={saveSettings}
+          disabled={working === "save"}
+          className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#28332e] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+        >
+          {working === "save" ? (
+            <SpinnerGap size={16} className="animate-spin" aria-hidden="true" />
+          ) : null}
+          Save defaults
+        </button>
       </section>
       <section className="py-7 first:pt-0">
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
-            <LockKey size={19} weight="fill" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold">Account and access</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              {accountEmail || "Preview mode"}
-              {authMethods.length ? ` · signs in with ${authMethods.join(" and ").toLowerCase()}` : ""}
-            </p>
-          </div>
-        </div>
+        <h2 className="text-sm font-bold">Account and access</h2>
+        <p className="mt-0.5 text-xs text-ink-muted">
+          {accountEmail || "Preview mode"}
+          {authMethods.length ? ` · signs in with ${authMethods.join(" and ").toLowerCase()}` : ""}
+        </p>
         <form onSubmit={savePassword} className="mt-5">
           <h3 className="text-xs font-bold">Change your password</h3>
           <p className="mt-1 text-[11px] leading-5 text-ink-muted">
@@ -511,17 +500,10 @@ export function SettingsControls({
       </section>
 
       <section className="py-7 first:pt-0">
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-full bg-mist text-ink-muted">
-            <EnvelopeSimple size={19} weight="fill" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold">Emails from us</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              Occasional notes about what&apos;s new. Nothing else.
-            </p>
-          </div>
-        </div>
+        <h2 className="text-sm font-bold">Emails from us</h2>
+        <p className="mt-0.5 text-xs text-ink-muted">
+          Occasional notes about what&apos;s new. Nothing else.
+        </p>
         <div className="mt-4 flex items-start justify-between gap-4 rounded-2xl bg-porcelain px-4 py-3.5">
           <label htmlFor="marketing-opt-in" className="text-xs leading-5">
             <span className="font-semibold">Send me product updates</span>
@@ -562,28 +544,11 @@ export function SettingsControls({
         </p>
       ) : null}
 
-      <button
-        type="button"
-        onClick={saveSettings}
-        disabled={working === "save"}
-        className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-      >
-        {working === "save" ? (
-          <SpinnerGap size={18} className="animate-spin" aria-hidden="true" />
-        ) : null}
-        Save settings
-      </button>
-
       <section className="py-7 first:pt-0">
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-full bg-sage text-sage-strong">
-            <CloudArrowDown size={20} weight="fill" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold">Your data</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">Download a complete copy anytime.</p>
-          </div>
-        </div>
+        <h2 className="text-sm font-bold">Your data</h2>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          Download a complete copy anytime.
+        </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <button
             type="button"
@@ -621,10 +586,10 @@ export function SettingsControls({
           <button
             type="button"
             onClick={() => importInputRef.current?.click()}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-sage text-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            aria-label="Choose JSON file"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#28332e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
           >
-            <UploadSimple size={18} weight="bold" aria-hidden="true" />
+            <UploadSimple size={15} weight="bold" aria-hidden="true" />
+            Choose file
           </button>
           <input
             ref={importInputRef}

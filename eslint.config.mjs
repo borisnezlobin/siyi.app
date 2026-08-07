@@ -15,9 +15,8 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".claude/worktrees/**",
-      ".next/**",
-      ".next-dev/**",
-      ".next-e2e*/**",
+      // Any build output, however the dist directory was named.
+      ".next*/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
