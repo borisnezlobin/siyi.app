@@ -17,7 +17,7 @@ const eslintConfig = [
       ".claude/worktrees/**",
       ".next/**",
       ".next-dev/**",
-      ".next-e2e/**",
+      ".next-e2e*/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

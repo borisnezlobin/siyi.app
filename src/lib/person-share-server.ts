@@ -1,4 +1,3 @@
-import { normalizeOwnCard, ownCardIsEmpty, type OwnCard } from "@/lib/own-card";
 /**
  * Resolving a share link. The public page has no session, so the lookup runs
  * through the service role — but only after the token has been checked against
@@ -42,8 +41,6 @@ export type SharedPersonView = {
   person: Person;
   selection: ContactShareSelection;
   expiresAt: string | null;
-  /** The sharer's own details, when they have chosen to offer them. */
-  ownerCard: OwnCard | null;
 };
 
 function adminClient(): ShareLookupClient | null {
@@ -196,29 +193,7 @@ export async function resolveSharedPerson(
     person: redactedSharePerson(person, selection),
     selection,
     expiresAt: share.expiresAt,
-    ownerCard: await ownerCardFor(client, row.user_id),
   };
-}
-
-/**
- * The sharer's own card, and only if they turned the offer on. A link is about
- * the person in it; the sharer's details ride along solely because they asked.
- */
-async function ownerCardFor(client: ShareLookupClient, userId: unknown) {
-  if (typeof userId !== "string" || !userId) return null;
-
-  const result = await client
-    .from("user_settings")
-    .select("own_card,own_card_enabled")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (result.error || !result.data) return null;
-  const row = result.data as { own_card?: unknown; own_card_enabled?: boolean };
-  if (!row.own_card_enabled) return null;
-
-  const card = normalizeOwnCard(row.own_card);
-  return ownCardIsEmpty(card) ? null : card;
 }
 
 /** Best effort; a viewer should never see an error because the counter failed. */

@@ -1,7 +1,8 @@
 # Agent worktrees live inside the repo and hold their own build output. Without
 # this the deploy archive sweeps them up, and a build running in one of them
 # makes the upload fail on files that vanish mid-read.
-.claude/
+.claude
+.claude/**
 .next-e2e*/
 .next-dev/
 test-results/
