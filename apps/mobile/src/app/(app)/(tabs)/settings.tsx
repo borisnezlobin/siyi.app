@@ -260,6 +260,14 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <Section title="Your page">
+        <NavigationRow
+          detail="A handle people can find you by, and a code they can scan"
+          label="Public profile"
+          onPress={() => router.push("/profile")}
+        />
+      </Section>
+
       <Section title="Your own details">
         <NavigationRow
           detail="What you hand out about yourself, and a default university"
