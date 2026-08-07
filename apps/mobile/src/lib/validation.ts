@@ -3,6 +3,7 @@ import { isCustomTypeIconKey } from "@/lib/custom-type-icons";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import {
   interactionTypes,
+  personStatuses,
   relationshipStrengths,
 } from "@/lib/types";
 
@@ -122,6 +123,7 @@ export const personInputSchema = z.object({
     .max(3650)
     .optional()
     .nullable(),
+  status: z.enum(personStatuses).optional(),
   firstMetAt: pastTimestamp.optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,

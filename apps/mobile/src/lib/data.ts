@@ -860,7 +860,7 @@ function optimisticPerson(
     relationshipLabel: input.relationshipLabel ?? null,
     remindersEnabled: input.remindersEnabled ?? true,
     reminderIntervalDays: input.reminderIntervalDays ?? null,
-    status: current?.status ?? "active",
+    status: input.status ?? current?.status ?? "active",
     firstMetAt: input.firstMetAt ?? current?.firstMetAt ?? now,
     firstMetLocation: input.firstMetLocation,
     generalNotes: input.generalNotes,
@@ -2458,6 +2458,7 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
         ...(mutation.input.firstMetAt
           ? { first_met_at: mutation.input.firstMetAt }
           : {}),
+        ...(mutation.input.status ? { status: mutation.input.status } : {}),
         first_met_location: mutation.input.firstMetLocation,
         general_notes: mutation.input.generalNotes,
       },

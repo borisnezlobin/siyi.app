@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PersonForm } from "@/components/person-form";
 import { mockKeyboardEvents } from "@/test-support/keyboard";
@@ -66,12 +66,35 @@ afterEach(() => {
 });
 
 describe("editing a person", () => {
+  it("groups the fields the way the web form does", async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <PersonForm person={person} />
+      </SafeAreaProvider>,
+    );
+
+    for (const heading of [
+      "Who they are",
+      "How to reach them",
+      "About them",
+      "How you met",
+      "Notes",
+      "Reminders",
+    ]) {
+      expect(screen.getByText(heading)).toBeTruthy();
+    }
+    expect(screen.queryByText(/basic info/i)).toBeNull();
+  });
+
   it("offers a university beside the other school details", async () => {
     await render(
       <SafeAreaProvider initialMetrics={metrics}>
         <PersonForm person={{ ...person, university: "Westmont University" }} />
       </SafeAreaProvider>,
     );
+
+    // The school details live in a collapsed group, exactly as on the web.
+    await fireEvent.press(screen.getByRole("button", { name: "About them" }));
 
     expect(screen.getByDisplayValue("Westmont University")).toBeTruthy();
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { BellSlash, Check } from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import {
   isDefaultRelationshipLabel,
@@ -116,6 +116,9 @@ export function RelationshipFields({
           placeholder="college roommate"
           className={inputClassName}
         />
+        <span className="mt-1 block text-[11px] font-normal leading-4 text-ink-muted">
+          Anything you like, up to 40 characters.
+        </span>
       </label>
 
       <div className="mt-4 rounded-2xl bg-porcelain p-4">
@@ -147,13 +150,6 @@ export function RelationshipFields({
             />
           </button>
         </div>
-
-        {remindersEnabled ? null : (
-          <p className="mt-3 flex items-center gap-2 text-[11px] font-medium text-ink-muted">
-            <BellSlash size={14} aria-hidden="true" />
-            Reminder timing is paused until you switch this back on.
-          </p>
-        )}
 
         {/* Kept mounted while paused so an existing custom interval survives a save. */}
         <div

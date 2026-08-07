@@ -214,7 +214,7 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
 
         <div className="mt-6 space-y-4">
           <label className={labelClassName}>
-            Name
+            Full name
             <input
               autoFocus
               required
@@ -276,21 +276,13 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
           />
         </summary>
         <div className="grid gap-4 px-4 pb-5 sm:grid-cols-2 sm:px-6 sm:pb-6">
-          <label className={labelClassName}>
+          <label className={`${labelClassName} sm:col-span-2`}>
             Preferred name
             <input name="preferredName" className={inputClassName} />
           </label>
           <label className={labelClassName}>
-            Birthday
-            <input name="birthday" type="date" className={inputClassName} />
-          </label>
-          <label className={labelClassName}>
             Hometown
             <input name="hometown" className={inputClassName} />
-          </label>
-          <label className={labelClassName}>
-            Dorm or residence
-            <input name="dormOrResidence" className={inputClassName} />
           </label>
           <label className={labelClassName}>
             University
@@ -310,6 +302,14 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
               inputMode="numeric"
               className={inputClassName}
             />
+          </label>
+          <label className={labelClassName}>
+            Dorm or residence
+            <input name="dormOrResidence" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Birthday
+            <input name="birthday" type="date" className={inputClassName} />
           </label>
           <RelationshipFields personName={fullName.trim() || undefined} />
         </div>

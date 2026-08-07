@@ -1,9 +1,9 @@
-import { CaretRight, InstagramLogo } from "phosphor-react-native";
-import { StyleSheet, View } from "react-native";
+import { CaretRight, Clock } from "phosphor-react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
-import { PressableCard } from "@/components/surface";
 import { colors, radii } from "@/constants/theme";
+import { elapsedLabel } from "@/lib/date-labels";
 import { overdueDays } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
 
@@ -17,44 +17,28 @@ export function PersonRow({
   trailing?: React.ReactNode;
 }) {
   const overdue = overdueDays(person);
-  const supporting = [
-    person.instagramUsername ? `@${person.instagramUsername}` : null,
-    person.major,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
-    <PressableCard
+    <Pressable
       accessibilityLabel={`Open ${person.fullName}`}
+      accessibilityRole="button"
       onPress={onPress}
-      style={styles.row}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <Avatar
-        name={person.fullName}
-        size={52}
-        uri={person.profilePhotoUrl}
-      />
+      <Avatar name={person.fullName} size={52} uri={person.profilePhotoUrl} />
       <View style={styles.copy}>
-        <AppText variant="heading">
+        <AppText numberOfLines={1} variant="heading">
           {person.preferredName || person.fullName}
         </AppText>
-        {supporting ? (
-          <View style={styles.supporting}>
-            {person.instagramUsername ? (
-              <InstagramLogo color={colors.inkMuted} size={14} />
-            ) : null}
-            <AppText numberOfLines={1} variant="caption">
-              {supporting}
-            </AppText>
-          </View>
-        ) : (
-          <AppText variant="caption">
-            {person.firstMetLocation
-              ? `Met at ${person.firstMetLocation}`
-              : "Ready for a first note"}
+        <View style={styles.metaRow}>
+          <Clock color={colors.inkMuted} size={13} />
+          <AppText numberOfLines={1} variant="caption">
+            {elapsedLabel(person.lastInteractionAt)}
           </AppText>
-        )}
+        </View>
+        <AppText numberOfLines={1} style={styles.note} variant="caption">
+          {person.generalNotes || person.major || "Add something worth remembering"}
+        </AppText>
         {overdue > 0 ? (
           <View style={styles.overdueChip}>
             <AppText style={styles.overdueText} variant="caption">
@@ -63,27 +47,35 @@ export function PersonRow({
           </View>
         ) : null}
       </View>
-      {trailing || <CaretRight color={colors.inkMuted} size={18} />}
-    </PressableCard>
+      {trailing || <CaretRight color={colors.inkMuted} size={16} />}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
     alignItems: "center",
+    borderBottomColor: colors.mist,
+    borderBottomWidth: 1,
     flexDirection: "row",
     gap: 13,
-    padding: 14,
+    paddingVertical: 12,
+  },
+  pressed: {
+    opacity: 0.72,
   },
   copy: {
     flex: 1,
     gap: 3,
     minWidth: 0,
   },
-  supporting: {
+  metaRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
+  },
+  note: {
+    color: colors.ink,
   },
   overdueChip: {
     alignSelf: "flex-start",

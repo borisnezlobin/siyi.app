@@ -1,4 +1,4 @@
-import { Cake, GraduationCap, GlobeHemisphereWest, Plus } from "@phosphor-icons/react/dist/ssr";
+import { Cake, GraduationCap, MapPin, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
@@ -49,7 +49,7 @@ export default async function PeoplePage({
               className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-ink shadow-card transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               aria-label="See where everyone's from"
             >
-              <GlobeHemisphereWest size={20} aria-hidden="true" />
+              <MapPin size={20} aria-hidden="true" />
             </Link>
             <Link
               href="/people/new"
