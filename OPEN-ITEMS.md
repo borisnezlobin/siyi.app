@@ -6,22 +6,22 @@ for directly.
 
 ## Your Card screen (web + phone)
 
-- [ ] The public-page switch moves to the **top** of the screen and reads
+- [x] The public-page switch moves to the **top** of the screen and reads
       **"Enable shareable link"**. On by default.
       CAREFUL: default-on applies to NEW profiles only. Never flip an existing
       row from off to on — that publishes someone's details without them doing
       anything.
-- [ ] Default shared fields: **full name and major only**.
-- [ ] **QR code and copy link move to the top** of the screen.
-- [ ] When the switch is off, **everything below it greys out**.
-- [ ] "People can find you as" → **"People can find you at <link>"**. Nothing in
+- [x] Default shared fields: **full name and major only**.
+- [x] **QR code and copy link move to the top** of the screen.
+- [x] When the switch is off, **everything below it greys out**.
+- [x] "People can find you as" → **"People can find you at <link>"**. Nothing in
       the app offers a name#number, so "as" describes something that does not
       exist.
-- [ ] Delete the explanatory line under the switch. "The name stays yours" says
+- [x] Delete the explanatory line under the switch. "The name stays yours" says
       nothing if the page does not exist.
-- [ ] **Default university does not belong on this screen.** Move it somewhere
+- [x] **Default university does not belong on this screen.** Move it somewhere
       that makes sense for a new-person default, on both platforms.
-- [ ] **No back button** on the Your Card screen on the phone.
+- [x] **No back button** on the Your Card screen on the phone.
 
 ## Share sheet
 
