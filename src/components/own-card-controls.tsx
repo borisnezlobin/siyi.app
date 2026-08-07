@@ -74,17 +74,19 @@ export function OwnCardControls({
     <div>
       <div className="flex items-start justify-between gap-4 rounded-2xl bg-porcelain p-4">
         <div>
-          <p className="text-xs font-semibold text-ink">Offer my details when sharing</p>
+          <p className="text-xs font-semibold text-ink">
+            Include my card in links I share
+          </p>
           <p className="mt-1 text-[11px] leading-4 text-ink-muted">
-            Someone opening your share link can copy whatever you fill in below
-            straight into their own circle. Off until you turn it on.
+            When you share someone else&apos;s card, yours is offered alongside
+            it so they can add you back. Separate from your page above.
           </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
-          aria-label="Offer my details when sharing"
+          aria-label="Include my card in links I share"
           onClick={() => {
             const next = !enabled;
             setEnabled(next);

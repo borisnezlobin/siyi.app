@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, SpinnerGap } from "@phosphor-icons/react";
+import { Check, Copy, QrCode, SpinnerGap } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { ConnectRipple } from "@/components/connect-ripple";
@@ -51,6 +51,10 @@ export function ProfileControls({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [qr, setQr] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState(false);
+  // The flourish plays once on reveal and then gets out of the way. Left
+  // running it moves light across the code while someone is trying to scan it.
+  const [revealing, setRevealing] = useState(false);
 
   const url = useMemo(
     () =>
@@ -71,9 +75,9 @@ export function ProfileControls({
     }
     let stillMounted = true;
     void QRCode.toDataURL(url, {
-      margin: 1,
+      margin: 4,
       width: 320,
-      color: { dark: "#17201c", light: "#00000000" },
+      color: { dark: "#17201c", light: "#ffffff" },
     }).then((image) => {
       if (stillMounted) setQr(image);
     });
@@ -81,6 +85,13 @@ export function ProfileControls({
       stillMounted = false;
     };
   }, [url]);
+
+  useEffect(() => {
+    if (!showQr) return;
+    setRevealing(true);
+    const done = window.setTimeout(() => setRevealing(false), 1100);
+    return () => window.clearTimeout(done);
+  }, [showQr]);
 
   async function save(changes: Record<string, unknown>) {
     setSaving(true);
@@ -148,8 +159,6 @@ export function ProfileControls({
           <p className="mt-1 text-xs leading-5 text-ink-muted">
             People can find you as{" "}
             <span className="font-semibold text-ink">{formatHandle(handle, tag)}</span>.
-            The four characters keep your page from being guessed by name alone,
-            and stay the same if you rename yourself.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -172,37 +181,51 @@ export function ProfileControls({
           </div>
 
           <div className="mt-4">
-            <div>
-              {qr ? (
-                <div className="relative w-fit overflow-hidden rounded-3xl bg-white p-8 shadow-card ring-1 ring-black/[0.035]">
-                  <ConnectRipple size={264} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={qr}
-                    alt={`QR code for ${formatHandle(handle, tag)}`}
-                    width={200}
-                    height={200}
-                    className="relative size-[200px]"
-                  />
-                </div>
-              ) : (
-                <SpinnerGap size={20} className="animate-spin text-ink-muted" aria-hidden="true" />
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowQr((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#28332e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+            >
+              <QrCode size={15} weight="bold" aria-hidden="true" />
+              {showQr ? "Hide code" : "Show code"}
+            </button>
+
+            {showQr ? (
+              <div className="mt-4">
+                {qr ? (
+                  <div className="relative w-fit overflow-hidden rounded-3xl bg-white p-6 shadow-card ring-1 ring-black/[0.035]">
+                    {revealing ? <ConnectRipple size={248} /> : null}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qr}
+                      alt={`QR code for ${formatHandle(handle, tag)}`}
+                      width={216}
+                      height={216}
+                      className="relative size-[216px] rounded-lg"
+                    />
+                  </div>
+                ) : (
+                  <SpinnerGap size={20} className="animate-spin text-ink-muted" aria-hidden="true" />
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-6 flex items-start justify-between gap-4 rounded-2xl bg-porcelain p-4">
             <div>
-              <p className="text-xs font-semibold text-ink">Turn my page on</p>
+              <p className="text-xs font-semibold text-ink">
+                Show my card on this page
+              </p>
               <p className="mt-1 text-[11px] leading-4 text-ink-muted">
-                Anyone with the address can read it. Off means it is nobody&apos;s.
+                Anyone who opens the address above can read it. While this is
+                off the address shows nothing, and the name stays yours.
               </p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={isPublic}
-              aria-label="Turn my page on"
+              aria-label="Show my card on this page"
               onClick={() => void save({ isPublic: !isPublic })}
               className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 ${
                 isPublic ? "bg-sage-strong" : "bg-ink/15"
