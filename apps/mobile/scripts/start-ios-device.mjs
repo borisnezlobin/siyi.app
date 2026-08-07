@@ -4,6 +4,7 @@ import {
   spawnSync,
 } from "node:child_process";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -47,7 +48,42 @@ function connectedIphone() {
   }
 }
 
+/**
+ * npm workspaces hoist binaries to the repository root, so the copy inside
+ * apps/mobile is usually absent. Take whichever one actually exists.
+ */
+function expoBinary() {
+  const candidates = [
+    join(process.cwd(), "node_modules", ".bin", "expo"),
+    join(process.cwd(), "..", "..", "node_modules", ".bin", "expo"),
+  ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error("Could not find the expo binary. Has npm install run?");
+  }
+  return found;
+}
+
+/**
+ * The phone only appears in the neighbour table once something has talked to
+ * it, and nothing has yet at this point. A broadcast ping over the USB
+ * interface is enough to make it answer.
+ */
+function seedNeighbours() {
+  for (const networkInterface of listInterfaces()) {
+    spawnSync("ping", ["-c", "2", "-t", "2", "-b", networkInterface, "169.254.255.255"], {
+      stdio: "ignore",
+    });
+  }
+}
+
+function listInterfaces() {
+  const output = spawnSync("ifconfig", ["-l"], { encoding: "utf8" }).stdout ?? "";
+  return output.split(/\s+/).filter((name) => /^en\d+$/.test(name));
+}
+
 function usbHostAddress() {
+  seedNeighbours();
   const neighbors = execFileSync("arp", ["-an"], { encoding: "utf8" });
   const candidates = Array.from(
     neighbors.matchAll(
@@ -130,7 +166,7 @@ process.stdout.write(
 );
 
 const metro = spawn(
-  join(process.cwd(), "node_modules", ".bin", "expo"),
+  expoBinary(),
   ["start", "--dev-client", "--lan", "--port", String(metroPort)],
   {
     env: {
