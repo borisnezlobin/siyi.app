@@ -20,68 +20,48 @@ import {
 } from "@/lib/contact-card";
 import type { Person } from "@/lib/types";
 
-const base64UrlAlphabet =
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /**
- * A link is read aloud, texted and typed, so it carries the person's surname and
- * a short random tail: siyi.app/s/zhang-k7f2m9qp.
+ * A link gets texted, read aloud and typed, so it is six characters and nothing
+ * else: siyi.app/s/k7f2mq. The alphabet drops the characters people confuse
+ * when copying by hand — 0/O, 1/l/I — which leaves 56 and about 35 bits.
  *
- * The tail is 9 bytes, which is 12 base64url characters and about 72 bits. That
- * is far short of the 192 bits links used to carry, and deliberately: 72 bits is
- * still nowhere near guessable, while 32 random characters made a link nobody
- * would want to share. Tokens issued before this are 32 characters and stay
- * valid, which is why the pattern accepts a range.
+ * Longer tokens were issued before, some with a surname in front, and those
+ * keep working: the pattern accepts the whole range.
  */
-export const shareTokenByteLength = 9;
-export const shareTokenPattern = /^[A-Za-z0-9_-]{10,64}$/;
-export const shareSlugMaxLength = 12;
-
-function encodeBase64Url(bytes: Uint8Array) {
-  let encoded = "";
-  for (let index = 0; index < bytes.length; index += 3) {
-    const chunk =
-      (bytes[index] << 16) |
-      ((bytes[index + 1] ?? 0) << 8) |
-      (bytes[index + 2] ?? 0);
-    const characters = [
-      base64UrlAlphabet[(chunk >> 18) & 63],
-      base64UrlAlphabet[(chunk >> 12) & 63],
-      base64UrlAlphabet[(chunk >> 6) & 63],
-      base64UrlAlphabet[chunk & 63],
-    ];
-    const remaining = bytes.length - index;
-    encoded += characters.slice(0, remaining >= 3 ? 4 : remaining + 1).join("");
-  }
-  return encoded;
-}
-
-/** The readable half of a link: their surname, or the last word that survives. */
-export function shareSlugFor(fullName: string): string {
-  const words = fullName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-
-  const chosen = words[words.length - 1] ?? "";
-  return chosen.slice(0, shareSlugMaxLength) || "card";
-}
+export const shareTokenLength = 6;
+export const shareTokenAlphabet =
+  "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const shareTokenPattern = /^[A-Za-z0-9_-]{6,64}$/;
 
 /**
  * `randomBytes` must come from a cryptographically secure source. It is passed
  * in because Node and React Native disagree about where that lives.
+ *
+ * Bytes above the largest whole multiple of the alphabet are discarded rather
+ * than folded in with a modulo, which would quietly bias the early characters.
  */
 export function createShareToken(
   randomBytes: (size: number) => Uint8Array,
-  fullName = "",
 ): string {
-  const bytes = randomBytes(shareTokenByteLength);
-  if (bytes.length !== shareTokenByteLength) {
-    throw new Error(`Share token needs ${shareTokenByteLength} random bytes.`);
+  const limit =
+    Math.floor(256 / shareTokenAlphabet.length) * shareTokenAlphabet.length;
+  let token = "";
+
+  while (token.length < shareTokenLength) {
+    const requested = shareTokenLength * 2;
+    const bytes = randomBytes(requested);
+    if (bytes.length < requested) {
+      throw new Error("Share token needs a full draw of random bytes.");
+    }
+    for (const byte of bytes) {
+      if (byte >= limit) continue;
+      token += shareTokenAlphabet[byte % shareTokenAlphabet.length];
+      if (token.length === shareTokenLength) break;
+    }
   }
-  return `${shareSlugFor(fullName)}-${encodeBase64Url(bytes)}`;
+
+  return token;
 }
 
 export function isValidShareToken(value: unknown): value is string {

@@ -71,14 +71,11 @@ export async function createPersonShare(
   {
     userId,
     personId,
-    personName,
     selection,
     expiry,
   }: {
     userId: string;
     personId: string;
-    /** Only for the readable half of the link. */
-    personName?: string;
     selection: ContactShareSelection;
     expiry: ShareExpiryChoiceId;
   },
@@ -91,7 +88,7 @@ export async function createPersonShare(
       .insert({
         user_id: userId,
         person_id: personId,
-        token: createShareToken(randomBytes, personName ?? ""),
+        token: createShareToken(randomBytes),
         // The short bio is written on this device and never stored, so a link
         // cannot reproduce it however the picker was left.
         fields: { ...selection, bio: false },

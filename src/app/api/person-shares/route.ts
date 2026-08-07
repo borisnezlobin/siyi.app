@@ -67,10 +67,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         person_id: validation.data.personId,
-        token: createShareToken(
-          (size) => new Uint8Array(randomBytes(size)),
-          person.full_name,
-        ),
+        token: createShareToken((size) => new Uint8Array(randomBytes(size))),
         // The bio is generated on the sharer's device and never stored, so a
         // link can never reproduce it.
         fields: { ...validation.data.selection, bio: false },

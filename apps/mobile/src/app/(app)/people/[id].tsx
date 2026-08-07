@@ -445,7 +445,7 @@ export default function PersonDetailScreen() {
                   label="See all"
                   onPress={() =>
                     router.push({
-                      pathname: "/(tabs)/reminders",
+                      pathname: "/reminders",
                       params: { q: person.preferredName || person.fullName },
                     })
                   }

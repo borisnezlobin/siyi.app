@@ -12,8 +12,8 @@ import {
   shareExpiryFromChoice,
   shareIsLive,
   sharedFieldRows,
-  shareTokenByteLength,
-  shareSlugFor,
+  shareTokenAlphabet,
+  shareTokenLength,
 } from "@/lib/person-share";
 import type { Person } from "@/lib/types";
 
@@ -51,25 +51,41 @@ function person(overrides: Partial<Person> = {}): Person {
 }
 
 describe("share tokens", () => {
-  it("reads as a name and a short random tail", () => {
-    const token = createShareToken(secureRandomBytes, "Wei Zhang");
+  it("is six characters, so a link stays short enough to text", () => {
+    const token = createShareToken(secureRandomBytes);
 
-    expect(shareTokenByteLength * 8).toBeGreaterThanOrEqual(64);
-    expect(token).toMatch(/^zhang-[A-Za-z0-9_-]{12}$/);
-    expect(token).not.toContain("=");
+    expect(token).toHaveLength(shareTokenLength);
+    expect(token).toMatch(/^[a-zA-Z0-9]{6}$/);
     expect(isValidShareToken(token)).toBe(true);
+    expect(buildShareUrl("https://www.siyi.app", token)).toHaveLength(
+      "https://www.siyi.app/s/".length + 6,
+    );
   });
 
-  it("still accepts the 32 character tokens issued before the change", () => {
+  it("leaves out the characters people mistype when copying a link", () => {
+    const drawn = Array.from({ length: 4_000 }, () =>
+      createShareToken(secureRandomBytes),
+    ).join("");
+
+    for (const confusable of ["0", "O", "1", "l", "I"]) {
+      expect(drawn).not.toContain(confusable);
+    }
+  });
+
+  it("still accepts every link shape issued before this", () => {
+    // 32 characters, and later a surname with a tail.
     expect(isValidShareToken("a".repeat(32))).toBe(true);
+    expect(isValidShareToken("zhang-k7f2m9qpAB3d")).toBe(true);
   });
 
-  it("builds a slug from any name, however awkward", () => {
-    expect(shareSlugFor("Wei Zhang")).toBe("zhang");
-    expect(shareSlugFor("José Álvarez")).toBe("alvarez");
-    expect(shareSlugFor("Cher")).toBe("cher");
-    expect(shareSlugFor("???")).toBe("card");
-    expect(shareSlugFor("Bartholomew Featherstonehaugh")).toHaveLength(12);
+  it("draws every character of the alphabet rather than favouring a few", () => {
+    const drawn = new Set(
+      Array.from({ length: 6_000 }, () => createShareToken(secureRandomBytes))
+        .join("")
+        .split(""),
+    );
+
+    expect(drawn.size).toBe(shareTokenAlphabet.length);
   });
 
   it("never repeats across many draws", () => {
@@ -79,29 +95,19 @@ describe("share tokens", () => {
     expect(tokens.size).toBe(5_000);
   });
 
-  it("uses every position of the alphabet rather than a fixed prefix", () => {
-    const firstCharacters = new Set(
-      Array.from(
-        { length: 500 },
-        () => createShareToken(secureRandomBytes).split("-")[1][0],
-      ),
-    );
-    expect(firstCharacters.size).toBeGreaterThan(20);
-  });
-
-  it("refuses anything that is not exactly the token shape", () => {
+  it("refuses anything that is not a token", () => {
     expect(isValidShareToken("")).toBe(false);
-    expect(isValidShareToken("short")).toBe(false);
-    expect(isValidShareToken("a".repeat(9))).toBe(false);
+    expect(isValidShareToken("abc")).toBe(false);
     expect(isValidShareToken("a".repeat(65))).toBe(false);
-    expect(isValidShareToken(`${"a".repeat(30)}/=`)).toBe(false);
-    expect(isValidShareToken(`${"a".repeat(31)}'`)).toBe(false);
+    expect(isValidShareToken("abcde/=")).toBe(false);
+    expect(isValidShareToken("abcde'")).toBe(false);
     expect(isValidShareToken(null)).toBe(false);
     expect(isValidShareToken(12345)).toBe(false);
   });
 
-  it("refuses a random source that returns the wrong number of bytes", () => {
-    expect(() => createShareToken(() => new Uint8Array(4))).toThrow();
+  it("refuses a random source that hands back less than it was asked for", () => {
+    // A source quietly returning short would narrow the token without saying so.
+    expect(() => createShareToken(() => new Uint8Array(2))).toThrow();
   });
 });
 
