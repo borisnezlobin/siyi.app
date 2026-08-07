@@ -66,8 +66,11 @@ export function formatDays(days: WeekdayKey[]): string {
 }
 
 export function normalizeCourseCode(value: string): string {
-  // "cs 61a", "CS61A" and "cs-61a" are one course.
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+  // "cs 61a", "CS61A" and "cs-61a" are one course. A code is a department and
+  // then a number, so the two are separated wherever the letters stop.
+  const bare = value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  const match = /^([A-Z]+)([0-9].*)$/.exec(bare);
+  return match ? `${match[1]} ${match[2]}` : bare;
 }
 
 function normalizeText(value: string) {
@@ -152,42 +155,39 @@ export function formatTimeRange(startsAt: string | null, endsAt: string | null) 
   return end ? `${start}–${end}` : start;
 }
 
-export type ScheduleEntry = {
-  personId: string;
-  personName: string;
-  entry: PersonClass;
-  startsAt: number;
-  endsAt: number;
+export type CourseGroup<T> = {
+  code: string;
+  title: string | null;
+  professors: string[];
+  people: T[];
 };
 
-/**
- * Everyone's classes on one day, in time order — the "where is everybody right
- * now" view. A class with no time cannot be placed, so it is left out rather
- * than dropped at midnight.
- */
-export function scheduleForDay(
-  people: { id: string; name: string; classes: PersonClass[] }[],
-  day: WeekdayKey,
-): ScheduleEntry[] {
-  const entries: ScheduleEntry[] = [];
+export function peopleByCourse<T extends { id: string; classes: PersonClass[] }>(
+  people: T[],
+): CourseGroup<T>[] {
+  const groups = new Map<string, CourseGroup<T>>();
 
   for (const person of people) {
     for (const entry of person.classes) {
-      if (!parseDays(entry.days).includes(day)) continue;
-      const startsAt = minutesInto(entry.startsAt);
-      const endsAt = minutesInto(entry.endsAt);
-      if (startsAt === null) continue;
-      entries.push({
-        personId: person.id,
-        personName: person.name,
-        entry,
-        startsAt,
-        endsAt: endsAt ?? startsAt + 50,
-      });
+      const code = normalizeCourseCode(entry.courseCode);
+      const group = groups.get(code) ?? {
+        code,
+        title: entry.courseTitle,
+        professors: [],
+        people: [],
+      };
+      if (entry.professor && !group.professors.includes(entry.professor)) {
+        group.professors.push(entry.professor);
+      }
+      if (!group.people.some((existing) => existing.id === person.id)) {
+        group.people.push(person);
+      }
+      group.title = group.title ?? entry.courseTitle;
+      groups.set(code, group);
     }
   }
 
-  return entries.sort(
-    (left, right) => left.startsAt - right.startsAt || left.personName.localeCompare(right.personName),
+  return [...groups.values()].sort(
+    (left, right) => right.people.length - left.people.length || left.code.localeCompare(right.code),
   );
 }

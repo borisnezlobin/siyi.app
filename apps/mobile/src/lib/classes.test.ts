@@ -2,12 +2,10 @@ import {
   classMatchesQuery,
   courseOptions,
   formatDays,
-  formatTimeRange,
-  minutesInto,
   normalizeCourseCode,
   parseDays,
+  peopleByCourse,
   personMatchesClassQuery,
-  scheduleForDay,
   type PersonClass,
 } from "@/lib/classes";
 
@@ -50,7 +48,7 @@ describe("parseDays", () => {
 describe("normalizeCourseCode", () => {
   it("treats the ways people write a code as one course", () => {
     expect(normalizeCourseCode("cs 61a")).toBe("CS 61A");
-    expect(normalizeCourseCode("CS61A")).toBe("CS61A");
+    expect(normalizeCourseCode("CS61A")).toBe("CS 61A");
     expect(normalizeCourseCode(" cs-61a ")).toBe("CS 61A");
   });
 });
@@ -90,50 +88,59 @@ describe("courseOptions", () => {
       entry({ id: "d", courseCode: "DATA 8" }),
     ]);
 
-    expect(options[0]).toEqual({ code: "DATA 8", title: "Foundations of Data Science", count: 2 });
+    expect(options.find((option) => option.code === "DATA 8")).toEqual({
+      code: "DATA 8",
+      title: "Foundations of Data Science",
+      count: 2,
+    });
+    // CS61A and "cs 61a" are the same course, so they are counted once.
+    expect(options.filter((option) => option.code === "CS 61A")).toHaveLength(1);
     expect(options.map((option) => option.code)).toContain("CS 61A");
   });
 });
 
-describe("times", () => {
-  it("converts to minutes and refuses nonsense", () => {
-    expect(minutesInto("10:30")).toBe(630);
-    expect(minutesInto("09:05")).toBe(545);
-    expect(minutesInto("99:99")).toBeNull();
-    expect(minutesInto(null)).toBeNull();
-  });
-
-  it("reads a range the way it would be said", () => {
-    expect(formatTimeRange("10:00", "11:00")).toBe("10am–11am");
-    expect(formatTimeRange("13:30", "14:45")).toBe("1:30pm–2:45pm");
-    expect(formatTimeRange("12:00", null)).toBe("12pm");
-    expect(formatTimeRange(null, null)).toBeNull();
-  });
-});
-
-describe("scheduleForDay", () => {
+describe("peopleByCourse", () => {
   const people = [
-    { id: "1", name: "Ana", classes: [entry({ startsAt: "14:00", endsAt: "15:00" })] },
-    { id: "2", name: "Ben", classes: [entry({ id: "b", startsAt: "09:00", endsAt: "10:00" })] },
-    { id: "3", name: "Cal", classes: [entry({ id: "c", days: "TuTh" })] },
+    { id: "1", name: "Ana", classes: [entry()] },
+    { id: "2", name: "Ben", classes: [entry({ id: "b", courseCode: "cs 61a", professor: "Hilfinger" })] },
+    { id: "3", name: "Cal", classes: [entry({ id: "c" }), entry({ id: "d", courseCode: "CS61A" })] },
   ];
 
-  it("returns only that day, in time order", () => {
-    const monday = scheduleForDay(people, "M");
-    expect(monday.map((slot) => slot.personName)).toEqual(["Ben", "Ana"]);
+  it("groups everyone by course", () => {
+    const groups = peopleByCourse(people);
+    const data = groups.find((group) => group.code === "DATA 8");
+    expect(data?.people.map((person) => person.name)).toEqual(["Ana", "Cal"]);
   });
 
-  it("places a class on each of its days", () => {
-    expect(scheduleForDay(people, "Tu").map((slot) => slot.personName)).toEqual(["Cal"]);
+  it("puts the course with the most people first", () => {
+    const groups = peopleByCourse([
+      ...people,
+      { id: "4", name: "Dee", classes: [entry({ id: "e" })] },
+    ]);
+    expect(groups[0].code).toBe("DATA 8");
   });
 
-  it("leaves out a class with no start time rather than putting it at midnight", () => {
-    const untimed = [{ id: "1", name: "Ana", classes: [entry({ startsAt: null })] }];
-    expect(scheduleForDay(untimed, "M")).toEqual([]);
+  it("treats the ways a code is written as one course", () => {
+    const groups = peopleByCourse(people);
+    const cs = groups.find((group) => group.code === "CS 61A");
+    expect(cs?.people).toHaveLength(2);
   });
 
-  it("gives a class with no end time a sensible length", () => {
-    const open = [{ id: "1", name: "Ana", classes: [entry({ endsAt: null })] }];
-    expect(scheduleForDay(open, "M")[0].endsAt).toBe(650);
+  it("collects the professors named for a course", () => {
+    const groups = peopleByCourse(people);
+    expect(groups.find((group) => group.code === "DATA 8")?.professors).toEqual([
+      "DeNero",
+    ]);
+  });
+
+  it("lists a person once even with two rows for the same course", () => {
+    const groups = peopleByCourse([
+      { id: "1", name: "Ana", classes: [entry(), entry({ id: "b" })] },
+    ]);
+    expect(groups[0].people).toHaveLength(1);
+  });
+
+  it("returns nothing when nobody has a class", () => {
+    expect(peopleByCourse([{ id: "1", name: "Ana", classes: [] }])).toEqual([]);
   });
 });
