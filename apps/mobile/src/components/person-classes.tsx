@@ -5,23 +5,10 @@ import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
 import { colors, radii } from "@/constants/theme";
-import {
-  formatTimeRange,
-  parseDays,
-  weekdays,
-  type PersonClass,
-} from "@/lib/classes";
+import type { PersonClass } from "@/lib/classes";
 import { addClass, removeClass } from "@/lib/classes-data";
 
-const emptyDraft = {
-  courseCode: "",
-  courseTitle: "",
-  professor: "",
-  days: "",
-  startsAt: "",
-  endsAt: "",
-  location: "",
-};
+const emptyDraft = { courseCode: "", professor: "" };
 
 /**
  * The classes somebody is taking. Same shape as the web editor so the two apps
@@ -51,13 +38,13 @@ export function PersonClasses({
       await addClass(userId, {
         personId,
         courseCode: draft.courseCode,
-        courseTitle: draft.courseTitle || null,
+        courseTitle: null,
         professor: draft.professor || null,
         term: null,
-        days: draft.days || null,
-        startsAt: draft.startsAt || null,
-        endsAt: draft.endsAt || null,
-        location: draft.location || null,
+        days: null,
+        startsAt: null,
+        endsAt: null,
+        location: null,
       });
       setDraft(emptyDraft);
       setAdding(false);
@@ -83,17 +70,9 @@ export function PersonClasses({
             <View style={styles.rowBody}>
               <AppText variant="body">
                 {entry.courseCode}
-                {entry.courseTitle ? ` · ${entry.courseTitle}` : ""}
               </AppText>
               <AppText variant="caption">
-                {[
-                  entry.professor,
-                  parseDays(entry.days).join(""),
-                  formatTimeRange(entry.startsAt, entry.endsAt),
-                  entry.location,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "No schedule saved"}
+                {entry.professor ?? "No professor saved"}
               </AppText>
             </View>
             <Pressable
@@ -123,60 +102,6 @@ export function PersonClasses({
             onChangeText={(value) => setDraft({ ...draft, professor: value })}
             placeholder="DeNero"
             value={draft.professor}
-          />
-          <View>
-            <AppText variant="label">Days</AppText>
-            <View style={styles.days}>
-              {weekdays.map((day) => {
-                const on = parseDays(draft.days).includes(day.key);
-                return (
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
-                    key={day.key}
-                    onPress={() => {
-                      const current = parseDays(draft.days);
-                      const next = on
-                        ? current.filter((key) => key !== day.key)
-                        : [...current, day.key];
-                      setDraft({
-                        ...draft,
-                        days: weekdays
-                          .map(({ key }) => key)
-                          .filter((key) => next.includes(key))
-                          .join(""),
-                      });
-                    }}
-                    style={[styles.day, on && styles.daySelected]}
-                  >
-                    <AppText
-                      style={on ? styles.dayTextSelected : undefined}
-                      variant="caption"
-                    >
-                      {day.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-          <FormField
-            label="Starts"
-            onChangeText={(value) => setDraft({ ...draft, startsAt: value })}
-            placeholder="10:00"
-            value={draft.startsAt}
-          />
-          <FormField
-            label="Ends"
-            onChangeText={(value) => setDraft({ ...draft, endsAt: value })}
-            placeholder="11:00"
-            value={draft.endsAt}
-          />
-          <FormField
-            label="Where"
-            onChangeText={(value) => setDraft({ ...draft, location: value })}
-            placeholder="Wheeler 150"
-            value={draft.location}
           />
 
           {error ? (
@@ -233,24 +158,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.medium,
     gap: 12,
     padding: 14,
-  },
-  days: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 7,
-  },
-  day: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.small,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-  },
-  daySelected: {
-    backgroundColor: colors.ink,
-  },
-  dayTextSelected: {
-    color: colors.paper,
   },
   addRow: {
     alignItems: "center",

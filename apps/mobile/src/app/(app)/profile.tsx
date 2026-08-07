@@ -3,6 +3,7 @@ import { Copy, QrCode } from "phosphor-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Animated, Pressable, StyleSheet, Switch, View } from "react-native";
 import QRCodeView from "react-native-qrcode-svg";
+import { ConnectRipple } from "@/components/connect-ripple";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
@@ -153,6 +154,7 @@ export default function ProfileScreen() {
                 },
               ]}
             >
+              <ConnectRipple size={236} />
               <QRCodeView
                 backgroundColor={colors.paper}
                 color={colors.ink}

@@ -3,6 +3,7 @@
 import { Check, Copy, QrCode, SpinnerGap } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { ConnectRipple } from "@/components/connect-ripple";
 import {
   buildProfileUrl,
   formatHandle,
@@ -187,14 +188,15 @@ export function ProfileControls({
           >
             <div className="overflow-hidden">
               {qr ? (
-                <div className="w-fit rounded-3xl bg-white p-4 shadow-card ring-1 ring-black/[0.035]">
+                <div className="relative w-fit overflow-hidden rounded-3xl bg-white p-4 shadow-card ring-1 ring-black/[0.035]">
+                  <ConnectRipple size={232} />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qr}
                     alt={`QR code for ${formatHandle(handle, tag)}`}
                     width={200}
                     height={200}
-                    className="size-[200px]"
+                    className="relative size-[200px]"
                   />
                 </div>
               ) : (

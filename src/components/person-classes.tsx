@@ -3,22 +3,18 @@
 import { Plus, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  courseOptions,
-  formatTimeRange,
-  parseDays,
-  weekdays,
-  type PersonClass,
-} from "@/lib/classes";
+import { courseOptions, type PersonClass } from "@/lib/classes";
 import { getApiResponseError } from "@/lib/http";
 
 const inputClassName =
-  "h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";
+  "mt-1 h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";
 
 /**
- * The classes somebody is taking. Course codes already used elsewhere are
- * offered as you type, so the fifth person in a course is a couple of taps
- * rather than a form.
+ * The classes somebody is taking: a course and who teaches it.
+ *
+ * Deliberately just those two. A course rarely meets at the same time every day,
+ * so a timetable is a lot of typing for something that ends up wrong — and who
+ * you share a class with is the part worth knowing anyway.
  */
 export function PersonClasses({
   personId,
@@ -33,15 +29,7 @@ export function PersonClasses({
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [draft, setDraft] = useState({
-    courseCode: "",
-    courseTitle: "",
-    professor: "",
-    days: "",
-    startsAt: "",
-    endsAt: "",
-    location: "",
-  });
+  const [draft, setDraft] = useState({ courseCode: "", professor: "" });
 
   const options = courseOptions(knownClasses);
 
@@ -59,15 +47,7 @@ export function PersonClasses({
           await getApiResponseError(response, "That class could not be saved."),
         );
       }
-      setDraft({
-        courseCode: "",
-        courseTitle: "",
-        professor: "",
-        days: "",
-        startsAt: "",
-        endsAt: "",
-        location: "",
-      });
+      setDraft({ courseCode: "", professor: "" });
       setAdding(false);
       router.refresh();
     } catch (caughtError) {
@@ -102,17 +82,9 @@ export function PersonClasses({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-ink">
                   {entry.courseCode}
-                  {entry.courseTitle ? ` · ${entry.courseTitle}` : ""}
                 </span>
                 <span className="block truncate text-xs text-ink-muted">
-                  {[
-                    entry.professor,
-                    parseDays(entry.days).join(""),
-                    formatTimeRange(entry.startsAt, entry.endsAt),
-                    entry.location,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "No schedule saved"}
+                  {entry.professor ?? "No professor saved"}
                 </span>
               </span>
               <button
@@ -142,13 +114,11 @@ export function PersonClasses({
                   setDraft({ ...draft, courseCode: event.target.value })
                 }
                 placeholder="DATA 8"
-                className={`mt-1 ${inputClassName}`}
+                className={inputClassName}
               />
               <datalist id="known-courses">
                 {options.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.title ?? ""}
-                  </option>
+                  <option key={option.code} value={option.code} />
                 ))}
               </datalist>
             </label>
@@ -160,88 +130,7 @@ export function PersonClasses({
                   setDraft({ ...draft, professor: event.target.value })
                 }
                 placeholder="DeNero"
-                className={`mt-1 ${inputClassName}`}
-              />
-            </label>
-            <label className="text-xs font-semibold text-ink-muted">
-              Title
-              <input
-                value={draft.courseTitle}
-                onChange={(event) =>
-                  setDraft({ ...draft, courseTitle: event.target.value })
-                }
-                placeholder="Foundations of Data Science"
-                className={`mt-1 ${inputClassName}`}
-              />
-            </label>
-            <label className="text-xs font-semibold text-ink-muted">
-              Where
-              <input
-                value={draft.location}
-                onChange={(event) =>
-                  setDraft({ ...draft, location: event.target.value })
-                }
-                placeholder="Wheeler 150"
-                className={`mt-1 ${inputClassName}`}
-              />
-            </label>
-          </div>
-
-          <fieldset className="mt-3">
-            <legend className="text-xs font-semibold text-ink-muted">Days</legend>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {weekdays.map((day) => {
-                const on = parseDays(draft.days).includes(day.key);
-                return (
-                  <button
-                    key={day.key}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => {
-                      const current = parseDays(draft.days);
-                      const next = on
-                        ? current.filter((key) => key !== day.key)
-                        : [...current, day.key];
-                      setDraft({
-                        ...draft,
-                        days: weekdays
-                          .map(({ key }) => key)
-                          .filter((key) => next.includes(key))
-                          .join(""),
-                      });
-                    }}
-                    className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
-                      on ? "bg-ink text-white" : "bg-white text-ink-muted hover:bg-mist"
-                    }`}
-                  >
-                    {day.label}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-ink-muted">
-              Starts
-              <input
-                type="time"
-                value={draft.startsAt}
-                onChange={(event) =>
-                  setDraft({ ...draft, startsAt: event.target.value })
-                }
-                className={`mt-1 ${inputClassName}`}
-              />
-            </label>
-            <label className="text-xs font-semibold text-ink-muted">
-              Ends
-              <input
-                type="time"
-                value={draft.endsAt}
-                onChange={(event) =>
-                  setDraft({ ...draft, endsAt: event.target.value })
-                }
-                className={`mt-1 ${inputClassName}`}
+                className={inputClassName}
               />
             </label>
           </div>

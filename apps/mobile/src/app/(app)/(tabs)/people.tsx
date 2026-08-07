@@ -1,7 +1,7 @@
 import {
   ArrowsDownUp,
   Cake,
-  CalendarBlank,
+  GraduationCap,
   MagnifyingGlass,
   MapPin,
   SlidersHorizontal,
@@ -191,7 +191,7 @@ export default function PeopleScreen() {
         {(
           [
             ["/birthdays", "Birthdays", Cake],
-            ["/schedule", "Schedule", CalendarBlank],
+            ["/classes", "Classes", GraduationCap],
             ["/map", "Map", MapPin],
           ] as const
         ).map(([href, label, Icon]) => (
