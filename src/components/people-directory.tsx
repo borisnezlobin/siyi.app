@@ -12,6 +12,7 @@ import { differenceInCalendarDays } from "date-fns";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PersonRow } from "@/components/person-row";
+import { personMatchesClassQuery, type PersonClass } from "@/lib/classes";
 import { contactDraftsOf } from "@/lib/contact-methods";
 import { plainCollegeTerms, type CollegeTermsLookup } from "@/lib/college-terms";
 import {
@@ -32,9 +33,12 @@ const missingDetailOptions: MissingDetail[] = ["birthday", "email", "phone"];
 export function PeopleDirectory({
   people,
   initialFilter = "all",
+  classesByPerson = {},
 }: {
   people: Person[];
   initialFilter?: FilterOption;
+  /** Their classes, so "data 8 denero" finds everyone in it. */
+  classesByPerson?: Record<string, PersonClass[]>;
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterOption>(initialFilter);
@@ -81,7 +85,10 @@ export function PeopleDirectory({
           contactMethods: contactDraftsOf(person),
         };
 
-        if (!matchesPeopleQuery(searchable, search, collegeTerms)) {
+        if (
+          !matchesPeopleQuery(searchable, search, collegeTerms) &&
+          !personMatchesClassQuery(classesByPerson[person.id] ?? [], search)
+        ) {
           return false;
         }
         if (missing.some((detail) => !isMissingDetail(person, detail))) {
@@ -125,7 +132,7 @@ export function PeopleDirectory({
           ? firstContact - secondContact
           : secondContact - firstContact;
       });
-  }, [collegeTerms, filter, missing, people, search, sort, strength, tag]);
+  }, [classesByPerson, collegeTerms, filter, missing, people, search, sort, strength, tag]);
 
   const sections = useMemo(
     () => (sort === "name" ? sectionPeopleAlphabetically(filteredPeople) : []),
@@ -159,7 +166,7 @@ export function PeopleDirectory({
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Name, school, hometown, tag, note…"
+            placeholder="Name, school, class, hometown, tag…"
             className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-11 text-sm outline-none transition [&::-webkit-search-cancel-button]:hidden placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
           {search ? (

@@ -1,3 +1,5 @@
+import { getAllClasses } from "@/lib/classes-server";
+import { PersonClasses } from "@/components/person-classes";
 import {
   ArrowLeft,
   ArrowSquareOut,
@@ -68,12 +70,21 @@ export default async function PersonDetailPage({
     personUpdates,
     allReminders,
     noteSections,
+    allClasses,
   ] = await Promise.all([
     getInteractions(person.id),
     getPersonUpdates(person.id),
     getReminders(),
     getPersonNoteSections(person.id),
+    getAllClasses(),
   ]);
+
+  const classesByPerson = new Map<string, typeof allClasses>();
+  for (const entry of allClasses) {
+    const existing = classesByPerson.get(entry.personId);
+    if (existing) existing.push(entry);
+    else classesByPerson.set(entry.personId, [entry]);
+  }
 
   const timeline = buildPersonTimeline(personUpdates, interactions);
   const openReminders = allReminders.filter(
@@ -279,6 +290,20 @@ export default async function PersonDetailPage({
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
+            <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
+              <div className="flex items-center gap-2">
+                <GraduationCap size={18} className="text-coral" aria-hidden="true" />
+                <h2 className="text-sm font-bold">Classes</h2>
+              </div>
+              <div className="mt-4">
+                <PersonClasses
+                  classes={classesByPerson.get(person.id) ?? []}
+                  knownClasses={allClasses}
+                  personId={person.id}
+                />
+              </div>
+            </section>
+
           {person.generalNotes || visibleNoteSections.length ? (
             <section className="rounded-[1.75rem] bg-white p-5 shadow-card ring-1 ring-black/[0.035] sm:p-6">
               <div className="flex items-center gap-2">
