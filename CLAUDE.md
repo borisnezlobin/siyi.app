@@ -18,6 +18,12 @@ they look. The apps keep parallel copies of shared logic — `birthday-age.ts`,
 `contact-methods.ts`, `people-filters.ts` and friends exist in both `src/lib`
 and `apps/mobile/src/lib`. Change both.
 
+**Never add backwards compatibility unless asked.** No fallback stores, no
+legacy-format readers, no "works before the migration runs" paths. The project
+is in development: the schema and the client ship together, so a migration is
+simply run. Compatibility layers are cheap to write and expensive to live with —
+ask first.
+
 **Renames are not find-and-replace.** Strings that look like copy are often not:
 fetch paths, persisted values in the offline queue, notification deduplication
 keys, object keys matched against route names. Rename what a user reads; leave

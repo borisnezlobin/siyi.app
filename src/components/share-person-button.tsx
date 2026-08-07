@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ShareNetwork, X } from "@phosphor-icons/react";
+import { Check, Copy, Export, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   availableContactShareFields,
@@ -12,10 +12,8 @@ import {
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import {
   buildShareUrl,
-  defaultShareExpiryChoiceId,
   shareIsLive,
   type PersonShare,
-  type ShareExpiryChoiceId,
 } from "@/lib/person-share";
 import type { Person } from "@/lib/types";
 
@@ -28,21 +26,10 @@ const sensitiveFields = new Set<ContactShareField>([
 type SharesResponse = { available?: boolean; shares?: PersonShare[] };
 type CreateResponse = { available?: boolean; share?: PersonShare };
 
-function expiryLabel(share: PersonShare) {
-  if (!share.expiresAt) return "No expiry";
-  return `Expires ${new Date(share.expiresAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  })}`;
-}
-
 export function SharePersonButton({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<ContactShareSelection>(
     defaultContactShareSelection,
-  );
-  const [expiry, setExpiry] = useState<ShareExpiryChoiceId>(
-    defaultShareExpiryChoiceId,
   );
   // Null while we are still finding out. Links stay hidden until we know the
   // table exists, so a deploy that lands before migration 0015 simply shows the
@@ -131,7 +118,7 @@ export function SharePersonButton({ person }: { person: Person }) {
       const response = await fetch("/api/person-shares", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personId: person.id, selection, expiry }),
+        body: JSON.stringify({ personId: person.id, selection }),
       });
       const payload = await readJsonResponse<CreateResponse>(response);
 
@@ -178,29 +165,18 @@ export function SharePersonButton({ person }: { person: Person }) {
     await copyLink(share);
   }
 
-  async function revokeLink(share: PersonShare) {
-    setShares((current) => current.filter((entry) => entry.id !== share.id));
-    try {
-      await fetch(`/api/person-shares/${share.id}`, { method: "DELETE" });
-    } catch {
-      setError("We couldn't turn that link off. Try again in a moment.");
-      void loadShares();
-    }
-  }
-
   return (
     <>
       <button
         type="button"
         onClick={() => {
           setSelection(defaultContactShareSelection);
-          setExpiry(defaultShareExpiryChoiceId);
           setError(null);
           setOpen(true);
         }}
-        className="inline-flex h-10 items-center gap-2 rounded-xl bg-porcelain px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="inline-flex h-10 items-center gap-2 rounded-full bg-porcelain px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
-        <ShareNetwork size={17} weight="bold" aria-hidden="true" />
+        <Export size={17} weight="bold" aria-hidden="true" />
         Share
       </button>
 
@@ -290,7 +266,7 @@ export function SharePersonButton({ person }: { person: Person }) {
                 onClick={() => void sendShareLink()}
                 className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
               >
-                <ShareNetwork size={16} weight="bold" aria-hidden="true" />
+                <Export size={16} weight="bold" aria-hidden="true" />
                 Share link
               </button>
             ) : null}
@@ -306,15 +282,8 @@ export function SharePersonButton({ person }: { person: Person }) {
             ) : null}
 
             {liveShares.length > 0 ? (
-              <p className="mt-3 text-center text-[11px] leading-4 text-ink-muted">
-                {expiryLabel(liveShares[0])}.{" "}
-                <button
-                  type="button"
-                  onClick={() => void revokeLink(liveShares[0])}
-                  className="font-semibold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                >
-                  Turn this link off
-                </button>
+              <p className="mt-3 break-all text-center text-[11px] leading-4 text-ink-muted">
+                {shareUrlFor(liveShares[0])}
               </p>
             ) : null}
 

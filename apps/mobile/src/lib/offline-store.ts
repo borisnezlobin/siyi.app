@@ -317,28 +317,12 @@ export async function updateOfflineSnapshot(
   return snapshot;
 }
 
-/**
- * Reminders used to be called follow-ups, and the kind is written into storage.
- * A queue built by an older build still has the old spelling in it, so it is
- * translated on the way out — otherwise anything saved offline before the update
- * would match no handler and be dropped without a trace.
- */
-const renamedKinds: Record<string, string> = {
-  "create-follow-up": "create-reminder",
-  "set-follow-up-complete": "set-reminder-complete",
-};
-
 export async function getOfflineQueue(userId: string) {
   const stored = await AsyncStorage.getItem(queueKey(userId));
   if (!stored) return [] as OfflineMutation[];
 
   try {
-    const queue = JSON.parse(stored) as OfflineMutation[];
-    return queue.map((mutation) =>
-      renamedKinds[mutation.kind]
-        ? ({ ...mutation, kind: renamedKinds[mutation.kind] } as OfflineMutation)
-        : mutation,
-    );
+    return JSON.parse(stored) as OfflineMutation[];
   } catch {
     return [] as OfflineMutation[];
   }

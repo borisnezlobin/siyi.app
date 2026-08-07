@@ -189,9 +189,7 @@ export function appRouteFromNotificationUrl(value: unknown) {
   if (typeof value !== "string") return "/today" as const;
   const personIdentifier = personRouteIdentifier(value);
   if (personIdentifier) return `/people/${personIdentifier}` as const;
-  // Notifications sent before the rename still carry the old path, and they can
-  // sit in the tray for days.
-  if (value === "/reminders" || value === "/follow-ups") return "/reminders" as const;
+  if (value === "/reminders") return "/reminders" as const;
   if (value === "/notifications") return "/notifications" as const;
   return "/today" as const;
 }

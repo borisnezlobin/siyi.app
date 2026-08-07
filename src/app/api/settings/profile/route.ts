@@ -10,11 +10,6 @@ import {
   normalizeHandle,
 } from "@/lib/handles";
 import { ownCardFields } from "@/lib/own-card";
-import {
-  isMissingSchema,
-  readFallback,
-  writeFallback,
-} from "@/lib/schema-fallback";
 import { createClient } from "@/lib/supabase/server";
 
 const profileSchema = z.object({
@@ -52,11 +47,11 @@ export async function PATCH(request: NextRequest) {
         .eq("auth_user_id", user.id)
         .maybeSingle();
 
-      const existing = current ?? (await readProfileFallback(supabase, user.id));
+      // The tag stays put once claimed: a rename should not break links people
+      // already have.
       const tag =
-        existing?.handle === handle && existing?.handle_tag
-          ? existing.handle_tag
-          : createHandleTag((size) => new Uint8Array(randomBytes(size)));
+        current?.handle_tag ??
+        createHandleTag((size) => new Uint8Array(randomBytes(size)));
 
       update.handle = handle;
       update.handle_tag = tag;
@@ -82,12 +77,6 @@ export async function PATCH(request: NextRequest) {
       .update(update)
       .eq("auth_user_id", user.id);
 
-    if (isMissingSchema(error)) {
-      // Migration 0019 has not run; keep it in the blob until it does.
-      const saved = await saveProfileFallback(supabase, user.id, update);
-      return NextResponse.json({ profile: saved });
-    }
-
     if (error) {
       // The unique index is what actually decides a clash, so a duplicate is
       // reported from the failure rather than from a check that could race.
@@ -109,55 +98,3 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-type Client = Awaited<ReturnType<typeof createClient>>;
-
-async function readOwnCard(supabase: Client, userId: string) {
-  const { data } = await supabase
-    .from("user_settings")
-    .select("own_card")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data?.own_card ?? {};
-}
-
-async function readProfileFallback(supabase: Client, userId: string) {
-  const profile = readFallback(await readOwnCard(supabase, userId)).profile;
-  return profile ? { handle: profile.handle, handle_tag: profile.tag } : null;
-}
-
-/** Mirrors the column names so the response shape does not change. */
-async function saveProfileFallback(
-  supabase: Client,
-  userId: string,
-  update: Record<string, unknown>,
-) {
-  const ownCard = await readOwnCard(supabase, userId);
-  const current = readFallback(ownCard).profile ?? {
-    handle: "",
-    tag: "",
-    isPublic: false,
-    publicFields: {},
-  };
-
-  const profile = {
-    handle: (update.handle as string) ?? current.handle,
-    tag: (update.handle_tag as string) ?? current.tag,
-    isPublic: (update.profile_public as boolean) ?? current.isPublic,
-    publicFields:
-      (update.public_fields as Record<string, boolean>) ?? current.publicFields,
-  };
-
-  await supabase
-    .from("user_settings")
-    .upsert(
-      { user_id: userId, own_card: writeFallback(ownCard, { profile }) },
-      { onConflict: "user_id" },
-    );
-
-  return {
-    handle: profile.handle,
-    handle_tag: profile.tag,
-    profile_public: profile.isPublic,
-    public_fields: profile.publicFields,
-  };
-}
