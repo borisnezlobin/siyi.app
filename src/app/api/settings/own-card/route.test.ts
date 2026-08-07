@@ -16,6 +16,10 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: () => ({
+      // The route reads the row first, to carry across anything sharing the column.
+      select: () => ({
+        eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }),
+      }),
       upsert: (row: Record<string, unknown>) => {
         authState.upserted.push(row);
         return Promise.resolve({ error: null });

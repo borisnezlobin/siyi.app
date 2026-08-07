@@ -1,4 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { readFallback, withoutFallback } from "@/lib/schema-fallback";
 import { DefaultUniversityControl } from "@/components/default-university-control";
 import { OwnCardControls } from "@/components/own-card-controls";
 import { ProfileControls } from "@/components/profile-controls";
@@ -59,10 +60,13 @@ export default async function SettingsPage() {
         .maybeSingle(),
     ]);
     initialTimezone = profile?.timezone ?? "UTC";
-    initialHandle = profile?.handle ?? "";
-    initialHandleTag = profile?.handle_tag ?? "";
-    initialProfilePublic = profile?.profile_public ?? false;
-    initialPublicFields = (profile?.public_fields ?? {}) as Record<string, boolean>;
+    const storedProfile = readFallback(settings?.own_card).profile;
+    initialHandle = profile?.handle ?? storedProfile?.handle ?? "";
+    initialHandleTag = profile?.handle_tag ?? storedProfile?.tag ?? "";
+    initialProfilePublic = profile?.profile_public ?? storedProfile?.isPublic ?? false;
+    initialPublicFields = (profile?.public_fields ??
+      storedProfile?.publicFields ??
+      {}) as Record<string, boolean>;
 
     // Read consent on its own so a deployment that lands before migration
     // 0007 cannot null out the whole profile row and reset the timezone.
@@ -72,7 +76,7 @@ export default async function SettingsPage() {
       .eq("auth_user_id", user.id)
       .maybeSingle();
     initialMarketingOptIn = consent?.marketing_opt_in ?? false;
-    initialOwnCard = normalizeOwnCard(settings?.own_card);
+    initialOwnCard = normalizeOwnCard(withoutFallback(settings?.own_card));
     initialOwnCardEnabled = settings?.own_card_enabled ?? false;
     initialDefaultUniversity = settings?.default_university ?? "";
     if (settings) {

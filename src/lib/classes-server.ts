@@ -1,5 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { getAuthenticatedUser } from "@/lib/auth";
-import type { PersonClass } from "@/lib/classes";
+import { normalizeCourseCode, type PersonClass } from "@/lib/classes";
+import {
+  isMissingSchema,
+  readFallback,
+  writeFallback,
+} from "@/lib/schema-fallback";
 import { createClient } from "@/lib/supabase/server";
 
 type ClassRow = {
@@ -31,10 +37,22 @@ function mapClass(row: ClassRow): PersonClass {
   };
 }
 
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+async function readOwnCard(supabase: Client, userId: string) {
+  const { data } = await supabase
+    .from("user_settings")
+    .select("own_card")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.own_card ?? {};
+}
+
 /**
- * Every class across everyone. Comes back empty rather than throwing when the
- * table is not there yet, so a deployment that lands before migration 0019 shows
- * a page with no classes instead of an error.
+ * Every class across everyone.
+ *
+ * Reads the table when migration 0019 has been applied, and the fallback blob
+ * when it has not, so the feature works either way.
  */
 export async function getAllClasses(): Promise<PersonClass[]> {
   const user = await getAuthenticatedUser();
@@ -47,8 +65,89 @@ export async function getAllClasses(): Promise<PersonClass[]> {
     .eq("user_id", user.id)
     .order("course_code");
 
-  if (error || !data) return [];
-  return (data as ClassRow[]).map(mapClass);
+  if (!error && data) return (data as ClassRow[]).map(mapClass);
+  if (!isMissingSchema(error)) return [];
+
+  const byPerson = readFallback(await readOwnCard(supabase, user.id)).classes ?? {};
+  return Object.values(byPerson)
+    .flat()
+    .sort((left, right) => left.courseCode.localeCompare(right.courseCode));
+}
+
+export async function addClassForUser(
+  userId: string,
+  input: Omit<PersonClass, "id">,
+): Promise<PersonClass | { error: string }> {
+  const supabase = await createClient();
+  const courseCode = normalizeCourseCode(input.courseCode);
+
+  const { data, error } = await supabase
+    .from("person_classes")
+    .insert({
+      user_id: userId,
+      person_id: input.personId,
+      course_code: courseCode,
+      course_title: input.courseTitle,
+      professor: input.professor,
+      term: input.term,
+      days: input.days,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt,
+      location: input.location,
+    })
+    .select("*")
+    .single();
+
+  if (!error && data) return mapClass(data as ClassRow);
+  if (!isMissingSchema(error)) return { error: error?.message ?? "It could not be saved." };
+
+  const ownCard = await readOwnCard(supabase, userId);
+  const classes = readFallback(ownCard).classes ?? {};
+  const entry: PersonClass = { ...input, courseCode, id: randomUUID() };
+  const next = {
+    ...classes,
+    [input.personId]: [...(classes[input.personId] ?? []), entry],
+  };
+
+  const { error: writeError } = await supabase
+    .from("user_settings")
+    .upsert(
+      { user_id: userId, own_card: writeFallback(ownCard, { classes: next }) },
+      { onConflict: "user_id" },
+    );
+
+  if (writeError) return { error: writeError.message };
+  return entry;
+}
+
+export async function removeClassForUser(userId: string, id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("person_classes")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", id);
+
+  if (!error) return null;
+  if (!isMissingSchema(error)) return error.message;
+
+  const ownCard = await readOwnCard(supabase, userId);
+  const classes = readFallback(ownCard).classes ?? {};
+  const next = Object.fromEntries(
+    Object.entries(classes).map(([personId, entries]) => [
+      personId,
+      entries.filter((entry) => entry.id !== id),
+    ]),
+  );
+
+  const { error: writeError } = await supabase
+    .from("user_settings")
+    .upsert(
+      { user_id: userId, own_card: writeFallback(ownCard, { classes: next }) },
+      { onConflict: "user_id" },
+    );
+
+  return writeError?.message ?? null;
 }
 
 export async function getClassesByPerson(): Promise<Map<string, PersonClass[]>> {
