@@ -1,8 +1,9 @@
-import { GlobeHemisphereWest, Plus } from "@phosphor-icons/react/dist/ssr";
+import { Cake, CalendarBlank, GlobeHemisphereWest, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { PeopleDirectory } from "@/components/people-directory";
+import { getClassesByPerson } from "@/lib/classes-server";
 import { getPeople } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -31,6 +32,20 @@ export default async function PeoplePage({
         action={
           <div className="flex shrink-0 items-center gap-2">
             <Link
+              href="/birthdays"
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-ink shadow-card transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              aria-label="See everyone's birthdays"
+            >
+              <Cake size={20} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/schedule"
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-ink shadow-card transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              aria-label="See where everyone is"
+            >
+              <CalendarBlank size={20} aria-hidden="true" />
+            </Link>
+            <Link
               href="/map"
               className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-ink shadow-card transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
               aria-label="See where everyone's from"
@@ -55,7 +70,11 @@ export default async function PeoplePage({
           Person saved. A “met” update was logged automatically.
         </p>
       ) : null}
-      <PeopleDirectory people={people} initialFilter={initialFilter} />
+      <PeopleDirectory
+        classesByPerson={Object.fromEntries(await getClassesByPerson())}
+        people={people}
+        initialFilter={initialFilter}
+      />
     </div>
   );
 }
