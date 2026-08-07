@@ -199,13 +199,6 @@ export function buildShareUrl(baseUrl: string, token: string) {
   return `${baseUrl.replace(/\/+$/, "")}${sharePath(token)}`;
 }
 
-/** The share tables only exist once migration 0015 has been applied. */
-export function isMissingPersonSharesSchema(code: string | undefined) {
-  return ["42P01", "42883", "42703", "PGRST202", "PGRST204", "PGRST205"].includes(
-    code || "",
-  );
-}
-
 function selectedContactKinds(selection: ContactShareSelection) {
   const kinds: ContactMethodDraft["kind"][] = [];
   if (selection.phoneNumber) kinds.push("phone");

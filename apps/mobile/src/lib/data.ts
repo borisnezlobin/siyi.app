@@ -34,7 +34,6 @@ import {
   type StoredContactMethodRow,
 } from "@/lib/contact-method-sync";
 import {
-  isMissingNoteSchema,
   maxNoteBodyLength,
   maxNoteHeadingLength,
   maxNoteSectionsPerPerson,
@@ -304,12 +303,6 @@ type ContactMethodRow = {
 };
 
 /** Postgres codes for "that table or column is not there yet". */
-const missingSchemaCodes = ["42P01", "42703", "PGRST202", "PGRST204", "PGRST205"];
-
-function isMissingContactMethodsSchema(error: { code?: string } | null) {
-  return Boolean(error && missingSchemaCodes.includes(error.code ?? ""));
-}
-
 /**
  * Every contact row this account owns. Reports itself unavailable rather than
  * throwing until migration 0013 has been applied on the server, and the phone
@@ -323,7 +316,6 @@ async function getContactMethodsRemote(): Promise<PersonContactMethods> {
     .order("created_at", { ascending: true });
 
   if (error) {
-    if (isMissingContactMethodsSchema(error)) return unavailableContactMethods;
     throw error;
   }
 
@@ -388,7 +380,6 @@ async function getPersonNotesRemote(
     : query);
 
   if (error) {
-    if (isMissingNoteSchema(error.code)) return unavailableNoteSections;
     throw error;
   }
 
@@ -610,12 +601,7 @@ async function getOfflineDatasetRemote(userId: string) {
     ]);
 
     if (interactionsResult.error) throw interactionsResult.error;
-    if (
-      updatesResult.error &&
-      !isMissingUpdatesSchema(updatesResult.error.code)
-    ) {
-      throw updatesResult.error;
-    }
+    if (updatesResult.error) throw updatesResult.error;
 
     const interactions = (
       interactionsResult.data as Record<string, unknown>[]
@@ -700,7 +686,7 @@ async function getPersonDetailsRemote(identifier: string) {
     .select("*, person_update_people!inner(person_id)")
     .eq("person_update_people.person_id", personId)
     .order("recorded_at", { ascending: false });
-  if (updatesResult.error && !isMissingUpdatesSchema(updatesResult.error.code)) {
+  if (updatesResult.error) {
     throw updatesResult.error;
   }
   const updates = (
@@ -1155,10 +1141,6 @@ function updateKind(label: string | null) {
   return updateTypeKinds[label?.trim().toLowerCase() || ""] || "other";
 }
 
-function isMissingUpdatesSchema(code: string | undefined) {
-  return ["42P01", "42883", "PGRST202", "PGRST205"].includes(code || "");
-}
-
 export async function createPersonUpdate(
   userId: string,
   input: PersonUpdateInput,
@@ -1266,9 +1248,6 @@ export async function getRecentUpdateTypes() {
     .not("interaction_label", "is", null)
     .order("recorded_at", { ascending: false })
     .limit(30);
-  if (error && isMissingUpdatesSchema(error.code)) {
-    return snapshot.recentUpdateTypes;
-  }
   if (error) {
     if (snapshot.recentUpdateTypes.length > 0) {
       return snapshot.recentUpdateTypes;
@@ -1309,7 +1288,7 @@ export async function getRecentCustomLabels(limit = 6): Promise<string[]> {
     .limit(60);
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    if (error.code === "42703") return [];
     return snapshot.recentCustomLabels;
   }
 
@@ -2032,7 +2011,6 @@ async function mirrorPrimaryContactMethods(
     .eq("person_id", personId);
 
   if (error) {
-    if (isMissingContactMethodsSchema(error)) return;
     throw error;
   }
 
@@ -2221,7 +2199,6 @@ async function saveQueuedContactMethods(
     .eq("person_id", personId);
 
   if (error) {
-    if (isMissingContactMethodsSchema(error)) return;
     throw error;
   }
 
@@ -2240,7 +2217,6 @@ async function saveQueuedContactMethods(
       .from("person_contact_methods")
       .upsert(plan.upserts, { onConflict: "id" });
     if (upsertError) {
-      if (isMissingContactMethodsSchema(upsertError)) return;
       throw upsertError;
     }
   }
@@ -2301,7 +2277,7 @@ async function executeNoteMutation(
       },
       { onConflict: "id" },
     );
-    if (error && !isMissingNoteSchema(error.code)) throw error;
+    if (error) throw error;
     return;
   }
 
@@ -2311,7 +2287,7 @@ async function executeNoteMutation(
       .delete()
       .eq("id", mutation.noteId)
       .eq("user_id", mutation.userId);
-    if (error && !isMissingNoteSchema(error.code)) throw error;
+    if (error) throw error;
     return;
   }
 
@@ -2324,7 +2300,6 @@ async function executeNoteMutation(
         .eq("person_id", mutation.personId)
         .eq("user_id", mutation.userId);
       if (error) {
-        if (isMissingNoteSchema(error.code)) return;
         throw error;
       }
     }
@@ -2338,7 +2313,6 @@ async function executeNoteMutation(
     .eq("user_id", mutation.userId)
     .maybeSingle();
   if (error) {
-    if (isMissingNoteSchema(error.code)) return;
     throw error;
   }
 
@@ -2368,7 +2342,6 @@ async function executeNoteMutation(
         position: mutation.position,
       });
   if (writeError) {
-    if (isMissingNoteSchema(writeError.code)) return;
     throw writeError;
   }
 
@@ -2382,7 +2355,7 @@ async function executeNoteMutation(
       body: resolution.spillover.body,
       position: mutation.position + 1,
     });
-  if (spilloverError && !isMissingNoteSchema(spilloverError.code)) {
+  if (spilloverError) {
     throw spilloverError;
   }
 }

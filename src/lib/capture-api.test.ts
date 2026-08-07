@@ -165,22 +165,4 @@ describe("adding an update about someone", () => {
     expect(response.status).toBe(400);
   });
 
-  it("explains itself when the updates tables have not shipped yet", async () => {
-    createClient.mockResolvedValue({
-      rpc: async () => ({ data: null, error: { code: "PGRST202", message: "" } }),
-    });
-
-    const response = await addUpdate(
-      requestWith({
-        personIds: [amelia],
-        text: "Is interested in photography",
-        recordedAt: lastNight,
-      }),
-    );
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      error: "Updates are not available on this deployment yet.",
-    });
-  });
 });

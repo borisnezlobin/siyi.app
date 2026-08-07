@@ -5,7 +5,6 @@ import {
   buildShareUrl,
   createShareToken,
   defaultShareExpiryChoiceId,
-  isMissingPersonSharesSchema,
   isValidShareToken,
   mapPersonShare,
   normalizeShareSelection,
@@ -286,16 +285,6 @@ describe("the rows a viewer sees", () => {
     expect(labels).not.toContain("Phone");
     expect(labels).not.toContain("Email");
     expect(labels).not.toContain("Notes");
-  });
-});
-
-describe("links before migration 0015", () => {
-  it("recognises every shape of a missing table or column", () => {
-    for (const code of ["42P01", "42883", "42703", "PGRST202", "PGRST204", "PGRST205"]) {
-      expect(isMissingPersonSharesSchema(code)).toBe(true);
-    }
-    expect(isMissingPersonSharesSchema("23505")).toBe(false);
-    expect(isMissingPersonSharesSchema(undefined)).toBe(false);
   });
 });
 

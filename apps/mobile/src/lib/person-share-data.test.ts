@@ -100,24 +100,6 @@ describe("creating a link from the phone", () => {
     expect((inserted[0].fields as Record<string, boolean>).bio).toBe(false);
   });
 
-  it("falls back quietly when migration 0015 has not been applied", async () => {
-    const { client } = fakeClient({ data: null, error: { code: "42P01" } });
-
-    const result = await createPersonShare(
-      {
-        userId: "owner-1",
-        personId: "person-1",
-        selection: defaultContactShareSelection,
-        expiry: "30d",
-      },
-      client,
-      randomBytes,
-    );
-
-    // Unavailable, not an error: the sheet hides links and keeps the vCard.
-    expect(result).toEqual({ share: null, unavailable: true });
-    expect(result.error).toBeUndefined();
-  });
 
   it("does tell the sharer about a real failure", async () => {
     const { client } = fakeClient({ data: null, error: { code: "23505" } });

@@ -21,12 +21,6 @@ function downloadResponse(
   });
 }
 
-function isMissingSchema(error: { code?: string } | null) {
-  return Boolean(
-    error && ["42P01", "42703", "PGRST204", "PGRST205"].includes(error.code ?? ""),
-  );
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { user, supabase } = await requireAuthenticatedRequest(request);
@@ -83,11 +77,7 @@ export async function GET(request: NextRequest) {
       remindersResult.error,
       deliveriesResult.error,
       subscriptionsResult.error,
-      // A web-only project has no phone-app table, which must not block
-      // someone from exporting their own data.
-      isMissingSchema(nativeSubscriptionsResult.error)
-        ? null
-        : nativeSubscriptionsResult.error,
+      nativeSubscriptionsResult.error,
     ].find(Boolean);
 
     if (firstError) return apiError(firstError.message, 500);
@@ -96,24 +86,16 @@ export async function GET(request: NextRequest) {
       supabase.from("person_updates").select("*").eq("user_id", user.id),
       supabase.from("person_update_people").select("*").eq("user_id", user.id),
     ]);
-    const updates = isMissingSchema(updatesResult.error)
-      ? []
-      : updatesResult.data ?? [];
-    const updatePeople = isMissingSchema(updatePeopleResult.error)
-      ? []
-      : updatePeopleResult.data ?? [];
-    const updatesError = [updatesResult.error, updatePeopleResult.error].find(
-      (error) => error && !isMissingSchema(error),
-    );
+    const updatesError = [updatesResult.error, updatePeopleResult.error].find(Boolean);
     if (updatesError) return apiError(updatesError.message, 500);
+    const updates = updatesResult.data ?? [];
+    const updatePeople = updatePeopleResult.data ?? [];
 
-    // Migration 0013 may not have run yet; an export must not fail because of
-    // a table that does not exist, so the single columns carry it instead.
     const contactMethodsResult = await supabase
       .from("person_contact_methods")
       .select("*")
       .eq("user_id", user.id);
-    if (contactMethodsResult.error && !isMissingSchema(contactMethodsResult.error)) {
+    if (contactMethodsResult.error) {
       return apiError(contactMethodsResult.error.message, 500);
     }
     const contactMethods = contactMethodsResult.error

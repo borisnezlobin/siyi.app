@@ -7,14 +7,6 @@ export const maxNoteSectionsPerPerson = 30;
 export const missingNoteSectionsMessage =
   "Note sections are not switched on yet. Your other changes still save.";
 
-/** Mirrors the read-side tolerance in data.ts: the table simply may not exist
- * yet, because migrations are applied by hand after a deploy. */
-export function isMissingNoteSchema(code: string | undefined) {
-  return ["42P01", "42883", "42703", "PGRST202", "PGRST204", "PGRST205"].includes(
-    code || "",
-  );
-}
-
 /** Headings are typed by hand on every person, so "  Interests " and
  * "Interests" have to count as the same one. */
 export function normalizeNoteHeading(heading: string) {

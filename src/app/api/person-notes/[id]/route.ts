@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import {
-  isMissingNoteSchema,
-  missingNoteSectionsMessage,
 } from "@/lib/note-sections";
 import { createClient } from "@/lib/supabase/server";
 import { personNoteEditSchema } from "@/lib/validation";
@@ -36,9 +34,6 @@ export async function PATCH(
       .single();
 
     if (error) {
-      if (isMissingNoteSchema(error.code)) {
-        return apiError(missingNoteSectionsMessage, 503);
-      }
       return apiError(error.message, 400);
     }
 
@@ -64,9 +59,6 @@ export async function DELETE(
       .eq("user_id", user.id);
 
     if (error) {
-      if (isMissingNoteSchema(error.code)) {
-        return apiError(missingNoteSectionsMessage, 503);
-      }
       return apiError(error.message, 400);
     }
 

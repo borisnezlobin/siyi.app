@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  isMissingNoteSchema,
   maxNoteBodyLength,
   maxNoteHeadingLength,
   moveNoteSection,
@@ -137,15 +136,6 @@ describe("suggestedNoteHeadings", () => {
         limit: 2,
       }),
     ).toEqual(["One", "Two"]);
-  });
-});
-
-describe("isMissingNoteSchema", () => {
-  it("recognises the codes a pending migration produces", () => {
-    expect(isMissingNoteSchema("42P01")).toBe(true);
-    expect(isMissingNoteSchema("PGRST205")).toBe(true);
-    expect(isMissingNoteSchema("23505")).toBe(false);
-    expect(isMissingNoteSchema(undefined)).toBe(false);
   });
 });
 

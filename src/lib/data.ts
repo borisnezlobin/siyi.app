@@ -115,7 +115,7 @@ async function loadContactMethods(
     .order("created_at", { ascending: true });
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+    if (error.code === "42703") {
       return unavailableContactMethods;
     }
     throw new Error(error.message);
@@ -346,7 +346,7 @@ async function loadPersonContactMethods(
     .order("created_at", { ascending: true });
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+    if (error.code === "42703") {
       return unavailableContactMethods;
     }
     throw new Error(error.message);
@@ -358,11 +358,6 @@ async function loadPersonContactMethods(
       .map(mapContactMethod)
       .filter((method): method is ContactMethod => method !== null),
   };
-}
-
-/** Older deployments may not have the person_updates tables yet. */
-function isMissingUpdatesSchema(code: string | undefined) {
-  return ["42P01", "42883", "PGRST202", "PGRST205"].includes(code || "");
 }
 
 export async function getPersonUpdates(
@@ -378,7 +373,6 @@ export async function getPersonUpdates(
     .order("recorded_at", { ascending: false });
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code)) return [];
     throw new Error(error.message);
   }
 
@@ -437,7 +431,7 @@ export async function getPersonNoteSections(
     .order("created_at", { ascending: true });
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") {
+    if (error.code === "42703") {
       return { available: false, sections: [] };
     }
     throw new Error(error.message);
@@ -465,7 +459,7 @@ export async function getUsedNoteHeadings(limit = 40): Promise<string[]> {
     .limit(200);
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    if (error.code === "42703") return [];
     throw new Error(error.message);
   }
 
@@ -574,7 +568,7 @@ export async function getRecentCustomLabels(limit = 6): Promise<string[]> {
     .limit(60);
 
   if (error) {
-    if (isMissingUpdatesSchema(error.code) || error.code === "42703") return [];
+    if (error.code === "42703") return [];
     throw new Error(error.message);
   }
 

@@ -15,10 +15,6 @@ const dayInMs = 24 * 60 * 60 * 1000;
  * Migrations land by hand, so any table a recent migration introduced may not
  * exist yet. A missing table means "no data", never a 500.
  */
-export function isMissingAdminSchema(code: string | undefined) {
-  return ["42P01", "42883", "42703", "PGRST202", "PGRST205"].includes(code || "");
-}
-
 type RowFilter = {
   column: string;
   since: string;
@@ -29,7 +25,7 @@ async function fetchAllRows<T>(
   table: string,
   columns: string,
   filter?: RowFilter,
-): Promise<{ rows: T[]; missing: boolean }> {
+): Promise<{ rows: T[] }> {
   const rows: T[] = [];
 
   for (let page = 0; page < maxPages; page += 1) {
@@ -42,7 +38,6 @@ async function fetchAllRows<T>(
     const { data, error } = await query;
 
     if (error) {
-      if (isMissingAdminSchema(error.code)) return { rows: [], missing: true };
       throw new Error(error.message);
     }
 
@@ -51,7 +46,7 @@ async function fetchAllRows<T>(
     if (batch.length < pageSize) break;
   }
 
-  return { rows, missing: false };
+  return { rows };
 }
 
 function latestTimestamp(current: string | null, candidate: string | null) {
@@ -263,7 +258,6 @@ export const announcementColumns =
   "id,title,body,segment,starts_at,ends_at,created_by,created_at,audience_size,push_sent_at,push_recipient_count,push_delivered_count,push_failed_count";
 
 export type AnnouncementListing = {
-  schemaReady: boolean;
   announcements: Announcement[];
 };
 
@@ -276,14 +270,10 @@ export async function listAnnouncements(): Promise<AnnouncementListing> {
     .limit(100);
 
   if (error) {
-    if (isMissingAdminSchema(error.code)) {
-      return { schemaReady: false, announcements: [] };
-    }
     throw new Error(error.message);
   }
 
   return {
-    schemaReady: true,
     announcements: (data as AnnouncementRow[]).map(mapAnnouncement),
   };
 }

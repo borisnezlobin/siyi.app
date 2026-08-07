@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import type { AdminUserFacts } from "@/lib/admin";
 import { findSegment } from "@/lib/admin";
-import { isMissingAdminSchema } from "@/lib/admin-data";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
@@ -97,9 +96,6 @@ export async function GET(request: NextRequest) {
       .limit(20);
 
     if (error) {
-      if (isMissingAdminSchema(error.code)) {
-        return NextResponse.json({ announcements: [] });
-      }
       throw new Error(error.message);
     }
 

@@ -6,7 +6,6 @@ import { adminNotFound, resolveAdminRequest } from "@/lib/admin-access";
 import {
   announcementColumns,
   getAdminUserFacts,
-  isMissingAdminSchema,
   listAnnouncements,
   mapAnnouncement,
 } from "@/lib/admin-data";
@@ -70,12 +69,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      if (isMissingAdminSchema(error.code)) {
-        return apiError(
-          "The announcements tables are not in the database yet. Run migration 0011.",
-          503,
-        );
-      }
       if (error.code === duplicateKey) {
         const { data: existing } = await service
           .from("announcements")

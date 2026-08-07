@@ -1,5 +1,4 @@
 import {
-  isMissingNoteSchema,
   moveNoteSection,
   nextNotePosition,
   normalizeNoteHeading,
@@ -130,15 +129,7 @@ describe("heading suggestions", () => {
   });
 });
 
-describe("pre-migration tolerance", () => {
-  it("treats a missing table or column as the feature not being switched on", () => {
-    for (const code of ["42P01", "42883", "42703", "PGRST202", "PGRST205"]) {
-      expect(isMissingNoteSchema(code)).toBe(true);
-    }
-    expect(isMissingNoteSchema("23505")).toBe(false);
-    expect(isMissingNoteSchema(undefined)).toBe(false);
-  });
-
+describe("headings", () => {
   it("normalises headings the same way the server does", () => {
     expect(normalizeNoteHeading("  Things   we did ")).toBe("Things we did");
   });
