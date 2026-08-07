@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   agendaCounts,
-  agendaDueLabel,
   agendaStatusFor,
   buildTodayAgenda,
   pickCheckInSuggestions,
@@ -21,19 +20,6 @@ describe("agendaStatusFor", () => {
     expect(agendaStatusFor(-1)).toBe("overdue");
     expect(agendaStatusFor(0)).toBe("today");
     expect(agendaStatusFor(3)).toBe("upcoming");
-  });
-});
-
-describe("agendaDueLabel", () => {
-  it("says how late in whole days, singular included", () => {
-    expect(agendaDueLabel(-1)).toBe("1 day overdue");
-    expect(agendaDueLabel(-4)).toBe("4 days overdue");
-  });
-
-  it("names today and tomorrow rather than counting", () => {
-    expect(agendaDueLabel(0)).toBe("Due today");
-    expect(agendaDueLabel(1)).toBe("Due tomorrow");
-    expect(agendaDueLabel(6)).toBe("Due in 6 days");
   });
 });
 
@@ -107,10 +93,30 @@ describe("buildTodayAgenda", () => {
           daysAway: 0,
         },
       ],
-    });
+    }, today);
 
     expect(item.detail).toBe("Amelia · Due today");
     expect(item.reminderId).toBe("r1");
+  });
+
+  it("names the day a countdown does not", () => {
+    const [item] = buildTodayAgenda(
+      {
+        ...emptyInput,
+        reminders: [
+          {
+            id: "r1",
+            personId: "p1",
+            text: "Send the photos",
+            personName: "Amelia",
+            daysAway: 4,
+          },
+        ],
+      },
+      today,
+    );
+
+    expect(item.detail).toBe("Amelia · Due in 4 days · May 14");
   });
 
   it("says turning, not turns, for a birthday with a known age", () => {

@@ -10,6 +10,7 @@ import { AppText } from "@/components/app-text";
 import {
   cardShadow,
   colors,
+  fontFamilies,
   radii,
 } from "@/constants/theme";
 
@@ -35,27 +36,57 @@ export function SectionHeading({
   title,
   subtitle,
   detail,
+  actions,
 }: {
   title: string;
   subtitle?: string;
   detail?: string;
+  /** Labelled buttons only — a bare glyph here is not readable. */
+  actions?: React.ReactNode;
 }) {
   return (
     <View style={styles.sectionHeading}>
       <View style={styles.sectionTitle}>
-        <AppText variant="heading">{title}</AppText>
+        <View style={styles.sectionTitleRow}>
+          <AppText variant="heading">{title}</AppText>
+          {detail ? (
+            <AppText style={styles.sectionDetail} variant="caption">
+              {detail}
+            </AppText>
+          ) : null}
+        </View>
         {subtitle ? (
           <AppText style={styles.sectionSubtitle} variant="caption">
             {subtitle}
           </AppText>
         ) : null}
       </View>
-      {detail ? (
-        <AppText style={styles.sectionDetail} variant="caption">
-          {detail}
-        </AppText>
-      ) : null}
+      {actions ? <View style={styles.sectionActions}>{actions}</View> : null}
     </View>
+  );
+}
+
+/** The one shape a section action takes, so two headings cannot disagree. */
+export function SectionAction({
+  icon: IconComponent,
+  label,
+  onPress,
+}: {
+  icon: Icon;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.sectionAction, pressed && styles.pressed]}
+    >
+      <IconComponent color={colors.inkMuted} size={16} weight="fill" />
+      <AppText style={styles.sectionActionLabel} variant="caption">
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -101,14 +132,32 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: 3,
   },
+  sectionTitleRow: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
   sectionSubtitle: {
     color: colors.inkMuted,
   },
   sectionDetail: {
     flexShrink: 1,
-    maxWidth: "42%",
-    paddingTop: 3,
-    textAlign: "right",
+  },
+  sectionActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 2,
+  },
+  sectionAction: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 8,
+  },
+  sectionActionLabel: {
+    fontFamily: fontFamilies.bodySemibold,
   },
   empty: {
     alignItems: "center",

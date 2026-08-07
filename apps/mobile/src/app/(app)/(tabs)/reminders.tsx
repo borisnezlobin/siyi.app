@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ClockCountdown, MagnifyingGlass } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -15,10 +15,10 @@ import {
   reminderBucketEmptyLabels,
   reminderBucketLabels,
   reminderBucketOrder,
-  reminderDueLabel,
   groupRemindersByBucket,
   type ReminderBucket,
 } from "@/lib/reminder-buckets";
+import { dueDateLabel } from "@/lib/relative-time";
 import type { Reminder } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
@@ -27,7 +27,10 @@ export default function RemindersScreen() {
   const router = useRouter();
   const quickCapture = useQuickCapture();
   const screenData = useRefreshableData(getReminders);
-  const [query, setQuery] = useState("");
+  // A person page links here for one person, which arrives as a filled-in
+  // search rather than a second, phone-only filter control.
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [query, setQuery] = useState(q ?? "");
   const [focusedBucket, setFocusedBucket] = useState<ReminderBucket | null>(
     null,
   );
@@ -36,6 +39,10 @@ export default function RemindersScreen() {
   // A reminder completed in this session keeps its place in the list so it
   // never jumps out from under the tap that completed it.
   const settledIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (q) setQuery(q);
+  }, [q]);
 
   useEffect(() => {
     if (quickCapture.revision > 0) void screenData.reload();
@@ -306,7 +313,7 @@ function ReminderRow({
           {reminder.person?.preferredName ||
             reminder.person?.fullName ||
             "Someone"}
-          {done ? "" : ` · ${reminderDueLabel(reminder.dueAt)}`}
+          {done ? "" : ` · ${dueDateLabel(reminder.dueAt)}`}
         </AppText>
       </View>
       <Pressable

@@ -2,7 +2,6 @@ import {
   alreadyLoggedIds,
   checkInCandidates,
   startOfCheckInDay,
-  lastSeenLabel,
   loggedToday,
   shouldAskToday,
 } from "@/lib/daily-check-in";
@@ -102,12 +101,3 @@ describe("shouldAskToday", () => {
   });
 });
 
-describe("lastSeenLabel", () => {
-  it("reads the way someone would say it", () => {
-    expect(lastSeenLabel(person("1", "A", null), today)).toBe("Not logged yet");
-    expect(lastSeenLabel(person("2", "B", daysAgo(1)), today)).toBe("Yesterday");
-    expect(lastSeenLabel(person("3", "C", daysAgo(3)), today)).toBe("3 days ago");
-    expect(lastSeenLabel(person("4", "D", daysAgo(10)), today)).toBe("Last week");
-    expect(lastSeenLabel(person("5", "E", daysAgo(90)), today)).toBe("3 months ago");
-  });
-});

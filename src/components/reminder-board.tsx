@@ -10,10 +10,10 @@ import {
   reminderBucketEmptyLabels,
   reminderBucketLabels,
   reminderBucketOrder,
-  reminderDueLabel,
   groupRemindersByBucket,
   type ReminderBucket,
 } from "@/lib/reminder-buckets";
+import { dueDateLabel } from "@/lib/relative-time";
 import type { Reminder } from "@/lib/types";
 
 function matchesQuery(reminder: Reminder, query: string) {
@@ -301,7 +301,7 @@ function ReminderRow({
       </span>
       <span className="mt-1 block truncate text-[11px] text-ink-muted">
         {name}
-        {done ? "" : ` · ${reminderDueLabel(reminder.dueAt)}`}
+        {done ? "" : ` · ${dueDateLabel(reminder.dueAt)}`}
       </span>
     </>
   );

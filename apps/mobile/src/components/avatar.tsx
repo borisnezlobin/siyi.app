@@ -1,10 +1,8 @@
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
-import {
-  colors,
-  fontFamilies,
-} from "@/constants/theme";
+import { fontFamilies } from "@/constants/theme";
+import { avatarColorFor, avatarInitials } from "@/lib/avatar-colors";
 
 export function Avatar({
   name,
@@ -15,12 +13,8 @@ export function Avatar({
   uri?: string | null;
   size?: number;
 }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
+  const initials = avatarInitials(name);
+  const color = avatarColorFor(name);
   const cacheKey = uri
     ? uri.startsWith("file:")
       ? uri
@@ -51,6 +45,7 @@ export function Avatar({
       style={[
         styles.fallback,
         {
+          backgroundColor: color.background,
           borderRadius: size / 2,
           height: size,
           width: size,
@@ -59,7 +54,7 @@ export function Avatar({
     >
       <AppText
         style={{
-          color: colors.paper,
+          color: color.ink,
           fontFamily: fontFamilies.bodyBold,
           fontSize: Math.max(13, size * 0.29),
           lineHeight: Math.max(16, size * 0.36),
@@ -75,7 +70,6 @@ export function Avatar({
 const styles = StyleSheet.create({
   fallback: {
     alignItems: "center",
-    backgroundColor: colors.sageStrong,
     justifyContent: "center",
     overflow: "hidden",
   },

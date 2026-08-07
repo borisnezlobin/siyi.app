@@ -26,7 +26,7 @@ import {
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
-import { lastSeenLabel } from "@/lib/daily-check-in";
+import { lastSeenLabel } from "@/lib/relative-time";
 import {
   getAccountSettings,
   getReminders,
@@ -189,7 +189,7 @@ export default function TodayScreen() {
         },
       ];
     }),
-  });
+  }, now);
   const counts = agendaCounts(agenda);
   const visibleAgenda = agenda.slice(0, agendaLimit);
   const recentlyMet = recentlyMetPeople(people, now);
@@ -318,7 +318,7 @@ export default function TodayScreen() {
                     {person.preferredName || person.fullName}
                   </AppText>
                   <AppText variant="caption">
-                    {lastSeenLabel(person, now)}
+                    {lastSeenLabel(person.lastInteractionAt, now)}
                   </AppText>
                 </View>
                 <HandWaving color={colors.inkMuted} size={20} />

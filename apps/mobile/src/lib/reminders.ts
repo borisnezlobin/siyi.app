@@ -51,6 +51,12 @@ export function overdueDays(
   return Math.max(0, daysBetween(reminderDueDate(person, defaults), now));
 }
 
+export function formatOverdueDuration(overdue: number): string {
+  if (overdue <= 0) return "Due today";
+  if (overdue === 1) return "1 day overdue";
+  return `${overdue} days overdue`;
+}
+
 export function nextReminderDate(
   person: Person,
   defaults: ReminderDefaults = defaultReminderIntervals,

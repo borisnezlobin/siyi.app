@@ -9,12 +9,9 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, radii } from "@/constants/theme";
-import {
-  alreadyLoggedIds,
-  checkInCandidates,
-  lastSeenLabel,
-} from "@/lib/daily-check-in";
+import { alreadyLoggedIds, checkInCandidates } from "@/lib/daily-check-in";
 import { createInteraction, getPeople } from "@/lib/data";
+import { lastSeenLabel } from "@/lib/relative-time";
 import { todayDateInputValue, timestampFromDateInput } from "@/lib/date-input";
 import type { Person } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
@@ -131,7 +128,7 @@ export default function CheckInScreen() {
                       {person.preferredName || person.fullName}
                     </AppText>
                     <AppText variant="caption">
-                      {locked ? "Logged today" : lastSeenLabel(person)}
+                      {locked ? "Logged today" : lastSeenLabel(person.lastInteractionAt)}
                     </AppText>
                   </View>
                   <View style={[styles.tick, chosen && styles.tickSelected]}>

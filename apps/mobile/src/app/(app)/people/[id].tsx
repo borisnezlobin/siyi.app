@@ -5,6 +5,7 @@ import {
   Buildings,
   Cake,
   CalendarBlank,
+  CaretRight,
   ChatCircleDots,
   ClockCountdown,
   EnvelopeSimple,
@@ -35,7 +36,7 @@ import { Button } from "@/components/button";
 import { SharePersonSheet } from "@/components/share-person-sheet";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
-import { Card, SectionHeading } from "@/components/surface";
+import { Card, SectionAction, SectionHeading } from "@/components/surface";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { ageOnDate } from "@/lib/birthday-age";
 import { archivePerson, getPersonDetails, noteSectionsOf } from "@/lib/data";
@@ -43,8 +44,12 @@ import {
   contactDraftsOf,
   type ContactMethodDraft,
 } from "@/lib/contact-methods";
-import { dateLabel, elapsedLabel, relativeDayLabel } from "@/lib/date-labels";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
+import {
+  dueDateLabel,
+  lastSeenLabel,
+  relativeDateLabel,
+} from "@/lib/relative-time";
 import { nextReminderDate } from "@/lib/reminders";
 import { customTypeIconOrFallback } from "@/lib/custom-type-icon";
 import { interactionLabels } from "@/lib/interaction-labels";
@@ -362,13 +367,13 @@ export default function PersonDetailScreen() {
           <Card style={styles.stat}>
             <AppText variant="caption">Last interaction</AppText>
             <AppText variant="heading">
-              {elapsedLabel(person.lastInteractionAt)}
+              {lastSeenLabel(person.lastInteractionAt)}
             </AppText>
           </Card>
           <Card style={styles.stat}>
             <AppText variant="caption">Next reminder</AppText>
             <AppText variant="heading">
-              {reminder ? relativeDayLabel(reminder) : "Paused"}
+              {reminder ? dueDateLabel(reminder) : "Paused"}
             </AppText>
           </Card>
         </View>
@@ -428,6 +433,25 @@ export default function PersonDetailScreen() {
 
         <View style={styles.section}>
           <SectionHeading
+            actions={
+              <>
+                <SectionAction
+                  icon={ClockCountdown}
+                  label="Add reminder"
+                  onPress={() => quickCapture.addReminder(person.id)}
+                />
+                <SectionAction
+                  icon={CaretRight}
+                  label="See all"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/reminders",
+                      params: { q: person.preferredName || person.fullName },
+                    })
+                  }
+                />
+              </>
+            }
             detail={`${openReminders.length} open`}
             title="Reminders"
           />
@@ -439,7 +463,7 @@ export default function PersonDetailScreen() {
                   <View style={styles.timelineCopy}>
                     <AppText variant="label">{reminder.text}</AppText>
                     <AppText variant="caption">
-                      {relativeDayLabel(reminder.dueAt)}
+                      {dueDateLabel(reminder.dueAt)}
                     </AppText>
                   </View>
                 </View>
@@ -463,6 +487,20 @@ export default function PersonDetailScreen() {
 
         <View style={styles.section}>
           <SectionHeading
+            actions={
+              <>
+                <SectionAction
+                  icon={UsersThree}
+                  label="Log interaction"
+                  onPress={() => quickCapture.logInteraction(person.id)}
+                />
+                <SectionAction
+                  icon={NotePencil}
+                  label="Add update"
+                  onPress={() => quickCapture.addUpdate(person.id)}
+                />
+              </>
+            }
             detail={`${timelineEntries.length}`}
             title="History"
           />
@@ -494,7 +532,7 @@ export default function PersonDetailScreen() {
                             : "Update"}
                         </AppText>
                         <AppText variant="caption">
-                          {dateLabel(entry.update.recordedAt)}
+                          {relativeDateLabel(entry.update.recordedAt)}
                         </AppText>
                         <AppText style={styles.note}>
                           {entry.update.text}
@@ -519,7 +557,7 @@ export default function PersonDetailScreen() {
                         {timelineTitle(interaction)}
                       </AppText>
                       <AppText variant="caption">
-                        {dateLabel(interaction.occurredAt)}
+                        {relativeDateLabel(interaction.occurredAt)}
                       </AppText>
                       {interaction.note ? (
                         <AppText style={styles.note}>

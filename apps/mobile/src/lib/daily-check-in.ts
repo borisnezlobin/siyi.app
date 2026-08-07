@@ -14,8 +14,6 @@ export type CheckInPerson = FilterablePerson & {
   status?: string;
 };
 
-const dayInMilliseconds = 86_400_000;
-
 /**
  * A day here ends at 4am, not midnight. Someone logging the people they saw at a
  * party at 1am means last night, and would be baffled to find the list already
@@ -83,18 +81,6 @@ export function checkInCandidates<T extends CheckInPerson>(
 /** Who the page opens with already ticked: everyone logged since 4am. */
 export function alreadyLoggedIds(people: CheckInPerson[], today = new Date()) {
   return people.filter((person) => loggedToday(person, today)).map((person) => person.id);
-}
-
-/** How long since you logged anything with them, for the subtitle on each row. */
-export function lastSeenLabel(person: CheckInPerson, today = new Date()) {
-  if (!person.lastInteractionAt) return "Not logged yet";
-  const days = Math.floor((today.getTime() - lastSeenAt(person)) / dayInMilliseconds);
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  if (days < 14) return "Last week";
-  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
-  return `${Math.round(days / 30)} months ago`;
 }
 
 /**

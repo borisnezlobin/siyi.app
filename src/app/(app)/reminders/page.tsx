@@ -31,11 +31,7 @@ export default async function RemindersPage({
         title="Reminders"
         description="What is coming up, and when it lands."
         action={
-          <QuickCaptureTrigger
-            mode="reminder"
-            label="Add a reminder"
-            compact
-          />
+          <QuickCaptureTrigger mode="reminder" label="Add a reminder" />
         }
       />
       <ReminderBoard

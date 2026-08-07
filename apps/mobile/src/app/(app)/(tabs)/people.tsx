@@ -370,8 +370,9 @@ export default function PeopleScreen() {
                   {section.letter}
                 </AppText>
                 <View style={styles.list}>
-                  {section.people.map((person) => (
+                  {section.people.map((person, index) => (
                     <PersonRow
+                      divider={index < section.people.length - 1}
                       key={person.id}
                       onPress={() => router.push(`/people/${person.id}`)}
                       person={person}
@@ -383,8 +384,9 @@ export default function PeopleScreen() {
           </View>
         ) : (
           <View style={styles.list}>
-            {filteredPeople.map((person) => (
+            {filteredPeople.map((person, index) => (
               <PersonRow
+                divider={index < filteredPeople.length - 1}
                 key={person.id}
                 onPress={() => router.push(`/people/${person.id}`)}
                 person={person}
@@ -591,6 +593,8 @@ const styles = StyleSheet.create({
   },
   sectionLetter: {
     color: colors.inkMuted,
+    fontSize: 12,
+    lineHeight: 17,
     paddingHorizontal: 4,
   },
 });

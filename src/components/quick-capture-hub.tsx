@@ -66,15 +66,17 @@ const modeCopy: Record<
   },
 };
 
+/**
+ * Always labelled. A clock or a pencil on its own is a guess, and the person
+ * reading it has no way to check whether they guessed right.
+ */
 export function QuickCaptureTrigger({
   mode,
   personId,
   label,
-  compact = false,
   surface = "default",
 }: QuickCaptureEventDetail & {
   label: string;
-  compact?: boolean;
   surface?: "default" | "sidebar" | "quiet";
 }) {
   const Icon =
@@ -94,22 +96,17 @@ export function QuickCaptureTrigger({
           }),
         )
       }
-      className={
-        compact
-          ? "grid size-9 shrink-0 place-items-center rounded-full bg-mist text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-          : clsx(
-              "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
-              surface === "sidebar"
-                ? "w-full bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
-                : surface === "quiet"
-                  ? "text-ink-muted hover:text-ink focus-visible:ring-coral"
-                  : "w-full bg-ink text-white shadow-card focus-visible:ring-coral",
-            )
-      }
-      aria-label={compact ? label : undefined}
+      className={clsx(
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
+        surface === "sidebar"
+          ? "w-full bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
+          : surface === "quiet"
+            ? "text-ink-muted hover:text-ink focus-visible:ring-coral"
+            : "bg-ink text-white shadow-card focus-visible:ring-coral",
+      )}
     >
-      <Icon size={compact ? 17 : 16} weight="fill" aria-hidden="true" />
-      {compact ? null : label}
+      <Icon size={16} weight="fill" aria-hidden="true" />
+      {label}
     </button>
   );
 }
