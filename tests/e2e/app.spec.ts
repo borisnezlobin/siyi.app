@@ -532,3 +532,24 @@ test("robots.txt keeps crawlers away from shared cards", async ({ request }) => 
   const body = await (await request.get("/robots.txt")).text();
   expect(body).toContain("Disallow: /s/");
 });
+
+test("Your card leads with the switch and disables the rest while it is off", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+
+  const shareSwitch = page.getByRole("switch", { name: "Enable shareable link" });
+  await expect(shareSwitch).toBeVisible();
+  await expect(shareSwitch).toHaveAttribute("aria-checked", "false");
+
+  // Off has to mean off. The fieldset is what does it, so the controls below
+  // refuse input and are announced as disabled rather than only looking grey.
+  await expect(page.getByLabel("Your handle")).toBeDisabled();
+  await expect(page.getByText("What goes on it")).toBeVisible();
+
+  // A default for the people you add is not a detail about you, so it lives
+  // with the other defaults now.
+  await expect(
+    page.getByRole("heading", { name: "New person defaults" }),
+  ).toBeVisible();
+});
