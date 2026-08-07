@@ -16,6 +16,22 @@ export type CheckInPerson = FilterablePerson & {
 
 const dayInMilliseconds = 86_400_000;
 
+/**
+ * A day here ends at 4am, not midnight. Someone logging the people they saw at a
+ * party at 1am means last night, and would be baffled to find the list already
+ * cleared.
+ */
+export const dayStartsAtHour = 4;
+
+export function startOfCheckInDay(now = new Date()) {
+  const start = new Date(now);
+  start.setHours(dayStartsAtHour, 0, 0, 0);
+  if (now.getHours() < dayStartsAtHour) {
+    start.setDate(start.getDate() - 1);
+  }
+  return start;
+}
+
 function lastSeenAt(person: CheckInPerson) {
   const stamp = person.lastInteractionAt ?? person.firstMetAt;
   const parsed = stamp ? new Date(stamp).getTime() : Number.NaN;
@@ -24,12 +40,7 @@ function lastSeenAt(person: CheckInPerson) {
 
 export function loggedToday(person: CheckInPerson, today = new Date()) {
   if (!person.lastInteractionAt) return false;
-  const seen = new Date(person.lastInteractionAt);
-  return (
-    seen.getFullYear() === today.getFullYear() &&
-    seen.getMonth() === today.getMonth() &&
-    seen.getDate() === today.getDate()
-  );
+  return new Date(person.lastInteractionAt).getTime() >= startOfCheckInDay(today).getTime();
 }
 
 /**
@@ -45,7 +56,13 @@ export function checkInCandidates<T extends CheckInPerson>(
   today = new Date(),
   limit = 12
 ): T[] {
-  return people
+  // Anyone already logged today stays on the list, ticked. Coming back at 9pm
+  // should show the three people from lunch still selected, not an empty page
+  // that makes it look like nothing was saved.
+  const alreadyLogged = people.filter(
+    (person) => person.status !== "archived" && loggedToday(person, today)
+  );
+  const rest = people
     .filter((person) => person.status !== "archived")
     .filter((person) => !loggedToday(person, today))
     .sort((left, right) => {
@@ -54,6 +71,18 @@ export function checkInCandidates<T extends CheckInPerson>(
       return displayNameOf(left).localeCompare(displayNameOf(right));
     })
     .slice(0, limit);
+
+  return [
+    ...alreadyLogged.sort((left, right) =>
+      displayNameOf(left).localeCompare(displayNameOf(right))
+    ),
+    ...rest,
+  ];
+}
+
+/** Who the page opens with already ticked: everyone logged since 4am. */
+export function alreadyLoggedIds(people: CheckInPerson[], today = new Date()) {
+  return people.filter((person) => loggedToday(person, today)).map((person) => person.id);
 }
 
 /** How long since you logged anything with them, for the subtitle on each row. */
@@ -73,5 +102,7 @@ export function lastSeenLabel(person: CheckInPerson, today = new Date()) {
  * once everyone plausible is logged the question is just noise.
  */
 export function shouldAskToday(people: CheckInPerson[], today = new Date()) {
-  return checkInCandidates(people, today).length > 0;
+  return checkInCandidates(people, today).some(
+    (person) => !loggedToday(person, today)
+  );
 }

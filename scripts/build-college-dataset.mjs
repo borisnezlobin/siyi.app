@@ -90,12 +90,70 @@ async function loadScorecard() {
   return results;
 }
 
+/**
+ * Coordinates for schools outside the United States, which Scorecard does not
+ * cover. Without this every non-US school lands in "couldn't place these" — the
+ * University of Cambridge included, which is a silly thing for a map to admit.
+ */
+async function loadWorldCoordinates() {
+  // A heavy SPARQL query that sometimes times out. Coordinates are an
+  // improvement, not a requirement, so a bad day at Wikidata must not stop the
+  // dataset being rebuilt.
+  try {
+    return await fetchWorldCoordinates();
+  } catch (error) {
+    console.log(`Wikidata request failed (${error.message}); skipping world coordinates`);
+    return new Map();
+  }
+}
+
+async function fetchWorldCoordinates() {
+  const query = `
+    SELECT ?name ?lat ?lon WHERE {
+      ?university wdt:P31/wdt:P279* wd:Q3918;
+                  rdfs:label ?name;
+                  p:P625/psv:P625 ?coordinate.
+      ?coordinate wikibase:geoLatitude ?lat; wikibase:geoLongitude ?lon.
+      FILTER(LANG(?name) = "en")
+    }`;
+
+  const response = await fetch(
+    `https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Accept: "application/sparql-results+json",
+        "User-Agent": "siyi-college-dataset/1.0 (https://siyi.app)",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    console.log(`Wikidata unavailable (HTTP ${response.status}); skipping world coordinates`);
+    return new Map();
+  }
+
+  const json = await response.json();
+  const byName = new Map();
+  for (const row of json.results.bindings) {
+    const key = mergeKey(row.name.value);
+    if (key && !byName.has(key)) {
+      byName.set(key, {
+        latitude: Number(row.lat.value),
+        longitude: Number(row.lon.value),
+      });
+    }
+  }
+  console.log(`pulled ${byName.size} school locations from Wikidata`);
+  return byName;
+}
+
 const worldResponse = await fetch(WORLD_SOURCE);
 if (!worldResponse.ok) {
   throw new Error(`Could not download the world college list: HTTP ${worldResponse.status}`);
 }
 const world = await worldResponse.json();
 const scorecard = await loadScorecard();
+const worldCoordinates = await loadWorldCoordinates();
 
 const colleges = new Map();
 for (const entry of world) {
@@ -184,6 +242,16 @@ for (const college of colleges.values()) {
 
 for (const college of colleges.values()) college.aliases = new Set();
 for (const [alias, holder] of claims) holder.college.aliases.add(alias);
+
+// Scorecard wins where it has a campus; Wikidata fills in the rest of the world.
+for (const [key, college] of colleges) {
+  if (college.latitude !== null) continue;
+  const found = worldCoordinates.get(key);
+  if (found) {
+    college.latitude = found.latitude;
+    college.longitude = found.longitude;
+  }
+}
 
 const sorted = [...colleges.values()].sort((left, right) => left.name.localeCompare(right.name));
 

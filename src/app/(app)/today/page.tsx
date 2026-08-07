@@ -183,7 +183,7 @@ export default async function TodayPage() {
       <PageHeader
         eyebrow={format(now, "EEEE, MMMM d")}
         title="What needs your attention?"
-        description="Dates and promises first. Everything else can stay quiet."
+        description="Log who you saw, then everything that needs you today."
         action={
           <Link
             href="/notifications"
@@ -195,7 +195,19 @@ export default async function TodayPage() {
         }
       />
 
-      {quickPeople.length ? <LogInteractionPanel people={quickPeople} /> : null}
+      <Link
+        href="/check-in"
+        className="mt-9 flex items-center justify-between gap-4 rounded-2xl bg-white p-4 transition-colors hover:bg-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        <span>
+          <span className="block text-sm font-bold">Select who you saw today</span>
+          <span className="mt-0.5 block text-xs text-ink-muted">
+            Easily log an interaction with everyone you talked to today.
+          </span>
+        </span>
+        <CaretRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-ink-muted" />
+      </Link>
+
 
       <section className="mt-9" aria-labelledby="time-sensitive-heading">
         <div className="flex items-end justify-between gap-4">
@@ -287,19 +299,6 @@ export default async function TodayPage() {
         </div>
       </section>
 
-      <Link
-        href="/check-in"
-        className="mt-9 flex items-center justify-between gap-4 rounded-2xl bg-white p-4 transition-colors hover:bg-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-      >
-        <span>
-          <span className="block text-sm font-bold">Who did you talk to today?</span>
-          <span className="mt-0.5 block text-xs text-ink-muted">
-            One pass, one tap each — log everyone you saw.
-          </span>
-        </span>
-        <CaretRight size={16} weight="bold" aria-hidden="true" className="shrink-0 text-ink-muted" />
-      </Link>
-
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">
           <h2 id="check-in-heading" className="text-base font-bold">
@@ -384,6 +383,8 @@ export default async function TodayPage() {
           </div>
         </section>
       ) : null}
+      {quickPeople.length ? <LogInteractionPanel people={quickPeople} /> : null}
+
     </div>
   );
 }

@@ -62,12 +62,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // The link carries their surname, so the name has to be read before the row
+    // is written. It also confirms the person belongs to this account.
+    const { data: person } = await supabase
+      .from("people")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .eq("id", validation.data.personId)
+      .maybeSingle();
+
+    if (!person) return apiError("That person could not be found.", 404);
+
     const { data, error } = await supabase
       .from("person_shares")
       .insert({
         user_id: user.id,
         person_id: validation.data.personId,
-        token: createShareToken((size) => new Uint8Array(randomBytes(size))),
+        token: createShareToken(
+          (size) => new Uint8Array(randomBytes(size)),
+          person.full_name,
+        ),
         // The bio is generated on the sharer's device and never stored, so a
         // link can never reproduce it.
         fields: { ...validation.data.selection, bio: false },

@@ -23,15 +23,22 @@ function supabaseReturning(result: Result) {
     is: () => chain,
     order: () => chain,
     single: () => Promise.resolve(result),
+    maybeSingle: () => Promise.resolve(result),
     then: (resolve: (value: Result) => unknown) =>
       Promise.resolve(result).then(resolve),
+  };
+
+  // The route reads the person first, for the name in the link.
+  const personChain = {
+    eq: () => personChain,
+    maybeSingle: () => Promise.resolve({ data: { full_name: "Wei Zhang" }, error: null }),
   };
 
   return {
     inserted,
     client: {
-      from: () => ({
-        select: () => chain,
+      from: (table: string) => ({
+        select: () => (table === "people" ? personChain : chain),
         insert: (row: Record<string, unknown>) => {
           inserted.push(row);
           return { select: () => chain };
@@ -114,7 +121,7 @@ describe("creating a share link once the table exists", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(inserted[0].token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(inserted[0].token).toMatch(/^zhang-[A-Za-z0-9_-]{12}$/);
     expect(inserted[0].fields).toEqual({
       preferredName: false,
       phoneNumber: false,
