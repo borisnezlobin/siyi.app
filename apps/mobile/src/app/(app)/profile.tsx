@@ -39,6 +39,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showQr, setShowQr] = useState(false);
+  const [revealing, setRevealing] = useState(false);
   const reveal = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
@@ -48,6 +49,16 @@ export default function ProfileScreen() {
       useNativeDriver: true,
     }).start();
   }, [reveal, showQr]);
+
+  useEffect(() => {
+    if (!showQr) {
+      setRevealing(false);
+      return;
+    }
+    setRevealing(true);
+    const done = setTimeout(() => setRevealing(false), 1100);
+    return () => clearTimeout(done);
+  }, [showQr]);
 
   if (screenData.loading && !screenData.data) {
     return <LoadingState label="Opening your page…" />;
@@ -116,8 +127,7 @@ export default function ProfileScreen() {
       {profile.tag ? (
         <>
           <AppText variant="caption">
-            People can find you as {formatHandle(profile.handle, profile.tag)}. The
-            four characters keep your page from being guessed by name alone.
+            People can find you as {formatHandle(profile.handle, profile.tag)}.
           </AppText>
 
           <View style={styles.actions}>
@@ -154,7 +164,7 @@ export default function ProfileScreen() {
                 },
               ]}
             >
-              <ConnectRipple size={236} />
+              {revealing ? <ConnectRipple size={236} /> : null}
               <QRCodeView
                 backgroundColor={colors.paper}
                 color={colors.ink}
@@ -166,9 +176,10 @@ export default function ProfileScreen() {
 
           <View style={styles.toggleRow}>
             <View style={styles.toggleCopy}>
-              <AppText variant="label">Turn my page on</AppText>
+              <AppText variant="label">Show my card on this page</AppText>
               <AppText variant="caption">
-                Anyone with the address can read it. Off means it is nobody&rsquo;s.
+                Anyone who opens the address above can read it. While this is
+                off the address shows nothing, and the name stays yours.
               </AppText>
             </View>
             <Switch

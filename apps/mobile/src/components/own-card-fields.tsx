@@ -81,10 +81,10 @@ export function OwnCardFields() {
 
         <View style={styles.toggleRow}>
           <View style={styles.toggleCopy}>
-            <AppText variant="label">Offer my details when sharing</AppText>
+            <AppText variant="label">Include my card in links I share</AppText>
             <AppText variant="caption">
-              Someone opening your share link can copy what you fill in below.
-              Off until you turn it on.
+              When you share someone else&rsquo;s card, yours is offered
+              alongside it so they can add you back. Separate from your page.
             </AppText>
           </View>
           <Switch
