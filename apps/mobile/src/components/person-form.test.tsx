@@ -112,3 +112,55 @@ describe("editing a person", () => {
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
   });
 });
+
+describe("choosing a profile photo", () => {
+  it("saves the photo on its own, without pushing unsaved edits with it", async () => {
+    const picker = jest.requireMock("expo-image-picker");
+    const data = jest.requireMock("@/lib/data");
+    picker.launchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///new.jpg", fileName: "new.jpg", mimeType: "image/jpeg" }],
+    });
+    data.updatePerson.mockResolvedValue(undefined);
+
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <PersonForm person={person} />
+      </SafeAreaProvider>,
+    );
+
+    // A name typed but not saved must not ride along with the photo.
+    await fireEvent.changeText(
+      screen.getByLabelText("Full name"),
+      "Half Typed Name",
+    );
+    await fireEvent.press(screen.getByLabelText("Add profile photo"));
+
+    expect(data.updatePerson).toHaveBeenCalledTimes(1);
+    const [, personId, input, photo] = data.updatePerson.mock.calls[0];
+    expect(personId).toBe("person-1");
+    expect(input.fullName).toBe("Jordan Lee");
+    expect(photo).toMatchObject({ uri: "file:///new.jpg" });
+  });
+
+  it("leaves a brand new person's photo to be saved with the rest", async () => {
+    const picker = jest.requireMock("expo-image-picker");
+    const data = jest.requireMock("@/lib/data");
+    // Module mocks keep their call log across tests; restoreAllMocks does not
+    // reach them.
+    data.updatePerson.mockClear();
+    picker.launchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///new.jpg" }],
+    });
+
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <PersonForm />
+      </SafeAreaProvider>,
+    );
+    await fireEvent.press(screen.getByLabelText("Add profile photo"));
+
+    expect(data.updatePerson).not.toHaveBeenCalled();
+  });
+});
