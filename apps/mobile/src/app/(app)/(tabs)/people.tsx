@@ -1,6 +1,7 @@
 import {
   ArrowsDownUp,
   Cake,
+  CalendarBlank,
   MagnifyingGlass,
   MapPin,
   SlidersHorizontal,
@@ -16,6 +17,8 @@ import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, fontFamilies, radii } from "@/constants/theme";
+import { personMatchesClassQuery, type PersonClass } from "@/lib/classes";
+import { getClasses } from "@/lib/classes-data";
 import { collegeSearchTerms } from "@/lib/colleges";
 import { getAccountSettings, getPeople } from "@/lib/data";
 import {
@@ -47,6 +50,7 @@ type OverdueFilter = "all" | "overdue" | "recent";
 type PeopleData = {
   people: Person[];
   reminderDefaults: ReminderDefaults;
+  classes: PersonClass[];
 };
 
 const sortLabels: Record<SortMode, string> = {
@@ -63,13 +67,15 @@ export default function PeopleScreen() {
   const { session } = useAuth();
   const quickCapture = useQuickCapture();
   const screenData = useRefreshableData<PeopleData>(async () => {
-    const [people, settings] = await Promise.all([
+    const [people, settings, classes] = await Promise.all([
       getPeople(),
       getAccountSettings(session!.user.id),
+      getClasses(session!.user.id),
     ]);
     return {
       people,
       reminderDefaults: settings.reminderDefaults,
+      classes,
     };
   });
   const [query, setQuery] = useState("");
@@ -89,13 +95,24 @@ export default function PeopleScreen() {
 
   const filteredPeople = useMemo(() => {
     if (!screenData.data) return [];
-    const { people, reminderDefaults } = screenData.data;
+    const { people, reminderDefaults, classes } = screenData.data;
+    const classesByPerson = new Map<string, PersonClass[]>();
+    for (const entry of classes) {
+      const existing = classesByPerson.get(entry.personId);
+      if (existing) existing.push(entry);
+      else classesByPerson.set(entry.personId, [entry]);
+    }
     const now = new Date();
     const thirtyDaysAgo = now.getTime() - 30 * 86_400_000;
     const filtered = people.filter((person) => {
       if (person.status === "archived") return false;
       // The whole table is already on the device, so acronym search is free here.
-      if (!matchesPeopleQuery(person, query, collegeSearchTerms)) return false;
+      if (
+        !matchesPeopleQuery(person, query, collegeSearchTerms) &&
+        !personMatchesClassQuery(classesByPerson.get(person.id) ?? [], query)
+      ) {
+        return false;
+      }
       if (missing.some((detail) => !isMissingDetail(person, detail))) return false;
       if (strength && person.relationshipStrength !== strength) return false;
       if (tagId && !person.tags.some((tag) => tag.id === tagId)) return false;
@@ -167,13 +184,14 @@ export default function PeopleScreen() {
       eyebrow="Your circle"
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="Search by name, school, hometown, note, major, dorm, or tag."
+      subtitle="Search by name, school, class, hometown, major, dorm, or tag."
       title="People"
     >
       <View style={styles.shortcuts}>
         {(
           [
             ["/birthdays", "Birthdays", Cake],
+            ["/schedule", "Schedule", CalendarBlank],
             ["/map", "Map", MapPin],
           ] as const
         ).map(([href, label, Icon]) => (

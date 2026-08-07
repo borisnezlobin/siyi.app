@@ -56,6 +56,9 @@ import {
 } from "@/lib/update-entries";
 import type { InteractionType } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useAuth } from "@/providers/auth-provider";
+import { PersonClasses } from "@/components/person-classes";
+import { getClasses } from "@/lib/classes-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
 /**
@@ -89,6 +92,10 @@ export default function PersonDetailScreen() {
   const [sharing, setSharing] = useState(false);
   const quickCapture = useQuickCapture();
   const personData = useRefreshableData(() => getPersonDetails(id));
+  const { session } = useAuth();
+  const classData = useRefreshableData(() =>
+    session ? getClasses(session.user.id) : Promise.resolve([]),
+  );
 
   useEffect(() => {
     if (quickCapture.revision > 0) void personData.reload();
@@ -398,6 +405,22 @@ export default function PersonDetailScreen() {
                   </View>
                 );
               })}
+            </Card>
+          </View>
+        ) : null}
+
+        {session ? (
+          <View style={styles.section}>
+            <SectionHeading title="Classes" />
+            <Card style={styles.notesCard}>
+              <PersonClasses
+                classes={(classData.data ?? []).filter(
+                  (entry) => entry.personId === person.id,
+                )}
+                onChanged={() => void classData.reload()}
+                personId={person.id}
+                userId={session.user.id}
+              />
             </Card>
           </View>
         ) : null}
