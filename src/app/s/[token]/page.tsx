@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
 import { buildVCard, contactCardFileName } from "@/lib/contact-card";
-import { ownCardFields, ownCardLabels } from "@/lib/own-card";
 import { sharedFieldRows } from "@/lib/person-share";
 import {
   recordShareView,
@@ -104,26 +103,6 @@ export default async function SharedPersonPage({
       )}
 
       <div className="mt-10 border-t border-black/[0.07] pt-8">
-        {shared.ownerCard ? (
-          <div className="mb-6 rounded-2xl bg-sage/40 p-4">
-            <p className="text-xs font-semibold text-ink">
-              They shared their own details too
-            </p>
-            <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
-              {ownCardFields
-                .filter((field) => shared.ownerCard?.[field])
-                .map((field) => (
-                  <div key={field} className="flex gap-2 text-xs leading-5">
-                    <dt className="shrink-0 text-ink-muted">{ownCardLabels[field]}</dt>
-                    <dd className="min-w-0 break-words text-ink">
-                      {shared.ownerCard?.[field]}
-                    </dd>
-                  </div>
-                ))}
-            </dl>
-          </div>
-        ) : null}
-
         <SaveActions
           card={buildVCard(person, selection)}
           fileName={contactCardFileName(person)}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Switch, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { CollegeField } from "@/components/college-field";
@@ -36,7 +36,6 @@ export function OwnCardFields() {
   );
 
   const [card, setCard] = useState<OwnCard | null>(null);
-  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [defaultUniversity, setDefaultUniversity] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -45,7 +44,6 @@ export function OwnCardFields() {
   const settings = screenData.data;
   if (!settings) return null;
   const currentCard = card ?? settings.ownCard;
-  const currentEnabled = enabled ?? settings.ownCardEnabled;
   const currentUniversity = defaultUniversity ?? settings.defaultUniversity;
 
   async function save() {
@@ -55,7 +53,7 @@ export function OwnCardFields() {
     try {
       await saveOwnCard(session.user.id, {
         card: currentCard,
-        enabled: currentEnabled,
+        enabled: true,
         defaultUniversity: currentUniversity,
       });
       setSaved(true);
@@ -79,20 +77,6 @@ export function OwnCardFields() {
           Filled in for you when you add someone new. Leave blank for none.
         </AppText>
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleCopy}>
-            <AppText variant="label">Include my card in links I share</AppText>
-            <AppText variant="caption">
-              When you share someone else&rsquo;s card, yours is offered
-              alongside it so they can add you back. Separate from your page.
-            </AppText>
-          </View>
-          <Switch
-            onValueChange={(value) => setEnabled(value)}
-            trackColor={{ false: colors.mist, true: colors.sageStrong }}
-            value={currentEnabled}
-          />
-        </View>
 
         {ownCardFields
           .filter((field) => field !== "university")

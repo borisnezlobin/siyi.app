@@ -1,6 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
 import { DefaultUniversityControl } from "@/components/default-university-control";
-import { OwnCardControls } from "@/components/own-card-controls";
 import { ProfileControls } from "@/components/profile-controls";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
@@ -36,7 +35,6 @@ export default async function SettingsPage() {
   let initialProfilePublic = false;
   let initialPublicFields: Record<string, boolean> = {};
   let initialOwnCard: OwnCard = {};
-  let initialOwnCardEnabled = false;
   let initialDefaultUniversity = "";
   let initialTimezone = "America/Los_Angeles";
   let initialMarketingOptIn = false;
@@ -55,7 +53,7 @@ export default async function SettingsPage() {
       supabase
         .from("user_settings")
         .select(
-          "strength_1_days,strength_2_days,strength_3_days,strength_4_days,own_card,own_card_enabled,default_university",
+          "strength_1_days,strength_2_days,strength_3_days,strength_4_days,own_card,default_university",
         )
         .eq("user_id", user.id)
         .maybeSingle(),
@@ -75,7 +73,6 @@ export default async function SettingsPage() {
       .maybeSingle();
     initialMarketingOptIn = consent?.marketing_opt_in ?? false;
     initialOwnCard = normalizeOwnCard(settings?.own_card);
-    initialOwnCardEnabled = settings?.own_card_enabled ?? false;
     initialDefaultUniversity = settings?.default_university ?? "";
     if (settings) {
       initialIntervals = {
@@ -109,12 +106,6 @@ export default async function SettingsPage() {
               initialPublic={initialProfilePublic}
               initialPublicFields={initialPublicFields}
               initialTag={initialHandleTag}
-            />
-          </div>
-          <div className="mt-7 border-t border-ink/[0.08] pt-6">
-            <OwnCardControls
-              initialCard={initialOwnCard}
-              initialEnabled={initialOwnCardEnabled}
             />
           </div>
           <div className="mt-7 border-t border-ink/[0.08] pt-6">
