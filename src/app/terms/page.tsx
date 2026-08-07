@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { brand } from "@/config/brand";
+import { publicPageMetadata } from "@/lib/public-pages";
 
-export const metadata: Metadata = {
-  title: "Terms of service",
-  description: `The terms for using ${brand.name}.`,
-};
+export const metadata: Metadata = publicPageMetadata("terms");
 
 const sections = [
   {

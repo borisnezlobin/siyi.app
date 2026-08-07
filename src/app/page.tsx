@@ -13,13 +13,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { brand } from "@/config/brand";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { publicPageMetadata } from "@/lib/public-pages";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-export const metadata: Metadata = {
-  title: "Remember the people who matter",
-  description:
-    "Capture the people you meet in college, remember the context, and reconnect when the time feels right.",
-};
+export const metadata: Metadata = publicPageMetadata("home");
 
 const previewPeople = [
   {

@@ -7,10 +7,9 @@ import {
   signInWithPassword,
   signUpWithPassword,
 } from "@/app/auth/actions";
+import { publicPageMetadata } from "@/lib/public-pages";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-};
+export const metadata: Metadata = publicPageMetadata("auth");
 
 const fieldClasses =
   "mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";

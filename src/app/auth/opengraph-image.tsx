@@ -3,7 +3,7 @@ import { publicPages } from "@/lib/public-pages";
 
 export { contentType, size } from "@/lib/og-image";
 
-const page = publicPages.home;
+const page = publicPages.auth;
 
 export const alt = ogImageAlt(page);
 
