@@ -75,7 +75,7 @@ describe("creating a link from the phone", () => {
     );
 
     expect(result.share?.id).toBe("share-1");
-    expect(inserted[0].token).toMatch(/^[A-Za-z0-9_-]{10,64}$/);
+    expect(inserted[0].token).toMatch(/^[A-Za-z0-9]{6}$/);
     expect(inserted[0].expires_at).toEqual(expect.any(String));
     expect(inserted[0].fields).toEqual({
       ...defaultContactShareSelection,

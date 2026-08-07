@@ -75,7 +75,11 @@ test("several people can be logged as one evening out", async ({
     await page.getByRole("button", { name: "Open quick actions" }).click();
     await page.getByRole("button", { name: /Log an interaction/ }).click();
   } else {
-    await page.getByRole("button", { name: "Log interaction" }).click();
+    // Section headers offer the same action now, so aim at the sidebar's.
+    await page
+      .getByRole("complementary")
+      .getByRole("button", { name: "Log interaction" })
+      .click();
   }
 
   const sheet = page.locator("dialog[open]");
