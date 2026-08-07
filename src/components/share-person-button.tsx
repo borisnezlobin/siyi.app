@@ -1,11 +1,9 @@
 "use client";
 
-import { Check, Copy, LinkSimple, ShareNetwork, X } from "@phosphor-icons/react";
+import { Check, Copy, ShareNetwork, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   availableContactShareFields,
-  buildVCard,
-  contactCardFileName,
   contactShareFieldLabels,
   defaultContactShareSelection,
   type ContactShareField,
@@ -15,7 +13,6 @@ import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import {
   buildShareUrl,
   defaultShareExpiryChoiceId,
-  shareExpiryChoices,
   shareIsLive,
   type PersonShare,
   type ShareExpiryChoiceId,
@@ -53,6 +50,7 @@ export function SharePersonButton({ person }: { person: Person }) {
   const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creating, setCreating] = useState(false);
+  const canShareLink = typeof navigator !== "undefined" && Boolean(navigator.share);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +82,16 @@ export function SharePersonButton({ person }: { person: Person }) {
     }
   }, [person.id]);
 
+  // Escape closes it, the way every other dialog on the page does.
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     void loadShares();
@@ -97,31 +105,25 @@ export function SharePersonButton({ person }: { person: Person }) {
     return buildShareUrl(window.location.origin, share.token);
   }
 
-  async function shareCard() {
-    const card = buildVCard(person, selection);
-    const fileName = contactCardFileName(person);
-    const file = new File([card], fileName, { type: "text/vcard" });
 
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: person.fullName });
-        setOpen(false);
-        return;
-      } catch {
-        // The person dismissed the share sheet; fall through to a download.
-      }
-    }
 
-    const url = URL.createObjectURL(file);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-    setOpen(false);
+  /** The live link if there is one, otherwise a fresh one. Never a second. */
+  async function ensureLink() {
+    return liveShares[0] ?? (await createLink());
+  }
+
+  async function copyShareLink() {
+    const share = await ensureLink();
+    if (share) await copyLink(share);
+  }
+
+  async function sendShareLink() {
+    const share = await ensureLink();
+    if (share) await shareLink(share);
   }
 
   async function createLink() {
+    if (creating) return null;
     setCreating(true);
     setError(null);
 
@@ -135,18 +137,19 @@ export function SharePersonButton({ person }: { person: Person }) {
 
       if (!response.ok) {
         setError(await getApiResponseError(response, "That link couldn't be created."));
-        return;
+        return null;
       }
       if (!payload?.available || !payload.share) {
         // The table isn't there yet. Nothing broke; the card still works.
         setLinksAvailable(false);
-        return;
+        return null;
       }
 
       setShares((current) => [payload.share!, ...current]);
-      await copyLink(payload.share);
+      return payload.share;
     } catch {
       setError("That link couldn't be created. Check your connection.");
+      return null;
     } finally {
       setCreating(false);
     }
@@ -202,8 +205,13 @@ export function SharePersonButton({ person }: { person: Person }) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+          onClick={() => setOpen(false)}
+        >
           <div
+            // A click inside the sheet must not reach the backdrop behind it.
+            onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label={`Share ${person.fullName}`}
@@ -264,114 +272,52 @@ export function SharePersonButton({ person }: { person: Person }) {
 
             <button
               type="button"
-              onClick={() => void shareCard()}
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              onClick={() => void copyShareLink()}
+              disabled={creating}
+              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
             >
-              <ShareNetwork size={17} weight="bold" aria-hidden="true" />
-              Share contact card
+              {copiedToken ? (
+                <Check size={17} weight="bold" aria-hidden="true" />
+              ) : (
+                <Copy size={17} weight="bold" aria-hidden="true" />
+              )}
+              {copiedToken ? "Link copied" : creating ? "Making a link…" : "Copy link"}
             </button>
 
-            {linksAvailable ? (
-              <div className="mt-6 border-t border-black/[0.07] pt-5">
-                <h3 className="text-sm font-semibold text-ink">
-                  Or send a link
-                </h3>
-                <p className="mt-1 text-xs leading-5 text-ink-muted">
-                  A page on siyi.app showing only what you ticked above. Anyone
-                  with the link can open it, so it expires by default.
-                </p>
+            {canShareLink ? (
+              <button
+                type="button"
+                onClick={() => void sendShareLink()}
+                className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              >
+                <ShareNetwork size={16} weight="bold" aria-hidden="true" />
+                Share link
+              </button>
+            ) : null}
 
-                <div
-                  role="radiogroup"
-                  aria-label="How long the link lasts"
-                  className="mt-3 flex flex-wrap gap-1.5"
-                >
-                  {shareExpiryChoices.map((choice) => (
-                    <button
-                      key={choice.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={expiry === choice.id}
-                      onClick={() => setExpiry(choice.id)}
-                      className={`h-9 rounded-full px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
-                        expiry === choice.id
-                          ? "bg-ink text-white"
-                          : "bg-porcelain text-ink-muted hover:bg-mist"
-                      }`}
-                    >
-                      {choice.label}
-                    </button>
-                  ))}
-                </div>
+            {error ? (
+              <p className="mt-3 text-center text-xs leading-5 text-coral-strong">{error}</p>
+            ) : null}
 
+            {!linksAvailable ? (
+              <p className="mt-3 text-center text-[11px] leading-4 text-ink-muted">
+                Links are not available on this account yet.
+              </p>
+            ) : null}
+
+            {liveShares.length > 0 ? (
+              <p className="mt-3 text-center text-[11px] leading-4 text-ink-muted">
+                {expiryLabel(liveShares[0])}.{" "}
                 <button
                   type="button"
-                  onClick={() => void createLink()}
-                  disabled={creating}
-                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  onClick={() => void revokeLink(liveShares[0])}
+                  className="font-semibold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
-                  <LinkSimple size={16} weight="bold" aria-hidden="true" />
-                  {creating ? "Creating link…" : "Create a link"}
+                  Turn this link off
                 </button>
-
-                {liveShares.length > 0 ? (
-                  <ul className="mt-4 grid gap-2">
-                    {liveShares.map((share) => (
-                      <li
-                        key={share.id}
-                        className="flex items-center gap-2 rounded-2xl bg-porcelain px-3.5 py-2.5"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-semibold text-ink">
-                            /s/{share.token.slice(0, 8)}…
-                          </span>
-                          <span className="block text-[11px] text-ink-muted">
-                            {expiryLabel(share)}
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void copyLink(share)}
-                          aria-label="Copy link"
-                          className="grid size-8 place-items-center rounded-full bg-white text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                        >
-                          {copiedToken === share.token ? (
-                            <Check size={14} weight="bold" aria-hidden="true" />
-                          ) : (
-                            <Copy size={14} weight="bold" aria-hidden="true" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void shareLink(share)}
-                          aria-label="Send link"
-                          className="grid size-8 place-items-center rounded-full bg-white text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                        >
-                          <ShareNetwork
-                            size={14}
-                            weight="bold"
-                            aria-hidden="true"
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void revokeLink(share)}
-                          className="h-8 rounded-full px-2.5 text-[11px] font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                        >
-                          Turn off
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-
-                {error ? (
-                  <p className="mt-3 text-xs leading-5 text-coral-strong">
-                    {error}
-                  </p>
-                ) : null}
-              </div>
+              </p>
             ) : null}
+
           </div>
         </div>
       ) : null}

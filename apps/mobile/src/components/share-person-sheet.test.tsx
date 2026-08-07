@@ -74,23 +74,19 @@ describe("the share sheet", () => {
     expect(screen.queryByText("Or send a link")).toBeNull();
   });
 
-  it("offers a link, defaulting to thirty days, once the table exists", async () => {
+  it("offers copying the link once the table exists", async () => {
     listShares.mockResolvedValue({ available: true, shares: [] });
 
     await render(
       <SharePersonSheet person={person} visible onClose={() => {}} />,
     );
 
-    await waitFor(() => expect(screen.getByText("Or send a link")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
 
-    expect(screen.getByText("Share contact card")).toBeTruthy();
-    expect(screen.getByText("Create a link")).toBeTruthy();
-    expect(
-      screen.getByLabelText("30 days").props.accessibilityState.selected,
-    ).toBe(true);
-    expect(
-      screen.getByLabelText("No expiry").props.accessibilityState.selected,
-    ).toBe(false);
+    // One link action, not three. The contact card is gone entirely.
+    expect(screen.getByText("Share link")).toBeTruthy();
+    expect(screen.queryByText("Share contact card")).toBeNull();
+    expect(screen.queryByText("Create a link")).toBeNull();
   });
 
   it("lists a live link with its expiry and a way to turn it off", async () => {
