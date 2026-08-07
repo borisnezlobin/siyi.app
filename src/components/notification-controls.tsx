@@ -1,31 +1,25 @@
 "use client";
 
-import {
-  BellRinging,
-  BellSlash,
-  CheckCircle,
-  Info,
-  PaperPlaneTilt,
-  SpinnerGap,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { BellRinging, PaperPlaneTilt, SpinnerGap } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { brand } from "@/config/brand";
 import { SwitchControl } from "@/components/switch-control";
+import { formatReminderHour, reminderHourOptions } from "@/lib/reminder-hours";
 
 type StatusMessage = { text: string; tone: "success" | "error" };
 
 type PermissionState = NotificationPermission | "unsupported";
 
+/** Monday first: the week people plan around, not the week the calendar prints. */
 const weekDays = [
-  { value: 0, label: "Sun" },
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
   { value: 3, label: "Wed" },
   { value: 4, label: "Thu" },
   { value: 5, label: "Fri" },
   { value: 6, label: "Sat" },
+  { value: 0, label: "Sun" },
 ];
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -63,7 +57,7 @@ export function NotificationControls({
     initialPreferences.reminderEnabled,
   );
   const [reminderHour, setReminderHour] = useState(
-    String(initialPreferences.reminderHourLocal),
+    initialPreferences.reminderHourLocal,
   );
   const [days, setDays] = useState(initialPreferences.reminderDaysOfWeek);
   const [working, setWorking] = useState<"push" | "test" | "save" | null>(null);
@@ -137,13 +131,16 @@ export function NotificationControls({
       }
 
       setPushEnabled(true);
-      setMessage({ text: "Push notifications are enabled.", tone: "success" });
+      setMessage({
+        text: "Push notifications are enabled on this browser.",
+        tone: "success",
+      });
     } catch (caughtError) {
       setMessage({
         text:
           caughtError instanceof Error
             ? caughtError.message
-            : "Push could not be enabled.",
+            : "Push notifications could not be enabled.",
         tone: "error",
       });
     }
@@ -167,7 +164,7 @@ export function NotificationControls({
 
     await subscription?.unsubscribe();
     setPushEnabled(false);
-    setMessage({ text: "Push notifications are off on this browser.", tone: "success" });
+    setMessage({ text: "Push notifications are off.", tone: "success" });
     setWorking(null);
   }
 
@@ -178,7 +175,10 @@ export function NotificationControls({
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       const response = await fetch("/api/push/test", { method: "POST" });
       if (response.ok) {
-        setMessage({ text: "Test notification sent.", tone: "success" });
+        setMessage({
+          text: "Test sent. It may take a few seconds to arrive.",
+          tone: "success",
+        });
       } else {
         // Surface what the server actually said; a bare "could not be sent"
         // leaves nobody able to act on it.
@@ -187,7 +187,7 @@ export function NotificationControls({
           .then((body) => body?.error as string | undefined)
           .catch(() => undefined);
         setMessage({
-          text: detail || "The test notification could not be sent.",
+          text: detail || "The test could not be sent.",
           tone: "error",
         });
       }
@@ -198,7 +198,10 @@ export function NotificationControls({
         icon: "/icon-192.png",
         data: { url: "/today" },
       });
-      setMessage({ text: "Test notification sent.", tone: "success" });
+      setMessage({
+        text: "Test sent. It may take a few seconds to arrive.",
+        tone: "success",
+      });
     } else {
       setMessage({ text: "Enable push before sending a test.", tone: "error" });
     }
@@ -219,7 +222,7 @@ export function NotificationControls({
           overdueContactEnabled,
           birthdayEnabled,
           reminderEnabled,
-          reminderHourLocal: Number(reminderHour),
+          reminderHourLocal: reminderHour,
           reminderDaysOfWeek: days,
         }),
       });
@@ -232,154 +235,119 @@ export function NotificationControls({
       await new Promise((resolve) => window.setTimeout(resolve, 250));
     }
 
-    setMessage({ text: "Notification preferences saved.", tone: "success" });
+    setMessage({
+      text: "Your notification preferences are saved.",
+      tone: "success",
+    });
     setWorking(null);
   }
 
   const permissionCopy = {
-    granted: "Allowed on this browser",
-    denied: "Blocked in browser settings",
-    default: "Not requested yet",
-    unsupported: "Not supported on this browser",
+    granted: {
+      title: "Allowed on this browser",
+      body: "This browser can receive the categories you enable below.",
+    },
+    denied: {
+      title: "Blocked in browser settings",
+      body: "Open the site permissions in your browser settings if you would like to allow notifications.",
+    },
+    default: {
+      title: "Not requested yet",
+      body: "We will show the browser prompt only after you choose Enable push.",
+    },
+    unsupported: {
+      title: "Unavailable here",
+      body: "This browser does not support web push. On iPhone and iPad, install the app from Safari’s Share menu first.",
+    },
   }[permission];
 
   return (
-    <div className="mt-7 divide-y divide-ink/[0.08]">
-      <section className="rounded-[1.75rem] bg-ink p-5 text-white shadow-float sm:p-6">
-        <div className="flex items-start gap-4">
-          <span
-            className={clsx(
-              "grid size-12 shrink-0 place-items-center rounded-full",
-              pushEnabled ? "bg-sage text-sage-strong" : "bg-white/10 text-white",
-            )}
+    <div className="mt-8 space-y-8">
+      <section>
+        <h2 className="text-sm font-bold">{permissionCopy.title}</h2>
+        <p className="mt-1 max-w-lg text-sm leading-6 text-ink-muted">
+          {permissionCopy.body}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={pushEnabled ? disablePush : enablePush}
+            disabled={working === "push" || permission === "unsupported"}
+            className="inline-flex h-12 items-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white transition-colors hover:bg-coral-strong disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
           >
-            {pushEnabled ? (
-              <BellRinging size={23} weight="fill" aria-hidden="true" />
+            {working === "push" ? (
+              <SpinnerGap size={17} className="animate-spin" aria-hidden="true" />
             ) : (
-              <BellSlash size={23} aria-hidden="true" />
+              <BellRinging size={17} aria-hidden="true" />
             )}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">
-              {pushEnabled ? "Push is on" : "Stay in the loop"}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-white/62">
-              {permissionCopy}. Permission is only requested when you choose to
-              enable push.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={pushEnabled ? disablePush : enablePush}
-                disabled={working === "push" || permission === "unsupported"}
-                className="inline-flex items-center gap-2 rounded-xl bg-coral px-4 py-3 text-xs font-semibold text-white transition-colors hover:bg-coral-strong disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-              >
-                {working === "push" ? (
-                  <SpinnerGap size={16} className="animate-spin" aria-hidden="true" />
-                ) : pushEnabled ? (
-                  <BellSlash size={16} aria-hidden="true" />
-                ) : (
-                  <BellRinging size={16} weight="fill" aria-hidden="true" />
-                )}
-                {pushEnabled ? "Turn off push" : "Enable push"}
-              </button>
-              <button
-                type="button"
-                onClick={sendTestNotification}
-                disabled={!pushEnabled || working === "test"}
-                className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-xs font-semibold text-white transition-colors hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
-              >
-                <PaperPlaneTilt size={16} aria-hidden="true" />
-                Send a test
-              </button>
-            </div>
-
-            {message ? (
-              <p
-                role="status"
-                aria-live="polite"
-                className={clsx(
-                  "mt-3 flex items-start gap-2 rounded-2xl px-4 py-3 text-xs font-semibold leading-5",
-                  message.tone === "success"
-                    ? "bg-sage text-sage-strong"
-                    : "bg-[#fbe5e0] text-coral-strong",
-                )}
-              >
-                {message.tone === "success" ? (
-                  <CheckCircle
-                    size={17}
-                    weight="fill"
-                    className="mt-px shrink-0"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <WarningCircle
-                    size={17}
-                    weight="fill"
-                    className="mt-px shrink-0"
-                    aria-hidden="true"
-                  />
-                )}
-                {message.text}
-              </p>
-            ) : null}
-          </div>
+            {pushEnabled ? "Turn off push" : "Enable push"}
+          </button>
+          <button
+            type="button"
+            onClick={sendTestNotification}
+            disabled={!pushEnabled || working === "test"}
+            className="inline-flex h-12 items-center gap-2 rounded-2xl px-5 text-sm font-semibold text-ink transition-colors hover:bg-ink/[0.05] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            <PaperPlaneTilt size={17} aria-hidden="true" />
+            Send a test
+          </button>
         </div>
       </section>
 
-      {permission === "denied" ? (
-        <div className="flex gap-3 rounded-2xl bg-[#fbe5e0] p-4 text-coral-strong">
-          <WarningCircle size={20} className="shrink-0" aria-hidden="true" />
-          <p className="text-xs leading-5">
-            This browser has blocked notifications. Open the site permissions in
-            your browser settings, allow notifications, then return here.
-          </p>
-        </div>
-      ) : null}
-
-      <section className="py-7 first:pt-0">
+      <section>
         <h2 className="text-sm font-bold">What should arrive?</h2>
-        <div className="mt-2 divide-y divide-black/[0.055]">
+        <div className="mt-2 divide-y divide-ink/[0.055]">
           <SwitchControl
             checked={overdueContactEnabled}
             onChange={setOverdueContactEnabled}
-            label="Contact reminders"
-            description="When someone passes their chosen reminder interval."
+            label="People to check in with"
+            description="A person is past the reminder interval you chose."
           />
           <SwitchControl
             checked={birthdayEnabled}
             onChange={setBirthdayEnabled}
             label="Upcoming birthdays"
-            description="A heads-up before a saved birthday."
+            description="A birthday is approaching."
           />
           <SwitchControl
             checked={reminderEnabled}
             onChange={setReminderEnabled}
             label="Reminders"
-            description="For reminders that are due or overdue."
+            description="A reminder is due or overdue."
           />
         </div>
       </section>
 
-      <section className="py-7 first:pt-0">
-        <h2 className="text-sm font-bold">Choose a calm time</h2>
-        <p className="mt-1 text-xs leading-5 text-ink-muted">
-          Reminders are evaluated in your saved timezone.
+      <section>
+        <h2 className="text-sm font-bold">Preferred local time</h2>
+        <p className="mt-1 max-w-lg text-sm leading-6 text-ink-muted">
+          The scheduler evaluates this in your saved timezone. Actual delivery can
+          vary slightly by provider and device state.
         </p>
-        <label className="mt-4 block text-xs font-semibold text-ink-muted">
-          Preferred local time
-          <input
-            type="time"
-            value={`${reminderHour.padStart(2, "0")}:00`}
-            onChange={(event) => setReminderHour(event.target.value.split(":")[0])}
-            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-          />
-        </label>
-        <fieldset className="mt-4">
-          <legend className="text-xs font-semibold text-ink-muted">
-            Reminder days
-          </legend>
-          <div className="mt-2 grid grid-cols-7 gap-1.5">
+        <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="Preferred local time">
+          {reminderHourOptions(reminderHour).map((hour) => {
+            const selected = reminderHour === hour;
+            return (
+              <button
+                key={hour}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setReminderHour(hour)}
+                className={clsx(
+                  "h-11 min-w-[4rem] rounded-2xl px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                  selected ? "bg-ink text-white" : "bg-mist text-ink",
+                )}
+              >
+                {formatReminderHour(hour)}
+              </button>
+            );
+          })}
+        </div>
+
+        <fieldset className="mt-5">
+          <legend className="text-sm font-semibold">Reminder days</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
             {weekDays.map(({ value, label }) => {
               const selected = days.includes(value);
               return (
@@ -394,10 +362,8 @@ export function NotificationControls({
                     )
                   }
                   className={clsx(
-                    "grid h-10 place-items-center rounded-xl text-[10px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-                    selected
-                      ? "bg-sage text-sage-strong"
-                      : "bg-porcelain text-ink-muted",
+                    "h-10 min-w-[3rem] rounded-lg px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                    selected ? "bg-sage-strong text-white" : "bg-mist text-ink",
                   )}
                   aria-pressed={selected}
                 >
@@ -406,31 +372,52 @@ export function NotificationControls({
               );
             })}
           </div>
+          {days.length === 0 ? (
+            <p className="mt-2 text-xs text-coral-strong">
+              Choose at least one day.
+            </p>
+          ) : null}
         </fieldset>
+
+        <button
+          type="button"
+          onClick={savePreferences}
+          disabled={working === "save" || days.length === 0}
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white transition-colors hover:bg-coral-strong disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+        >
+          {working === "save" ? (
+            <SpinnerGap size={18} className="animate-spin" aria-hidden="true" />
+          ) : null}
+          Save preferences
+        </button>
       </section>
 
-      <div className="flex gap-3 rounded-2xl bg-[#e5edf1] p-4 text-[#355468]">
-        <Info size={20} className="shrink-0" aria-hidden="true" />
-        <div className="text-xs leading-5">
-          <p>
-            On iPhone and iPad, install the app from Safari’s Share menu before
-            enabling notifications. Browsers can pause delivery when battery
-            saving or notification focus modes are active.
-          </p>
-        </div>
-      </div>
+      <section>
+        <h2 className="text-sm font-bold">What to expect</h2>
+        <p className="mt-1 max-w-lg text-sm leading-6 text-ink-muted">
+          Focus modes and battery saving can delay or hide alerts. Push needs a
+          network connection.
+        </p>
+        <p className="mt-2 max-w-lg text-sm leading-6 text-ink-muted">
+          On iPhone and iPad, install the app from Safari’s Share menu before
+          enabling notifications.
+        </p>
+      </section>
 
-      <button
-        type="button"
-        onClick={savePreferences}
-        disabled={working === "save" || days.length === 0}
-        className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-[#28332e] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-      >
-        {working === "save" ? (
-          <SpinnerGap size={18} className="animate-spin" aria-hidden="true" />
-        ) : null}
-        Save preferences
-      </button>
+      {message ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className={clsx(
+            "rounded-2xl px-4 py-3 text-sm leading-6",
+            message.tone === "success"
+              ? "bg-sage text-sage-strong"
+              : "bg-[#fbe5e0] text-coral-strong",
+          )}
+        >
+          {message.text}
+        </p>
+      ) : null}
     </div>
   );
 }

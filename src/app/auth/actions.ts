@@ -29,11 +29,9 @@ const passwordCredentialsSchema = z.object({
     .max(72, "Use no more than 72 characters."),
 });
 
-function authErrorUrl(
-  message: string,
-  mode: "signin" | "signup" | "forgot" = "signin",
-) {
-  return `/auth?method=password&mode=${mode}&error=${encodeURIComponent(message)}`;
+function authErrorUrl(message: string, mode: "signin" | "signup" = "signin") {
+  const modeParameter = mode === "signup" ? "mode=signup&" : "";
+  return `/auth?${modeParameter}error=${encodeURIComponent(message)}`;
 }
 
 export async function signInWithGoogle() {
@@ -95,11 +93,11 @@ export async function sendMagicLink(formData: FormData) {
   const email = typeof emailValue === "string" ? emailValue.trim() : "";
 
   if (!email || !email.includes("@")) {
-    redirect("/auth?error=Enter+a+valid+email+address.");
+    redirect("/auth?method=link&error=Enter+a+valid+email+address.");
   }
 
   if (!isSupabaseConfigured()) {
-    redirect(`/auth?sent=${encodeURIComponent(email)}`);
+    redirect(`/auth?method=link&sent=${encodeURIComponent(email)}`);
   }
 
   const supabase = await createClient();
@@ -115,10 +113,10 @@ export async function sendMagicLink(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/auth?error=${encodeURIComponent(error.message)}`);
+    redirect(`/auth?method=link&error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect(`/auth?sent=${encodeURIComponent(email)}`);
+  redirect(`/auth?method=link&sent=${encodeURIComponent(email)}`);
 }
 
 export async function signInWithPassword(formData: FormData) {
@@ -146,19 +144,20 @@ export async function signInWithPassword(formData: FormData) {
 }
 
 export async function signUpWithPassword(formData: FormData) {
-  const password = formData.get("password");
-  const confirmation = formData.get("passwordConfirmation");
+  const displayNameValue = formData.get("displayName");
+  const displayName =
+    typeof displayNameValue === "string" ? displayNameValue.trim() : "";
   const validation = passwordCredentialsSchema.safeParse({
     email: formData.get("email"),
-    password,
+    password: formData.get("password"),
   });
 
   if (!validation.success) {
     redirect(authErrorUrl(validation.error.issues[0].message, "signup"));
   }
 
-  if (password !== confirmation) {
-    redirect(authErrorUrl("The passwords do not match.", "signup"));
+  if (!displayName) {
+    redirect(authErrorUrl("Add the name we should call you.", "signup"));
   }
 
   if (!isSupabaseConfigured()) {
@@ -172,6 +171,10 @@ export async function signUpWithPassword(formData: FormData) {
     password: validation.data.password,
     options: {
       emailRedirectTo: `${appUrl}/auth/callback?next=/onboarding`,
+      data: {
+        full_name: displayName,
+        app_name: brand.name,
+      },
     },
   });
 
@@ -184,7 +187,9 @@ export async function signUpWithPassword(formData: FormData) {
   }
 
   redirect(
-    `/auth?sent=${encodeURIComponent(validation.data.email)}&reason=confirm`,
+    `/auth?mode=signup&sent=${encodeURIComponent(
+      validation.data.email,
+    )}&reason=confirm`,
   );
 }
 
@@ -197,7 +202,7 @@ export async function sendPasswordReset(formData: FormData) {
     .safeParse(emailValue);
 
   if (!emailValidation.success) {
-    redirect(authErrorUrl(emailValidation.error.issues[0].message, "forgot"));
+    redirect(authErrorUrl(emailValidation.error.issues[0].message));
   }
 
   if (!isSupabaseConfigured()) {
@@ -216,7 +221,7 @@ export async function sendPasswordReset(formData: FormData) {
   );
 
   if (error) {
-    redirect(authErrorUrl(error.message, "forgot"));
+    redirect(authErrorUrl(error.message));
   }
 
   redirect(
@@ -243,7 +248,7 @@ export async function updatePassword(formData: FormData) {
 
   if (password !== confirmation) {
     redirect(
-      "/auth/update-password?error=The+passwords+do+not+match.",
+      "/auth/update-password?error=This+doesn%E2%80%99t+match+the+password+above.",
     );
   }
 

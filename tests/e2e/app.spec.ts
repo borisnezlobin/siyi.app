@@ -49,7 +49,7 @@ test("the mobile add button opens a tray that separates the two verbs", async ({
 
   await expect(page.getByRole("link", { name: /Add a person/ })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Add a follow-up/ }),
+    page.getByRole("button", { name: /Add a reminder/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Add an update/ }),
@@ -122,14 +122,14 @@ test("the capture sheet does not shift while the picker is used", async ({
   await page.goto("/today");
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open quick actions" }).click();
-    await page.getByRole("button", { name: /Add a follow-up/ }).click();
+    await page.getByRole("button", { name: /Add a reminder/ }).click();
   } else {
-    await page.getByRole("button", { name: "Follow-up", exact: true }).click();
+    await page.getByRole("button", { name: "Reminder", exact: true }).click();
   }
 
   const sheet = page.locator("dialog[open]");
   const picker = sheet.getByTestId("person-picker");
-  const below = sheet.getByLabel("Follow-up");
+  const below = sheet.getByLabel("Reminder");
   const search = sheet.getByLabel("Person");
 
   // The sheet scales as it opens, so measuring has to wait for it to settle.
@@ -168,23 +168,23 @@ test("the capture sheet does not shift while the picker is used", async ({
   expect(await layout()).toEqual(closed);
 });
 
-test("follow-ups are shaped by when they land, not one flat list", async ({
+test("reminders are shaped by when they land, not one flat list", async ({
   page,
 }) => {
-  await page.goto("/follow-ups");
+  await page.goto("/reminders");
 
-  const distribution = page.getByRole("region", {
-    name: "How your follow-ups are spread out",
+  const distribution = page.getByRole("tablist", {
+    name: "How your reminders are spread out",
   });
-  await expect(distribution.getByRole("link", { name: /Overdue/ })).toBeVisible();
-  await expect(distribution.getByRole("link", { name: /This week/ })).toBeVisible();
-  await expect(distribution.getByRole("link", { name: /Later/ })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: /Overdue/ })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: /This week/ })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: /Later/ })).toBeVisible();
 
   // Demo data: one overdue, one due today, one four days out, one done.
-  await expect(distribution.getByRole("link", { name: "1 Overdue" })).toBeVisible();
-  await expect(distribution.getByRole("link", { name: "1 Today" })).toBeVisible();
-  await expect(distribution.getByRole("link", { name: "1 This week" })).toBeVisible();
-  await expect(distribution.getByRole("link", { name: "0 Later" })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: "1 Overdue" })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: "1 Today" })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: "1 This week" })).toBeVisible();
+  await expect(distribution.getByRole("tab", { name: "0 Later" })).toBeVisible();
 
   for (const heading of ["Overdue", "Today", "This week", "Later"]) {
     await expect(page.getByRole("heading", { name: heading, level: 2 })).toBeVisible();
@@ -200,8 +200,8 @@ test("follow-ups are shaped by when they land, not one flat list", async ({
   ).toBe(true);
 });
 
-test("completing a follow-up keeps the list from jumping", async ({ page }) => {
-  await page.goto("/follow-ups");
+test("completing a reminder keeps the list from jumping", async ({ page }) => {
+  await page.goto("/reminders");
 
   const row = page.getByRole("listitem").filter({
     hasText: "Share the campus garden group chat",
@@ -222,8 +222,8 @@ test("completing a follow-up keeps the list from jumping", async ({ page }) => {
   expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
 });
 
-test("completed follow-ups stay one tap away", async ({ page }) => {
-  await page.goto("/follow-ups");
+test("completed reminders stay one tap away", async ({ page }) => {
+  await page.goto("/reminders");
 
   await expect(page.getByRole("heading", { name: "Done" })).toHaveCount(0);
   await page.getByRole("button", { name: "Done (1)" }).click();
@@ -251,20 +251,37 @@ test("fast capture keeps advanced fields collapsed", async ({ page }) => {
   await expect(page.getByText("Person saved.")).toBeVisible();
 });
 
-test("authentication offers magic links without forcing a password", async ({
+test("the sign-in screen leads with the tagline and nothing above it", async ({
   page,
 }) => {
   await page.goto("/auth");
 
-  await expect(page.getByRole("button", { name: "Apple", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Google", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("heading", { name: "Remember the people who matter." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with Apple" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Continue with Google" }),
+  ).toBeDisabled();
   await expect(page.getByText("Apple and Google sign-in are coming soon.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Email me a sign-in link" })).toBeVisible();
-  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+});
 
-  await page.getByLabel("Email address").fill("alex@example.edu");
+test("authentication offers magic links without forcing a password", async ({
+  page,
+}) => {
+  await page.goto("/auth");
+  await page.getByRole("link", { name: "Email me a sign-in link" }).click();
+
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Use my password instead" }),
+  ).toBeVisible();
+
+  await page.getByLabel("Email").fill("alex@example.edu");
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
-  await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+  await expect(page.getByText(/We sent a sign-in link to/)).toBeVisible();
 });
 
 test("legal pages contain launch-ready policies", async ({ page }) => {
@@ -282,20 +299,21 @@ test("legal pages contain launch-ready policies", async ({ page }) => {
 test("authentication supports password sign in, signup, and recovery", async ({
   page,
 }) => {
-  await page.goto("/auth?method=password");
+  await page.goto("/auth");
 
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  // Recovery reuses the email already typed rather than a separate screen.
   await expect(
-    page.getByRole("button", { name: "Sign in with password" }),
+    page.getByRole("button", { name: "Forgot your password?" }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Create an account" }).click();
-  await expect(page.getByLabel("Confirm password")).toBeVisible();
+  await page.getByRole("link", { name: "Create account" }).click();
+  await expect(page.getByLabel("Your name")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to sign in" }).click();
-  await page.getByRole("link", { name: "Forgot password?" }).click();
-  await expect(page.getByRole("button", { name: "Send reset link" })).toBeVisible();
+  await page.getByRole("link", { name: "Sign in" }).click();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
 test("a signed-in user can create a password without an email link", async ({
@@ -413,9 +431,9 @@ test("the person picker finds someone by typing rather than scrolling", async ({
     await page.getByRole("button", { name: "Open quick actions" }).click();
   }
   if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: /Add a follow-up/ }).click();
+    await page.getByRole("button", { name: /Add a reminder/ }).click();
   } else {
-    await page.getByRole("button", { name: "Follow-up", exact: true }).click();
+    await page.getByRole("button", { name: "Reminder", exact: true }).click();
   }
 
   const search = page.getByLabel("Person");
@@ -441,7 +459,10 @@ test("the edit person page is grouped rather than one long wall", async ({
     "How you met",
     "Reminders",
   ]) {
-    await expect(page.getByText(heading, { exact: true })).toBeVisible();
+    // Scoped to the form: "Reminders" is also a navigation destination.
+    await expect(
+      page.getByRole("main").getByText(heading, { exact: true }),
+    ).toBeVisible();
   }
   await expect(page.getByText(/basic info/i)).toHaveCount(0);
 

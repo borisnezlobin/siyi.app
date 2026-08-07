@@ -2,14 +2,8 @@ import * as Haptics from "expo-haptics";
 import {
   ArrowLeft,
   BellRinging,
-  Cake,
-  ChatCircleDots,
-  CheckCircle,
-  ClockCountdown,
-  DeviceMobile,
   Gear,
   PaperPlaneTilt,
-  ShieldCheck,
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -24,13 +18,13 @@ import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
-import { Card, SectionHeading } from "@/components/surface";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import {
   getAccountSettings,
   saveNotificationPreferences,
 } from "@/lib/data";
+import { formatReminderHour, reminderHourOptions } from "@/lib/reminder-hours";
 import {
   disableNativePush,
   enableNativePush,
@@ -42,6 +36,7 @@ import type { NotificationPreference } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 
+/** Monday first: the week people plan around, not the week the calendar prints. */
 const weekdayLabels = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -103,27 +98,23 @@ export default function NotificationsScreen() {
   const preferences = draft!;
   const permissionCopy: Record<
     PushPermissionState,
-    { title: string; body: string; color: string }
+    { title: string; body: string }
   > = {
     granted: {
       title: "Allowed on this device",
       body: "This device can receive the categories you enable below.",
-      color: colors.sageStrong,
     },
     denied: {
       title: "Blocked in device settings",
-      body: "Open Settings if you would like to allow notifications.",
-      color: colors.coralStrong,
+      body: "Open device settings if you would like to allow notifications.",
     },
     undetermined: {
       title: "Not requested yet",
-      body: "We will show the system prompt only after you tap Enable.",
-      color: colors.ink,
+      body: "We will show the system prompt only after you choose Enable push.",
     },
     unavailable: {
       title: "Unavailable here",
       body: "Remote push needs a physical iPhone or Android device and a release or development build.",
-      color: colors.inkMuted,
     },
   };
 
@@ -234,203 +225,171 @@ export default function NotificationsScreen() {
         </AppText>
       </View>
 
-      <Card style={styles.permissionCard}>
-        <View style={styles.permissionIcon}>
-          <DeviceMobile
-            color={permissionCopy[permission].color}
-            size={28}
-            weight="duotone"
-          />
-        </View>
-        <View style={styles.flex}>
-          <AppText variant="heading">
-            {permissionCopy[permission].title}
-          </AppText>
-          <AppText style={styles.muted}>
-            {permissionCopy[permission].body}
-          </AppText>
-        </View>
-      </Card>
-
-      <View style={styles.actions}>
-        {preferences.pushEnabled ? (
+      <View style={styles.section}>
+        <AppText variant="heading">{permissionCopy[permission].title}</AppText>
+        <AppText style={styles.muted}>
+          {permissionCopy[permission].body}
+        </AppText>
+        <View style={styles.actions}>
+          {preferences.pushEnabled ? (
+            <Button
+              icon={BellRinging}
+              label="Turn off push"
+              loading={busyAction === "disable"}
+              onPress={() => void disable()}
+            />
+          ) : (
+            <Button
+              icon={BellRinging}
+              label="Enable push"
+              loading={busyAction === "enable"}
+              onPress={() => void enable()}
+            />
+          )}
+          {permission === "denied" ? (
+            <Button
+              icon={Gear}
+              label="Open device settings"
+              onPress={() => void Linking.openSettings()}
+              variant="quiet"
+            />
+          ) : null}
           <Button
-            label="Disable push"
-            loading={busyAction === "disable"}
-            onPress={() => void disable()}
-            variant="secondary"
-          />
-        ) : (
-          <Button
-            icon={BellRinging}
-            label="Enable push notifications"
-            loading={busyAction === "enable"}
-            onPress={() => void enable()}
-          />
-        )}
-        {permission === "denied" ? (
-          <Button
-            icon={Gear}
-            label="Open device settings"
-            onPress={() => void Linking.openSettings()}
+            disabled={!preferences.pushEnabled || permission !== "granted"}
+            icon={PaperPlaneTilt}
+            label="Send a test"
+            loading={busyAction === "test"}
+            onPress={() => void testNotification()}
             variant="quiet"
           />
-        ) : null}
-        <Button
-          disabled={
-            !preferences.pushEnabled || permission !== "granted"
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <AppText variant="heading">What should arrive?</AppText>
+        <PreferenceSwitch
+          body="A person is past the reminder interval you chose."
+          label="People to check in with"
+          onChange={(enabled) =>
+            setDraft({ ...preferences, overdueContactEnabled: enabled })
           }
-          icon={PaperPlaneTilt}
-          label="Send a test notification"
-          loading={busyAction === "test"}
-          onPress={() => void testNotification()}
-          variant="quiet"
+          value={preferences.overdueContactEnabled}
+        />
+        <PreferenceSwitch
+          body="A birthday is approaching."
+          label="Upcoming birthdays"
+          onChange={(enabled) =>
+            setDraft({ ...preferences, birthdayEnabled: enabled })
+          }
+          value={preferences.birthdayEnabled}
+        />
+        <PreferenceSwitch
+          body="A reminder is due or overdue."
+          label="Reminders"
+          onChange={(enabled) =>
+            setDraft({ ...preferences, reminderEnabled: enabled })
+          }
+          value={preferences.reminderEnabled}
         />
       </View>
 
       <View style={styles.section}>
-        <SectionHeading title="Categories" />
-        <Card style={styles.settingsCard}>
-          <PreferenceSwitch
-            body="A person is past the reminder interval you chose."
-            icon={ChatCircleDots}
-            label="People to check in with"
-            onChange={(enabled) =>
-              setDraft({ ...preferences, overdueContactEnabled: enabled })
-            }
-            value={preferences.overdueContactEnabled}
-          />
-          <PreferenceSwitch
-            body="A birthday is approaching."
-            icon={Cake}
-            label="Upcoming birthdays"
-            onChange={(enabled) =>
-              setDraft({ ...preferences, birthdayEnabled: enabled })
-            }
-            value={preferences.birthdayEnabled}
-          />
-          <PreferenceSwitch
-            body="A reminder is due or overdue."
-            icon={ClockCountdown}
-            label="Reminders"
-            onChange={(enabled) =>
-              setDraft({ ...preferences, reminderEnabled: enabled })
-            }
-            value={preferences.reminderEnabled}
-          />
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Preferred local time" />
-        <Card style={styles.settingsCard}>
-          <AppText style={styles.muted}>
-            The scheduler evaluates this in your saved timezone. Actual delivery
-            can vary slightly by provider and device state.
-          </AppText>
-          <View style={styles.hourGrid}>
-            {[8, 10, 12, 18, 20].map((hour) => (
+        <AppText variant="heading">Preferred local time</AppText>
+        <AppText style={styles.muted}>
+          The scheduler evaluates this in your saved timezone. Actual delivery
+          can vary slightly by provider and device state.
+        </AppText>
+        <View style={styles.hourGrid}>
+          {reminderHourOptions(preferences.reminderHourLocal).map((hour) => {
+            const selected = preferences.reminderHourLocal === hour;
+            return (
               <Pressable
                 accessibilityRole="radio"
-                accessibilityState={{
-                  checked: preferences.reminderHourLocal === hour,
-                }}
+                accessibilityState={{ checked: selected }}
                 key={hour}
                 onPress={() => {
                   setDraft({ ...preferences, reminderHourLocal: hour });
                   void Haptics.selectionAsync();
                 }}
-                style={[
-                  styles.hour,
-                  preferences.reminderHourLocal === hour &&
-                    styles.hourSelected,
-                ]}
+                style={[styles.hour, selected && styles.hourSelected]}
               >
                 <AppText
-                  style={
-                    preferences.reminderHourLocal === hour
-                      ? styles.lightText
-                      : undefined
-                  }
+                  style={selected ? styles.lightText : undefined}
                   variant="label"
                 >
-                  {new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                  })}
+                  {formatReminderHour(hour)}
                 </AppText>
               </Pressable>
-            ))}
-          </View>
-          <AppText variant="label">Reminder days</AppText>
-          <View style={styles.dayRow}>
-            {weekdayLabels.map((day) => {
-              const selected =
-                preferences.reminderDaysOfWeek.includes(day.value);
-              return (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected }}
-                  key={day.value}
-                  onPress={() => {
-                    const days = selected
+            );
+          })}
+        </View>
+
+        <AppText variant="label">Reminder days</AppText>
+        <View style={styles.dayRow}>
+          {weekdayLabels.map((day) => {
+            const selected = preferences.reminderDaysOfWeek.includes(day.value);
+            return (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
+                key={day.value}
+                onPress={() => {
+                  setDraft({
+                    ...preferences,
+                    reminderDaysOfWeek: selected
                       ? preferences.reminderDaysOfWeek.filter(
                           (value) => value !== day.value,
                         )
-                      : [...preferences.reminderDaysOfWeek, day.value];
-                    if (days.length === 0) return;
-                    setDraft({
-                      ...preferences,
-                      reminderDaysOfWeek: days,
-                    });
-                    void Haptics.selectionAsync();
-                  }}
-                  style={[styles.day, selected && styles.daySelected]}
+                      : [...preferences.reminderDaysOfWeek, day.value].sort(),
+                  });
+                  void Haptics.selectionAsync();
+                }}
+                style={[styles.day, selected && styles.daySelected]}
+              >
+                <AppText
+                  style={selected ? styles.lightText : undefined}
+                  variant="caption"
                 >
-                  <AppText
-                    style={selected ? styles.lightText : undefined}
-                    variant="caption"
-                  >
-                    {day.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Button
-            label="Save notification preferences"
-            loading={busyAction === "save"}
-            onPress={() => void save()}
-          />
-        </Card>
+                  {day.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        {preferences.reminderDaysOfWeek.length === 0 ? (
+          <AppText style={styles.errorText} variant="caption">
+            Choose at least one day.
+          </AppText>
+        ) : null}
+
+        <Button
+          disabled={preferences.reminderDaysOfWeek.length === 0}
+          label="Save preferences"
+          loading={busyAction === "save"}
+          onPress={() => void save()}
+        />
       </View>
 
-      <Card style={styles.explanation}>
-        <ShieldCheck color={colors.sageStrong} size={25} weight="duotone" />
-        <View style={styles.flex}>
-          <AppText variant="heading">What to expect</AppText>
-          <AppText style={styles.muted}>
-            iPhone Focus modes and Android battery settings can delay or hide
-            alerts. Push requires a network connection. On iOS, reinstalling or
-            restoring the app may refresh the device token automatically.
-          </AppText>
-          <AppText style={styles.muted}>
-            Remote push is not testable inside Expo Go on Android; use a
-            development or release build on a physical device.
-          </AppText>
-        </View>
-      </Card>
+      <View style={styles.section}>
+        <AppText variant="heading">What to expect</AppText>
+        <AppText style={styles.muted}>
+          Focus modes and battery saving can delay or hide alerts. Push needs a
+          network connection.
+        </AppText>
+        <AppText style={styles.muted}>
+          Remote push is not testable inside Expo Go on Android; use a
+          development or release build on a physical device.
+        </AppText>
+      </View>
 
       {message ? (
         <View style={styles.message}>
-          <CheckCircle color={colors.sageStrong} size={20} weight="duotone" />
           <AppText style={styles.messageText}>{message}</AppText>
         </View>
       ) : null}
       {error ? (
         <View style={styles.error}>
-          <AppText style={styles.errorText} variant="caption">
-            {error}
-          </AppText>
+          <AppText style={styles.errorText}>{error}</AppText>
         </View>
       ) : null}
     </Screen>
@@ -438,13 +397,11 @@ export default function NotificationsScreen() {
 }
 
 function PreferenceSwitch({
-  icon: IconComponent,
   label,
   body,
   value,
   onChange,
 }: {
-  icon: typeof BellRinging;
   label: string;
   body: string;
   value: boolean;
@@ -452,9 +409,6 @@ function PreferenceSwitch({
 }) {
   return (
     <View style={styles.switchRow}>
-      <View style={styles.switchIcon}>
-        <IconComponent color={colors.sageStrong} size={21} weight="duotone" />
-      </View>
       <View style={styles.flex}>
         <AppText variant="label">{label}</AppText>
         <AppText variant="caption">{body}</AppText>
@@ -489,43 +443,23 @@ const styles = StyleSheet.create({
   muted: {
     color: colors.inkMuted,
   },
-  permissionCard: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 13,
-  },
-  permissionIcon: {
-    alignItems: "center",
-    backgroundColor: colors.mist,
-    borderRadius: radii.medium,
-    height: 52,
-    justifyContent: "center",
-    width: 52,
-  },
   flex: {
     flex: 1,
   },
   actions: {
     gap: 7,
+    paddingTop: 4,
   },
   section: {
     gap: 11,
   },
-  settingsCard: {
-    gap: 17,
-  },
   switchRow: {
     alignItems: "center",
+    borderBottomColor: colors.mist,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: 11,
-  },
-  switchIcon: {
-    alignItems: "center",
-    backgroundColor: colors.sage,
-    borderRadius: radii.medium,
-    height: 42,
-    justifyContent: "center",
-    width: 42,
+    paddingBottom: 11,
   },
   hourGrid: {
     flexDirection: "row",
@@ -563,18 +497,9 @@ const styles = StyleSheet.create({
   daySelected: {
     backgroundColor: colors.sageStrong,
   },
-  explanation: {
-    alignItems: "flex-start",
-    backgroundColor: colors.sage,
-    flexDirection: "row",
-    gap: 12,
-  },
   message: {
-    alignItems: "center",
     backgroundColor: colors.sage,
     borderRadius: radii.medium,
-    flexDirection: "row",
-    gap: 9,
     padding: 13,
   },
   messageText: {

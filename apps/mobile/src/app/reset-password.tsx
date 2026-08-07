@@ -79,6 +79,7 @@ export default function ResetPasswordScreen() {
         error={passwordError ?? undefined}
         label="New password"
         onChangeText={setPassword}
+        placeholder="At least 8 characters"
         secureTextEntry
         value={password}
         {...fieldProps("password")}

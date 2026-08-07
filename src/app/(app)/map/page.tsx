@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HometownMap } from "@/components/hometown-map";
 import { PageHeader } from "@/components/page-header";
+import { brand } from "@/config/brand";
 import { type MapMode, summariseHometowns } from "@/lib/geocode";
 import { getPeople } from "@/lib/data";
 
@@ -70,11 +71,7 @@ export default async function MapPage({
 
       <PageHeader
         title={mode === "college" ? "Where everyone studies" : "Where everyone's from"}
-        description={
-          mode === "college"
-            ? "Built from the schools you've written down, placed with a college list kept inside the app. Nothing about your people is sent anywhere to draw this."
-            : "Built from the hometowns you've written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this."
-        }
+        description={`Built from the ${noun}s you have written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this.`}
       />
 
       <div
@@ -105,10 +102,13 @@ export default async function MapPage({
       </div>
 
       {places.length === 0 && unplaced.length === 0 ? (
-        <p className="mt-8 rounded-3xl bg-paper p-6 text-sm leading-6 text-ink-muted shadow-card">
-          No one has a {noun} saved yet. Add one to someone&rsquo;s profile and
-          they&rsquo;ll show up here.
-        </p>
+        <div className="py-10">
+          <MapPin size={28} className="text-ink-muted" aria-hidden="true" />
+          <p className="mt-3 font-display text-2xl">No {noun}s saved yet</p>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-ink-muted">
+            Add a {noun} to someone&rsquo;s profile and they will show up here.
+          </p>
+        </div>
       ) : (
         <>
           <div className="mt-8">
@@ -130,19 +130,19 @@ export default async function MapPage({
             >
               Places
             </h2>
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-2">
               {places.map((place) => (
                 <li
                   key={place.key}
                   id={`place-${place.key}`}
-                  className="scroll-mt-6 rounded-2xl bg-paper p-4 shadow-card"
+                  className="scroll-mt-6 border-b border-ink/[0.055] py-3"
                 >
                   <div className="flex items-baseline justify-between gap-4">
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
                       <MapPin
                         size={16}
                         weight={place.precision === "city" ? "fill" : "regular"}
-                        className="shrink-0 text-coral"
+                        className="shrink-0 text-ink"
                         aria-hidden="true"
                       />
                       {place.label}
@@ -178,9 +178,12 @@ export default async function MapPage({
             than one place and we&rsquo;d rather leave it off than guess wrong.
             Adding a state or country usually sorts it out.
           </p>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-2">
             {unplaced.map((item) => (
-              <li key={item.hometown} className="rounded-2xl bg-paper p-4 shadow-card">
+              <li
+                key={item.hometown}
+                className="border-b border-ink/[0.055] py-3"
+              >
                 <div className="flex items-baseline justify-between gap-4">
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <Question
@@ -202,7 +205,7 @@ export default async function MapPage({
       ) : null}
 
       {withoutHometown.length > 0 ? (
-        <p className="mt-9 rounded-2xl bg-sage px-4 py-3 text-sm leading-6 text-sage-strong">
+        <p className="mt-9 text-sm leading-6 text-ink-muted">
           {peopleSentence(withoutHometown.length)}{" "}
           {withoutHometown.length === 1 ? "has" : "have"} no {noun} saved yet.
         </p>
@@ -228,8 +231,8 @@ export default async function MapPage({
         >
           Natural Earth
         </a>
-        . Both are stored with Siyi, so nobody&rsquo;s hometown is ever sent
-        anywhere to draw this map.
+        . Both are stored with {brand.name}, so nobody&rsquo;s {noun} is ever
+        sent anywhere to draw this map.
       </p>
     </div>
   );
