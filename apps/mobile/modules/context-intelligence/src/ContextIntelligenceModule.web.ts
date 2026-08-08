@@ -13,6 +13,10 @@ class ContextIntelligenceModule extends NativeModule<Record<never, never>> {
   async shortBio(): Promise<string> {
     return "";
   }
+
+  async sortUpdate(): Promise<string> {
+    return "";
+  }
 }
 
 export default registerWebModule(

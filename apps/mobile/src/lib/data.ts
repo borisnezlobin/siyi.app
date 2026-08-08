@@ -1,4 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { defaultNoteHeadings } from "@/lib/update-proposal";
 import type { Session } from "@supabase/supabase-js";
 import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
@@ -883,6 +884,7 @@ export async function createPerson(
   const mutationId = Crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const queuedPhoto = await persistPhotoForQueue(mutationId, photo);
+  const defaultNoteIds = defaultNoteHeadings.map(() => Crypto.randomUUID());
   const queuedContacts = queuedContactMethods(contactMethods, []);
   const createdPerson = optimisticPerson(
     userId,
@@ -913,6 +915,21 @@ export async function createPerson(
     ],
     reminders: [],
     updates: [],
+    // Somewhere to put things from the start, so an update that says "likes
+    // snowboarding" has a heading to go under without inventing one.
+    notes: {
+      available: true,
+      sections: defaultNoteHeadings.map((heading, position) => ({
+        id: defaultNoteIds[position],
+        userId,
+        personId,
+        heading,
+        body: "",
+        position,
+        createdAt,
+        updatedAt: createdAt,
+      })),
+    },
   };
 
   await enqueueOfflineMutation({
@@ -926,6 +943,19 @@ export async function createPerson(
     photo: queuedPhoto,
     contactMethods: queuedContacts,
   });
+  for (const [position, heading] of defaultNoteHeadings.entries()) {
+    await enqueueOfflineMutation({
+      id: Crypto.randomUUID(),
+      kind: "create-person-note",
+      userId,
+      createdAt,
+      personId,
+      noteId: defaultNoteIds[position],
+      heading,
+      body: "",
+      position,
+    });
+  }
   await updateOfflineSnapshot(userId, (snapshot) => ({
     ...snapshot,
     people: [createdPerson, ...snapshot.people],
@@ -1860,6 +1890,7 @@ export async function createPersonNote(
   userId: string,
   personId: string,
   heading: string,
+  body = "",
 ) {
   const cleanHeading = normalizeNoteHeading(heading).slice(
     0,
@@ -1882,7 +1913,7 @@ export async function createPersonNote(
     userId,
     personId,
     heading: cleanHeading,
-    body: "",
+    body,
     position,
     createdAt,
     updatedAt: createdAt,
@@ -1896,7 +1927,7 @@ export async function createPersonNote(
     personId,
     noteId,
     heading: cleanHeading,
-    body: "",
+    body,
     position,
   });
   await replaceNoteSections(userId, personId, (sections) => [

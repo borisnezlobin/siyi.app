@@ -1,6 +1,92 @@
 import ExpoModulesCore
 #if canImport(FoundationModels)
 import FoundationModels
+
+/**
+ * The shape an update is sorted into.
+ *
+ * Declared for guided generation rather than asked for as JSON: the schema is
+ * compiled into the sampler, so what comes back is structurally valid instead
+ * of being a string that usually parses. On a model this small there would be
+ * no way to repair a malformed answer.
+ *
+ * The field name being an enum is what stops a value going somewhere it should
+ * not: a name outside this list cannot be produced at all.
+ */
+@available(iOS 26.0, *)
+@Generable
+struct SortedUpdate {
+  @Guide(description: "Facts that belong under one of the person's note headings")
+  var notes: [SortedNote]
+  @Guide(description: "Profile details this note fills in")
+  var fields: [SortedField]
+  @Guide(description: "Things to be reminded about on a future date")
+  var reminders: [SortedReminder]
+  @Guide(description: "Anything that fits nowhere else, copied word for word. Empty when everything was sorted.")
+  var leftover: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct SortedNote {
+  @Guide(description: "One of the person's headings, copied exactly")
+  var heading: String
+  @Guide(description: "The fact, as a short phrase")
+  var text: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+enum SortedFieldName: String {
+  case hometown
+  case university
+  case major
+  case graduationYear
+  case birthday
+  case dormOrResidence
+  case firstMetLocation
+  case relationshipLabel
+  case phone
+  case email
+  case instagram
+  case discord
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct SortedField {
+  var field: SortedFieldName
+  @Guide(description: "The value exactly as it was written")
+  var value: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct SortedReminder {
+  @Guide(description: "What to be reminded of, under 100 characters")
+  var text: String
+  @Guide(description: "Whole days from today", .range(0...3650))
+  var dueInDays: Int
+}
+
+@available(iOS 26.0, *)
+private func sortedUpdateJSON(_ sorted: SortedUpdate) -> String {
+  // Handed across as a string so both this and the server path go through one
+  // validator in TypeScript, rather than two that could drift apart.
+  let payload: [String: Any] = [
+    "notes": sorted.notes.map { ["heading": $0.heading, "text": $0.text] },
+    "fields": sorted.fields.map { ["field": $0.field.rawValue, "value": $0.value] },
+    "reminders": sorted.reminders.map { ["text": $0.text, "dueInDays": $0.dueInDays] },
+    "leftover": sorted.leftover,
+  ]
+  guard
+    let data = try? JSONSerialization.data(withJSONObject: payload),
+    let json = String(data: data, encoding: .utf8)
+  else {
+    return ""
+  }
+  return json
+}
 #endif
 
 public class ContextIntelligenceModule: Module {
@@ -91,6 +177,49 @@ public class ContextIntelligenceModule: Module {
           """
         )
         return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+      }
+#endif
+      return ""
+    }
+
+    AsyncFunction("sortUpdate") { (context: String, text: String) async throws -> String in
+#if canImport(FoundationModels)
+      if #available(iOS 26.0, *) {
+        guard SystemLanguageModel.default.isAvailable else {
+          return ""
+        }
+        let session = LanguageModelSession(
+          instructions: """
+          You sort one short note about a person into structured parts.
+          Use only what the note says. Never invent a fact and never guess.
+          Put a fact under one of the person's existing headings when it fits;
+          only use a new heading when none of them do.
+          Do not repeat something as a note if you already made it a field or a
+          reminder.
+          Only make a reminder for something with a date or a deadline in the
+          future.
+          Put anything you are unsure about, or that fits nowhere, in leftover,
+          copied word for word.
+          """
+        )
+        do {
+          let response = try await session.respond(
+            to: """
+            \(context)
+
+            The note:
+            \(text)
+            """,
+            generating: SortedUpdate.self,
+            options: GenerationOptions(temperature: 0)
+          )
+          return sortedUpdateJSON(response.content)
+        } catch {
+          // A guardrail trips on ordinary notes about people often enough that
+          // it is not worth surfacing. Empty means "no model", and the update
+          // is saved the plain way.
+          return ""
+        }
       }
 #endif
       return ""
