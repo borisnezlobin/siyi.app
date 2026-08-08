@@ -47,6 +47,27 @@ export const proposalFieldLabels: Record<ProposalFieldName, string> = {
   discord: "Discord",
 };
 
+/**
+ * What each field is for, in the words a model is told.
+ *
+ * Spelled out rather than derived from the labels above: a label is written to
+ * sit over a form input, and "the person's where you met" is not a sentence.
+ */
+export const proposalFieldHints: Record<ProposalFieldName, string> = {
+  hometown: "the town or city they are from",
+  university: "the university or college they attend",
+  major: "what they study",
+  graduationYear: "the year they graduate",
+  birthday: "the day they were born",
+  dormOrResidence: "where they live now, such as a dorm or a neighbourhood",
+  firstMetLocation: "where you first met them",
+  relationshipLabel: "how you know them, such as a classmate or a cousin",
+  phone: "their phone number",
+  email: "their email address",
+  instagram: "their Instagram handle",
+  discord: "their Discord username",
+};
+
 const contactFields = new Set<ProposalFieldName>(contactMethodKinds);
 
 export function isContactField(field: ProposalFieldName) {
@@ -57,7 +78,14 @@ export function isContactField(field: ProposalFieldName) {
 export type UpdateProposal = {
   notes: { heading: string; text: string }[];
   fields: { field: ProposalFieldName; value: string }[];
-  reminders: { text: string; dueInDays: number }[];
+  /**
+   * `dueOn` is the date the note actually named, copied as written. `dueInDays`
+   * is only for something relative — "in three weeks". Given a date, a model is
+   * asked to repeat it rather than to count the days to it: counting is
+   * arithmetic, and a small model gets it wrong by a day often enough that a
+   * reminder lands on the wrong date.
+   */
+  reminders: { text: string; dueInDays: number; dueOn?: string }[];
   leftover: string;
 };
 
@@ -115,8 +143,9 @@ export function normalizeProposal(raw: unknown): UpdateProposal | null {
       const row = entry as Record<string, unknown>;
       const text = cleanText(row.text, 500);
       const days = typeof row.dueInDays === "number" ? Math.round(row.dueInDays) : null;
+      const dueOn = cleanText(row.dueOn, 40) ?? undefined;
       if (!text || days === null || days < 0 || days > 3650) continue;
-      reminders.push({ text, dueInDays: days });
+      reminders.push(dueOn ? { text, dueInDays: days, dueOn } : { text, dueInDays: days });
     }
   }
 
@@ -204,6 +233,79 @@ export function dueAtFromDays(dueInDays: number, now: Date): string {
   return due.toISOString();
 }
 
+/** Whole days between two moments, counted by the day each falls on. */
+export function daysBetweenDays(from: Date, to: Date): number {
+  const start = new Date(from).setHours(0, 0, 0, 0);
+  const end = new Date(to).setHours(0, 0, 0, 0);
+  return Math.round((end - start) / 86_400_000);
+}
+
+const monthNames = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/**
+ * A date as somebody wrote it — "august 23rd", "23 Aug", "2026-08-23".
+ *
+ * Parsed by hand rather than with `Date.parse`, which on Hermes understands
+ * little beyond ISO and would quietly return a different answer on the phone
+ * than in a test. A date with no year means the next one to come around.
+ */
+export function parseWrittenDate(value: string, now: Date): Date | null {
+  const text = value.trim().toLowerCase();
+  if (!text) return null;
+
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text);
+  if (iso) {
+    const parsed = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 9);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  // "23rd" is a day; the suffix carries nothing.
+  const cleaned = text.replace(/(\d+)(?:st|nd|rd|th)\b/g, "$1");
+  const month = monthNames.findIndex((name) =>
+    new RegExp(`\\b${name.slice(0, 3)}[a-z]*\\b`).test(cleaned),
+  );
+  if (month < 0) return null;
+
+  const numbers = cleaned.match(/\d{1,4}/g) ?? [];
+  const day = numbers.map(Number).find((value) => value >= 1 && value <= 31);
+  if (day === undefined) return null;
+  const year = numbers.map(Number).find((value) => value >= 1900 && value <= 2200);
+
+  const due = new Date(year ?? now.getFullYear(), month, day, 9, 0, 0, 0);
+  if (due.getMonth() !== month || due.getDate() !== day) return null;
+
+  // No year given, and that date has already gone by: they mean the next one.
+  if (!year && due.getTime() < new Date(now).setHours(0, 0, 0, 0)) {
+    due.setFullYear(due.getFullYear() + 1);
+  }
+  return due;
+}
+
+/**
+ * When a reminder is due. A date the note named wins over a number of days,
+ * because it is the thing the person actually said.
+ */
+export function reminderDueAt(
+  reminder: { dueInDays: number; dueOn?: string },
+  now: Date,
+): string {
+  const written = reminder.dueOn ? parseWrittenDate(reminder.dueOn, now) : null;
+  return written ? written.toISOString() : dueAtFromDays(reminder.dueInDays, now);
+}
+
 // ---------------------------------------------------------------------------
 // What the model is told, and what its answer means for this person.
 // ---------------------------------------------------------------------------
@@ -273,10 +375,19 @@ export function proposalInstructions(): string {
   return [
     "You sort one short note about a person into structured parts.",
     "Use only what the note says. Never invent a fact and never guess.",
-    "Put a fact under one of the person's existing headings when it fits; only use a new heading when none of them do.",
+    // Without this the model does not realise a profile field is even an
+    // option, and files "doing a chemistry major" as a note about them.
+    "A profile field always beats a note. These are the fields, and what belongs in each:",
+    ...proposalFieldNames.map((field) => `  ${field}: ${proposalFieldHints[field]}`),
+    "Only when a fact fits none of those does it become a note.",
+    "Put a note under one of the person's existing headings when it fits; only use a new heading when none of them do.",
     "Do not repeat something as a note if you already made it a field or a reminder.",
     "Do not propose a field the person already has a value for unless the note plainly corrects it.",
     "Only make a reminder for something with a date or a deadline in the future.",
+    // Counting days is arithmetic, and getting it wrong by one puts the
+    // reminder on the wrong day. Repeating the date is not.
+    "When the note names a date, copy it into dueOn exactly as written and set dueInDays to 0.",
+    "Only work out dueInDays when the note says something relative, like 'in three weeks', and leave dueOn empty.",
     "Put anything you are unsure about, or that fits nowhere, in leftover, copied word for word.",
     'Use "" for leftover when everything was sorted.',
   ].join("\n");
@@ -375,12 +486,17 @@ export function buildProposalItems({
   }
 
   proposal.reminders.forEach((entry, index) => {
+    const dueAt = reminderDueAt(entry, now);
     items.push({
       id: `reminder:${index}`,
       kind: "reminder",
       text: entry.text,
-      dueAt: dueAtFromDays(entry.dueInDays, now),
-      dueInDays: entry.dueInDays,
+      dueAt,
+      // Taken back off the date rather than trusted from the model: when the
+      // note named a day, that day decides how far away it is, and the two
+      // disagreeing is how a reminder ends up shown as one date and saved as
+      // another.
+      dueInDays: daysBetweenDays(now, new Date(dueAt)),
     });
   });
 
@@ -441,11 +557,18 @@ export function describeItem(item: ProposalItem): { title: string; detail: strin
   if (item.kind === "field") {
     return { title: proposalFieldLabels[item.field], detail: item.display };
   }
+  // Anything more than a week out is named by its date. "In 14 days" is not
+  // something a person can check, and this is the screen for checking.
   const when =
     item.dueInDays === 0
       ? "today"
       : item.dueInDays === 1
         ? "tomorrow"
-        : `in ${item.dueInDays} days`;
+        : item.dueInDays <= 7
+          ? `in ${item.dueInDays} days`
+          : new Date(item.dueAt).toLocaleDateString(undefined, {
+              day: "numeric",
+              month: "long",
+            });
   return { title: "Reminder", detail: `${item.text} · ${when}` };
 }
