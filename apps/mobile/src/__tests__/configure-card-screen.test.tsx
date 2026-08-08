@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as mockReact from "react";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import ConfigureCardScreen from "@/app/(app)/configure-card";
 import type { OwnProfile } from "@/lib/profile-data";
@@ -69,7 +70,7 @@ async function renderScreen(ownCard: Record<string, string>) {
     ownCardEnabled: true,
     defaultUniversity: "",
   });
-  await render(
+  return render(
     <SafeAreaProvider initialMetrics={metrics}>
       <ConfigureCardScreen />
     </SafeAreaProvider>,
@@ -185,4 +186,25 @@ describe("the What gets shared screen", () => {
 
     expect(await screen.findByText("March 18, 2004")).toBeTruthy();
   });
+});
+
+/**
+ * The two things that could only be seen by rendering: whether a dozen chips
+ * wrap rather than running off the edge, and whether a suggestion under the
+ * keyboard takes the first tap.
+ */
+describe("the shape of the page, not just its contents", () => {
+  it("wraps the chips instead of running them off the screen", async () => {
+    await renderScreen(filledCard);
+
+    await screen.findByLabelText("Major, shared");
+    // The row that holds them has to wrap: there are twelve, and the longest
+    // ("Dorm or residence") is most of a phone wide on its own.
+    const style = StyleSheet.flatten(
+      screen.getByTestId("share-chips").props.style,
+    );
+    expect(style?.flexWrap).toBe("wrap");
+    expect(style?.flexDirection).toBe("row");
+  });
+
 });

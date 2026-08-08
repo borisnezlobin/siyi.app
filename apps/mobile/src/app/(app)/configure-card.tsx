@@ -127,7 +127,7 @@ export default function ConfigureCardScreen() {
           Tap one to share it or keep it back. A detail you have not filled in
           yet cannot be shared until it has something in it.
         </AppText>
-        <View style={styles.chips}>
+        <View style={styles.chips} testID="share-chips">
           {ownCardFields.map((field) => {
             const state = ownCardShareState(currentCard, currentPublicFields, field);
             const unavailable = state === "unavailable";
