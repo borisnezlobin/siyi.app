@@ -41,6 +41,22 @@ export function lastSeenLabel(
 }
 
 /**
+ * The whole line, for the one place that says it mid-sentence rather than on
+ * its own. Blindly lower-casing the label turned "Jul 1" into "jul 1" and read
+ * "Last interaction no interactions yet" for somebody never contacted, so only
+ * the relative phrases fold down and a real date keeps its capital month.
+ */
+export function lastInteractionLine(
+  value: string | Date | null | undefined,
+  now: Date = new Date(),
+) {
+  if (!value) return "No interactions yet";
+  const label = relativeDateLabel(value, now);
+  const isRelativePhrase = /^(Today|Yesterday|\d+ days ago)$/.test(label);
+  return `Last interaction ${isRelativePhrase ? label.toLowerCase() : label}`;
+}
+
+/**
  * "Due in 5 days" scans quickly but does not answer "which day is that?", so
  * the date rides along whenever the phrase does not already name the day.
  */

@@ -282,7 +282,7 @@ export default function TodayScreen() {
           <View style={styles.catchUpCopy}>
             <AppText variant="heading">Have a little room today?</AppText>
             <AppText style={styles.catchUpBody}>
-              {brand.name} can pick someone and bring back the context you
+              {brand.shortName} can pick someone and bring back the context you
               saved.
             </AppText>
           </View>

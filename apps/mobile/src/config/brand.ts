@@ -1,5 +1,6 @@
 export const brand = {
   name: process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Siyi.app",
+  shortName: process.env.EXPO_PUBLIC_APP_SHORT_NAME?.trim() || "Siyi",
   slug: process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app",
   scheme: process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi",
   description: "Remember the people who make this chapter feel like yours.",

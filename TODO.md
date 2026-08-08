@@ -128,6 +128,16 @@ because the offline queue is awkward is how it fell behind in the first place.
 - Running mobile jest from an agent worktree needs
       `apps/mobile/node_modules` symlinked from the main checkout — Node
       resolution walks up to the root but never reaches the workspace folder.
+- [x] Catch-up is no longer phone-only. Web gets the same three phases in a
+      dialog off Today: the picked person with what you saved and a few
+      openings, choosing someone else, and choosing how to say hello.
+      `catch-up.ts` is a byte-identical copy of the phone's, so the person
+      picked and the openings offered match. `contact-links.ts` is web-only
+      and deliberately different: a browser cannot be asked whether it can
+      open `instagram://` and told to fall back, so the web always takes the
+      https route. The on-device Apple Intelligence starters stay phone-only
+      — the fallback starters are what web shows, which is what the phone
+      shows too whenever the model declines.
 - Shared-element transitions (People row → profile) do NOT work on this
       stack, and the entrance in `profile-intro.ts` is what stands in for
       them. Reanimated 4.5.1 still exports `sharedTransitionTag` and

@@ -135,7 +135,7 @@ import {
   getPreferredContactMethod,
   setPreferredContactMethod,
 } from "@/lib/contact-preferences";
-import { lastSeenLabel } from "@/lib/relative-time";
+import { lastInteractionLine } from "@/lib/relative-time";
 import {
   reminderDayFromDaysAway,
   reminderDayLabel,
@@ -1219,7 +1219,7 @@ export function QuickCaptureProvider({
                         }?`
                       : "Finding someone you haven’t heard from in a while…"
                     : phase === "choose-catch-up"
-                      ? `Search your people, or let ${brand.name} pick.`
+                      ? `Search your people, or let ${brand.shortName} pick.`
                       : "Pick the app that feels natural."}
                 </AppText>
               </View>
@@ -1282,8 +1282,7 @@ export function QuickCaptureProvider({
                           contextPerson.fullName}
                       </AppText>
                       <AppText variant="caption">
-                        Last interaction{" "}
-                        {lastSeenLabel(contextPerson.lastInteractionAt).toLowerCase()}
+                        {lastInteractionLine(contextPerson.lastInteractionAt)}
                       </AppText>
                       <Pressable
                         accessibilityRole="button"
@@ -1393,7 +1392,7 @@ export function QuickCaptureProvider({
                     <AppText style={styles.contactNote} variant="caption">
                       Add a phone number, email, or Instagram handle for a
                       direct shortcut. Discord can open your inbox, but{" "}
-                      {brand.name} can’t target someone from a username alone.
+                      {brand.shortName} can’t target someone from a username alone.
                     </AppText>
                   ) : null}
                 </>
@@ -1402,7 +1401,7 @@ export function QuickCaptureProvider({
               <View style={styles.noPeople}>
                 <AppText variant="heading">No one to choose yet</AppText>
                 <AppText style={styles.muted}>
-                  Add someone, then {brand.name} can bring back useful context
+                  Add someone, then {brand.shortName} can bring back useful context
                   when you want to catch up.
                 </AppText>
                 <Button
