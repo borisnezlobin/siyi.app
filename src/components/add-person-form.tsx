@@ -179,8 +179,8 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
                 size="lg"
               />
             ) : (
-              <span className="grid size-16 place-items-center rounded-full bg-sage text-sage-strong">
-                <Camera size={24} weight="fill" aria-hidden="true" />
+              <span className="grid size-16 place-items-center rounded-full bg-mist text-ink-muted">
+                <Camera size={24} aria-hidden="true" />
               </span>
             )}
             <span className="absolute -bottom-0.5 -right-0.5 grid size-6 place-items-center rounded-full bg-ink text-white ring-2 ring-white">

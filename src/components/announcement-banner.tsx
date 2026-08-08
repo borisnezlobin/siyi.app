@@ -96,9 +96,11 @@ export function AnnouncementBanner() {
             role="status"
             className="flex items-start gap-3 rounded-2xl bg-sage px-4 py-3.5 text-ink shadow-card"
           >
-            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-sage-strong">
-              <Megaphone size={18} weight="fill" aria-hidden="true" />
-            </span>
+            <Megaphone
+              size={18}
+              className="mt-0.5 shrink-0 text-sage-strong"
+              aria-hidden="true"
+            />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">{announcement.title}</p>
               <p className="mt-1 text-sm leading-6 text-ink-muted">

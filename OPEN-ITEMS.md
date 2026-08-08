@@ -35,9 +35,11 @@ for directly.
 
 ## Headings and typography
 
-- [ ] Headings are not one style across the app. Settings headings are light
-      grey with odd letter spacing; People and other pages differ again. One
-      scale, one weight, one colour, applied everywhere on both platforms.
+- [x] Settings was the only screen with its own title style — grey, 11px, wide
+      tracking. It uses the shared heading now. The web's settings sections had
+      also regrown icons in tinted circles, which pushed those headings out of
+      line with the ones that had none. Swept the rest of the web too: the only
+      circles left are avatars, the logo mark and the floating add button.
 
 ## Person detail
 
