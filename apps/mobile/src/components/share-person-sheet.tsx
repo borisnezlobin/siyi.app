@@ -33,20 +33,12 @@ import {
   type ContactShareSelection,
 } from "@/lib/contact-card";
 import { onDeviceShortBio } from "@/lib/on-device-intelligence";
-import {
-  defaultShareExpiryChoiceId,
-  shareExpiryChoices,
-  shareIsLive,
-  type PersonShare,
-  type ShareExpiryChoiceId,
-} from "@/lib/person-share";
+import { shareIsLive, type PersonShare } from "@/lib/person-share";
 import {
   createPersonShare,
   listPersonShares,
-  revokePersonShare,
   shareUrl,
 } from "@/lib/person-share-data";
-import { sharePersonCard } from "@/lib/share-contact";
 import type { Person } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -71,13 +63,6 @@ export function SharePersonSheet({
   const [bio, setBio] = useState<string | null>(null);
   const [generatingBio, setGeneratingBio] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [expiry, setExpiry] = useState<ShareExpiryChoiceId>(
-    defaultShareExpiryChoiceId,
-  );
-  // Null while we are still finding out. Links stay hidden until we know the
-  // table exists, so a build that ships before migration 0015 simply offers the
-  // contact card, exactly as before.
-  const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creatingLink, setCreatingLink] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -95,10 +80,14 @@ export function SharePersonSheet({
     [person],
   );
 
+  const liveLink = useMemo(
+    () => shares.find((entry) => shareIsLive(entry)) ?? null,
+    [shares],
+  );
+
+  // Only so that a second tap reuses the link the first one made.
   const loadShares = useCallback(async () => {
-    const result = await listPersonShares(person.id);
-    setLinksAvailable(result.available);
-    setShares(result.shares);
+    setShares(await listPersonShares(person.id));
   }, [person.id]);
 
   // Only on a change, never on the way in. Dismissing a sheet that has never
@@ -118,7 +107,6 @@ export function SharePersonSheet({
     if (!visible) return;
     setSelection(defaultContactShareSelection);
     setBio(null);
-    setExpiry(defaultShareExpiryChoiceId);
     setLinkError(null);
     void loadShares();
   }, [person.id, visible, loadShares]);
@@ -139,24 +127,6 @@ export function SharePersonSheet({
     }
   };
 
-  const share = async () => {
-    setSharing(true);
-    try {
-      await sharePersonCard(person, selection, bio);
-      sheetRef.current?.dismiss();
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const sendLink = async (personShare: PersonShare) => {
-    await Share.share({
-      url: shareUrl(personShare),
-      message: shareUrl(personShare),
-      title: person.preferredName || person.fullName,
-    });
-  };
-
   const createLink = async () => {
     if (!userId || workingRef.current) return null;
     workingRef.current = true;
@@ -168,13 +138,8 @@ export function SharePersonSheet({
         userId,
         personId: person.id,
         selection,
-        expiry,
       });
 
-      if (result.unavailable) {
-        setLinksAvailable(false);
-        return null;
-      }
       if (result.error || !result.share) {
         setLinkError(result.error ?? "That link couldn't be created.");
         return null;
@@ -189,10 +154,7 @@ export function SharePersonSheet({
   };
 
   /** The live link if there is one, otherwise a fresh one. Never a second. */
-  const ensureLink = async () => {
-    const live = shares.find((entry) => shareIsLive(entry));
-    return live ?? (await createLink());
-  };
+  const ensureLink = async () => liveLink ?? (await createLink());
 
   const copyLink = async () => {
     const link = await ensureLink();
@@ -211,17 +173,6 @@ export function SharePersonSheet({
       await Share.share({ message: shareUrl(link) });
     } finally {
       setSharing(false);
-    }
-  };
-
-  const revokeLink = async (personShare: PersonShare) => {
-    void Haptics.selectionAsync();
-    setShares((current) =>
-      current.filter((entry) => entry.id !== personShare.id),
-    );
-    if (!(await revokePersonShare(personShare.id))) {
-      setLinkError("We couldn't turn that link off. Try again in a moment.");
-      await loadShares();
     }
   };
 
@@ -313,108 +264,48 @@ export function SharePersonSheet({
             </View>
           ) : null}
 
-          {linksAvailable ? (
-            <View style={styles.linkSection}>
-              <AppText style={styles.linkHeading}>Or send a link</AppText>
-              <AppText style={styles.rowHint}>
-                A page on siyi.app showing only what you ticked above. Anyone
-                with the link can open it, so it expires by default.
-              </AppText>
-
-              <View style={styles.expiryRow}>
-                {shareExpiryChoices.map((choice) => (
-                  <Pressable
-                    key={choice.id}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: expiry === choice.id }}
-                    accessibilityLabel={choice.label}
-                    onPress={() => setExpiry(choice.id)}
-                    style={[
-                      styles.expiryChip,
-                      expiry === choice.id && styles.expiryChipOn,
-                    ]}
-                  >
-                    <AppText
-                      style={[
-                        styles.expiryLabel,
-                        expiry === choice.id && styles.expiryLabelOn,
-                      ]}
-                    >
-                      {choice.label}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-
-              {shares.map((personShare) => (
-                <View key={personShare.id} style={styles.linkRow}>
-                  <View style={styles.rowText}>
-                    <AppText style={styles.rowLabel}>
-                      /s/{personShare.token.slice(0, 8)}…
-                    </AppText>
-                    <AppText style={styles.rowHint}>
-                      {personShare.expiresAt
-                        ? `Expires ${new Date(
-                            personShare.expiresAt,
-                          ).toLocaleDateString()}`
-                        : "No expiry"}
-                    </AppText>
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Send link"
-                    onPress={() => void sendLink(personShare)}
-                    style={styles.linkAction}
-                  >
-                    <AppText style={styles.linkActionLabel}>Send</AppText>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Turn off link"
-                    onPress={() => void revokeLink(personShare)}
-                    style={styles.linkAction}
-                  >
-                    <AppText style={styles.linkActionLabel}>Turn off</AppText>
-                  </Pressable>
-                </View>
-              ))}
-
-              {linkError ? (
-                <AppText style={styles.linkError}>{linkError}</AppText>
-              ) : null}
-            </View>
-          ) : null}
         </View>
 
-        {linksAvailable ? (
-          <>
-            <Button
-              icon={Copy}
-              label={copied ? "Copied" : "Copy link"}
-              loading={creatingLink}
-              onPress={() => void copyLink()}
-            />
-            <Button
-              icon={ShareIcon}
-              label="Share link"
-              loading={sharing}
-              onPress={() => void shareLink()}
-              variant="secondary"
-            />
-          </>
-        ) : (
-          <Button
-            label="Share contact card"
-            loading={sharing}
-            onPress={() => void share()}
-          />
-        )}
+        <Button
+          icon={Copy}
+          label={copied ? "Copied" : "Copy link"}
+          loading={creatingLink}
+          onPress={() => void copyLink()}
+        />
+        <Button
+          icon={ShareIcon}
+          label="Share link"
+          loading={sharing}
+          onPress={() => void shareLink()}
+          variant="secondary"
+        />
+
+        {linkError ? (
+          <AppText style={styles.linkError}>{linkError}</AppText>
+        ) : null}
+
+        {liveLink ? (
+          <AppText style={styles.linkReadout}>{shareUrl(liveLink)}</AppText>
+        ) : null}
       </BottomSheetScrollView>
     </AppBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  rowText: { flex: 1, gap: 2 },
+  rowLabel: {
+    color: colors.ink,
+    fontFamily: fontFamilies.bodySemibold,
+    fontSize: 14,
+  },
+  linkReadout: {
+    color: colors.inkMuted,
+    fontFamily: fontFamilies.body,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
+  },
   content: {
     gap: 12,
     paddingHorizontal: 20,
@@ -463,8 +354,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mist,
   },
   checkboxOn: { backgroundColor: colors.coral },
-  rowText: { flex: 1, gap: 2 },
-  rowLabel: { fontFamily: fontFamilies.bodySemibold, fontSize: 14, color: colors.ink },
   rowHint: { fontSize: 11, lineHeight: 16, color: colors.inkMuted },
   bioRow: {
     flexDirection: "row",
@@ -483,46 +372,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sage,
   },
   bioText: { fontSize: 13, lineHeight: 19, color: colors.ink },
-  linkSection: {
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.mist,
-  },
-  linkHeading: {
-    fontFamily: fontFamilies.bodySemibold,
-    fontSize: 14,
-    color: colors.ink,
-  },
-  expiryRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 2 },
-  expiryChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    borderRadius: radii.round,
-    backgroundColor: colors.paper,
-  },
-  expiryChipOn: { backgroundColor: colors.ink },
-  expiryLabel: {
-    fontFamily: fontFamilies.bodySemibold,
-    fontSize: 12,
-    color: colors.inkMuted,
-  },
-  expiryLabelOn: { color: colors.paper },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: radii.medium,
-    backgroundColor: colors.paper,
-  },
-  linkAction: { paddingVertical: 6, paddingHorizontal: 8 },
-  linkActionLabel: {
-    fontFamily: fontFamilies.bodySemibold,
-    fontSize: 12,
-    color: colors.inkMuted,
-  },
   linkError: { fontSize: 12, lineHeight: 17, color: colors.coralStrong },
 });

@@ -120,12 +120,9 @@ describe("creating a link from the phone", () => {
 });
 
 describe("listing links", () => {
-  it("reports links as unavailable when the table is missing", async () => {
-    const { client } = fakeClient({ data: null, error: { code: "42P01" } });
-    expect(await listPersonShares("person-1", client)).toEqual({
-      available: false,
-      shares: [],
-    });
+  it("comes back empty when the lookup fails", async () => {
+    const { client } = fakeClient({ data: null, error: { code: "500" } });
+    expect(await listPersonShares("person-1", client)).toEqual([]);
   });
 
   it("hides links that have already expired", async () => {
@@ -138,8 +135,7 @@ describe("listing links", () => {
     });
 
     const listed = await listPersonShares("person-1", client);
-    expect(listed.available).toBe(true);
-    expect(listed.shares.map((share) => share.id)).toEqual(["live"]);
+    expect(listed.map((share) => share.id)).toEqual(["live"]);
   });
 });
 

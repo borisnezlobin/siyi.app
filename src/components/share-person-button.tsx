@@ -23,18 +23,14 @@ const sensitiveFields = new Set<ContactShareField>([
   "notes",
 ]);
 
-type SharesResponse = { available?: boolean; shares?: PersonShare[] };
-type CreateResponse = { available?: boolean; share?: PersonShare };
+type SharesResponse = { shares?: PersonShare[] };
+type CreateResponse = { share?: PersonShare };
 
 export function SharePersonButton({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<ContactShareSelection>(
     defaultContactShareSelection,
   );
-  // Null while we are still finding out. Links stay hidden until we know the
-  // table exists, so a deploy that lands before migration 0015 simply shows the
-  // contact card, exactly as before.
-  const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creating, setCreating] = useState(false);
   const canShareLink = typeof navigator !== "undefined" && Boolean(navigator.share);
@@ -47,25 +43,16 @@ export function SharePersonButton({ person }: { person: Person }) {
     [shares],
   );
 
+  // Only so that a second click reuses the link the first one made.
   const loadShares = useCallback(async () => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      setLinksAvailable(false);
-      return;
-    }
-
     try {
       const response = await fetch(
         `/api/person-shares?personId=${encodeURIComponent(person.id)}`,
       );
       const payload = await readJsonResponse<SharesResponse>(response);
-      if (!response.ok || !payload?.available) {
-        setLinksAvailable(false);
-        return;
-      }
-      setLinksAvailable(true);
-      setShares(payload.shares ?? []);
+      if (response.ok) setShares(payload?.shares ?? []);
     } catch {
-      setLinksAvailable(false);
+      // A link can still be made; the next tap simply makes a fresh one.
     }
   }, [person.id]);
 
@@ -126,9 +113,8 @@ export function SharePersonButton({ person }: { person: Person }) {
         setError(await getApiResponseError(response, "That link couldn't be created."));
         return null;
       }
-      if (!payload?.available || !payload.share) {
-        // The table isn't there yet. Nothing broke; the card still works.
-        setLinksAvailable(false);
+      if (!payload?.share) {
+        setError("That link couldn't be created.");
         return null;
       }
 
@@ -273,12 +259,6 @@ export function SharePersonButton({ person }: { person: Person }) {
 
             {error ? (
               <p className="mt-3 text-center text-xs leading-5 text-coral-strong">{error}</p>
-            ) : null}
-
-            {!linksAvailable ? (
-              <p className="mt-3 text-center text-[11px] leading-4 text-ink-muted">
-                Links are not available on this account yet.
-              </p>
             ) : null}
 
             {liveShares.length > 0 ? (
