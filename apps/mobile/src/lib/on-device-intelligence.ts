@@ -1,5 +1,9 @@
 import ContextIntelligence from "../../modules/context-intelligence/src/ContextIntelligenceModule";
-import { normalizeProposal, type UpdateProposal } from "@/lib/update-proposal";
+import {
+  normalizeProposal,
+  proposalInstructions,
+  type UpdateProposal,
+} from "@/lib/update-proposal";
 import type { Person } from "@/lib/types";
 
 function personContext(person: Person) {
@@ -94,7 +98,11 @@ export async function onDeviceSortUpdate({
   }
 
   try {
-    const json = (await ContextIntelligence.sortUpdate(context, text)).trim();
+    // The same instructions the server sends its model, so the two sort the
+    // same sentence the same way.
+    const json = (
+      await ContextIntelligence.sortUpdate(proposalInstructions(), context, text)
+    ).trim();
     if (!json) return null;
     return normalizeProposal(JSON.parse(json));
   } catch {

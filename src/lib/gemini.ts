@@ -52,8 +52,14 @@ const responseSchema = {
       maxItems: 4,
       items: {
         type: "OBJECT",
-        properties: { text: { type: "STRING" }, dueInDays: { type: "INTEGER" } },
-        required: ["text", "dueInDays"],
+        properties: {
+          text: { type: "STRING" },
+          dueInDays: { type: "INTEGER" },
+          // The date the note named, copied as written. Repeating a date is
+          // something a model can do; counting the days to it is not.
+          dueOn: { type: "STRING" },
+        },
+        required: ["text", "dueInDays", "dueOn"],
       },
     },
     leftover: { type: "STRING" },

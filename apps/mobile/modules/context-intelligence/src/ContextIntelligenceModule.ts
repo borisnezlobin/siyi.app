@@ -8,7 +8,11 @@ declare class ContextIntelligenceModule extends NativeModule<
   conversationStarters(context: string): Promise<string[]>;
   shortBio(context: string): Promise<string>;
   /** JSON, or "" when there is no model to ask. */
-  sortUpdate(context: string, text: string): Promise<string>;
+  sortUpdate(
+    instructions: string,
+    context: string,
+    text: string,
+  ): Promise<string>;
 }
 
 export default requireOptionalNativeModule<ContextIntelligenceModule>(

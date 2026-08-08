@@ -65,7 +65,9 @@ struct SortedField {
 struct SortedReminder {
   @Guide(description: "What to be reminded of, under 100 characters")
   var text: String
-  @Guide(description: "Whole days from today", .range(0...3650))
+  @Guide(description: "The date the note named, copied exactly as written, such as \"august 23rd\". Empty when the note only said something relative.")
+  var dueOn: String
+  @Guide(description: "Whole days from today, and only when dueOn is empty", .range(0...3650))
   var dueInDays: Int
 }
 
@@ -76,7 +78,9 @@ private func sortedUpdateJSON(_ sorted: SortedUpdate) -> String {
   let payload: [String: Any] = [
     "notes": sorted.notes.map { ["heading": $0.heading, "text": $0.text] },
     "fields": sorted.fields.map { ["field": $0.field.rawValue, "value": $0.value] },
-    "reminders": sorted.reminders.map { ["text": $0.text, "dueInDays": $0.dueInDays] },
+    "reminders": sorted.reminders.map {
+      ["text": $0.text, "dueInDays": $0.dueInDays, "dueOn": $0.dueOn]
+    },
     "leftover": sorted.leftover,
   ]
   guard
@@ -182,26 +186,18 @@ public class ContextIntelligenceModule: Module {
       return ""
     }
 
-    AsyncFunction("sortUpdate") { (context: String, text: String) async throws -> String in
+    // The instructions come from JavaScript rather than living here, so this
+    // model and the one on the server are told exactly the same thing. Two
+    // copies drifted apart once already: only one of them knew that a profile
+    // field beats a note, and this was the one that did not.
+    AsyncFunction("sortUpdate") {
+      (instructions: String, context: String, text: String) async throws -> String in
 #if canImport(FoundationModels)
       if #available(iOS 26.0, *) {
         guard SystemLanguageModel.default.isAvailable else {
           return ""
         }
-        let session = LanguageModelSession(
-          instructions: """
-          You sort one short note about a person into structured parts.
-          Use only what the note says. Never invent a fact and never guess.
-          Put a fact under one of the person's existing headings when it fits;
-          only use a new heading when none of them do.
-          Do not repeat something as a note if you already made it a field or a
-          reminder.
-          Only make a reminder for something with a date or a deadline in the
-          future.
-          Put anything you are unsure about, or that fits nowhere, in leftover,
-          copied word for word.
-          """
-        )
+        let session = LanguageModelSession(instructions: instructions)
         do {
           let response = try await session.respond(
             to: """

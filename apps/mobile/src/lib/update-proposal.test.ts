@@ -6,6 +6,8 @@ import {
   describeItem,
   dueAtFromDays,
   normalizeProposal,
+  parseWrittenDate,
+  reminderDueAt,
   planFromItems,
   planSize,
   proposalFieldNames,
@@ -287,5 +289,72 @@ describe("the field allow-list", () => {
     for (const forbidden of ["fullName", "id", "userId", "status", "relationshipStrength"]) {
       expect(proposalFieldNames).not.toContain(forbidden);
     }
+  });
+});
+
+describe("parseWrittenDate", () => {
+  const today = new Date(2026, 7, 9, 20, 0, 0);
+
+  it("reads a date the way somebody would write one", () => {
+    for (const written of ["august 23rd", "August 23", "23 august", "2026-08-23"]) {
+      const parsed = parseWrittenDate(written, today);
+      expect(parsed?.getMonth()).toBe(7);
+      expect(parsed?.getDate()).toBe(23);
+      expect(parsed?.getFullYear()).toBe(2026);
+    }
+  });
+
+  it("takes a date with no year to mean the next one to come around", () => {
+    const parsed = parseWrittenDate("february 3rd", today);
+    expect(parsed?.getFullYear()).toBe(2027);
+    expect(parsed?.getMonth()).toBe(1);
+  });
+
+  it("turns down what is not a date", () => {
+    expect(parseWrittenDate("in three weeks", today)).toBeNull();
+    expect(parseWrittenDate("", today)).toBeNull();
+    expect(parseWrittenDate("february 31st", today)).toBeNull();
+  });
+});
+
+describe("reminderDueAt", () => {
+  const today = new Date(2026, 7, 9, 20, 0, 0);
+
+  it("uses the date the note named, not the model's arithmetic", () => {
+    // A model counting to 23 August said 15 days, which is one too many. The
+    // date it copied out is not something it can be wrong about.
+    const due = new Date(reminderDueAt({ dueInDays: 15, dueOn: "august 23rd" }, today));
+
+    expect(due.getDate()).toBe(23);
+    expect(due.getMonth()).toBe(7);
+  });
+
+  it("counts days when the note only said something relative", () => {
+    const due = new Date(reminderDueAt({ dueInDays: 21 }, today));
+
+    expect(due.getMonth()).toBe(7);
+    expect(due.getDate()).toBe(30);
+  });
+});
+
+describe("how far away a reminder is", () => {
+  it("is worked out from the date, so what is shown is what is saved", () => {
+    const today = new Date(2026, 7, 9, 20, 0, 0);
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        reminders: [{ text: "anniversary", dueInDays: 15, dueOn: "august 23rd" }],
+      },
+      person,
+      sections: [],
+      now: today,
+    });
+
+    const reminder = items[0];
+    expect(reminder.kind === "reminder" && reminder.dueInDays).toBe(14);
+    // Named by its date rather than "in 14 days", which nobody can check.
+    const detail = describeItem(reminder).detail;
+    expect(detail).toContain("August");
+    expect(detail).toContain("23");
   });
 });
