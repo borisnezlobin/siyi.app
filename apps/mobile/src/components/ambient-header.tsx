@@ -44,66 +44,64 @@ export function AmbientHeader({
   const measure = (event: LayoutChangeEvent) =>
     setWidth(event.nativeEvent.layout.width);
 
-  if (width === 0) {
-    return <View onLayout={measure} style={styles.canvas} />;
-  }
-
+  // Measured on a plain view around the canvas: Skia's own canvas does not
+  // take onLayout on the new architecture.
   return (
-    <Canvas
-      onLayout={measure}
-      pointerEvents="none"
-      style={[styles.canvas, { height, width }]}
-    >
-      <Group layer={<Paint><Blur blur={52} /></Paint>}>
-        {image ? (
-          // Drawn well outside the frame: a blur this heavy would otherwise
-          // thin out towards the edges and show where the image stops.
-          <SkiaImage
-            fit="cover"
-            height={height * 1.6}
-            image={image}
-            width={width * 1.4}
-            x={-width * 0.2}
-            y={-height * 0.4}
-          />
-        ) : (
-          <Group opacity={0.5}>
-            <Circle
-              color={color.ink}
-              cx={width * 0.26}
-              cy={height * 0.3}
-              r={height * 0.46}
-            />
-            <Circle
-              color={color.ink}
-              cx={width * 0.84}
-              cy={height * 0.16}
-              opacity={0.7}
-              r={height * 0.36}
-            />
-            <Circle
-              color={color.background}
-              cx={width * 0.6}
-              cy={height * 0.66}
-              r={height * 0.34}
-            />
+    <View onLayout={measure} pointerEvents="none" style={styles.canvas}>
+      {width === 0 ? null : (
+        <Canvas style={{ height, width }}>
+          <Group layer={<Paint><Blur blur={52} /></Paint>}>
+            {image ? (
+              // Drawn well outside the frame: a blur this heavy would otherwise
+              // thin out towards the edges and show where the image stops.
+              <SkiaImage
+                fit="cover"
+                height={height * 1.6}
+                image={image}
+                width={width * 1.4}
+                x={-width * 0.2}
+                y={-height * 0.4}
+              />
+            ) : (
+              <Group opacity={0.5}>
+                <Circle
+                  color={color.ink}
+                  cx={width * 0.26}
+                  cy={height * 0.3}
+                  r={height * 0.46}
+                />
+                <Circle
+                  color={color.ink}
+                  cx={width * 0.84}
+                  cy={height * 0.16}
+                  opacity={0.7}
+                  r={height * 0.36}
+                />
+                <Circle
+                  color={color.background}
+                  cx={width * 0.6}
+                  cy={height * 0.66}
+                  r={height * 0.34}
+                />
+              </Group>
+            )}
           </Group>
-        )}
-      </Group>
 
-      <Rect height={height} width={width} x={0} y={0}>
-        <LinearGradient
-          colors={[
-            "rgba(244, 247, 244, 0)",
-            "rgba(244, 247, 244, 0.72)",
-            colors.porcelain,
-          ]}
-          end={vec(0, height)}
-          positions={[0, 0.62, 1]}
-          start={vec(0, 0)}
-        />
-      </Rect>
-    </Canvas>
+          <Rect height={height} width={width} x={0} y={0}>
+            <LinearGradient
+              colors={[
+                "rgba(244, 247, 244, 0)",
+                "rgba(244, 247, 244, 0.72)",
+                colors.porcelain,
+              ]}
+              end={vec(0, height)}
+              positions={[0, 0.62, 1]}
+              start={vec(0, 0)}
+            />
+          </Rect>
+        </Canvas>
+      )}
+    </View>
   );
 }
 

@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
-import { GlassIconButton } from "@/components/glass-surface";
-import { colors } from "@/constants/theme";
+import { GlassIconButton, GlassSurface } from "@/components/glass-surface";
+import { colors, radii } from "@/constants/theme";
 
 type ScreenProps = ScrollViewProps & {
   title?: string;
@@ -25,6 +25,8 @@ type ScreenProps = ScrollViewProps & {
   keyboardAvoiding?: boolean;
   /** For anything pushed on top of a tab, which the tab bar cannot get back from. */
   showBack?: boolean;
+  /** Controls that stay put on the glass while the list scrolls under them. */
+  stickyHeader?: React.ReactNode;
 };
 
 export function Screen({
@@ -38,11 +40,31 @@ export function Screen({
   maxContentWidth = 1040,
   keyboardAvoiding = true,
   showBack = false,
+  stickyHeader,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const heading =
+    eyebrow || title || subtitle ? (
+      <View style={styles.header}>
+        {eyebrow ? (
+          <AppText style={styles.eyebrow} variant="label">
+            {eyebrow}
+          </AppText>
+        ) : null}
+        {title ? <AppText variant="display">{title}</AppText> : null}
+        {subtitle ? (
+          <AppText style={styles.subtitle}>{subtitle}</AppText>
+        ) : null}
+      </View>
+    ) : null;
+
+  // Counted rather than written down: what comes before the sticky block
+  // decides its index, and getting it wrong sticks the wrong thing.
+  const stickyIndex = (showBack ? 1 : 0) + (heading ? 1 : 0);
 
   return (
     <KeyboardAvoidingView
@@ -59,7 +81,9 @@ export function Screen({
             maxWidth: maxContentWidth,
           },
           {
-            paddingTop: Math.max(insets.top + 10, 22),
+            // With a sticky block the inset is on the scroll view itself, so
+            // the block pins below the status bar rather than under it.
+            paddingTop: stickyHeader ? 10 : Math.max(insets.top + 10, 22),
             paddingBottom: bottomInset + insets.bottom,
           },
           contentContainerStyle,
@@ -76,7 +100,8 @@ export function Screen({
           ) : undefined
         }
         showsVerticalScrollIndicator={false}
-        style={styles.fill}
+        stickyHeaderIndices={stickyHeader ? [stickyIndex] : undefined}
+        style={[styles.fill, stickyHeader ? { paddingTop: insets.top } : null]}
         {...props}
       >
         {showBack ? (
@@ -94,19 +119,19 @@ export function Screen({
           </View>
         ) : null}
 
-        {eyebrow || title || subtitle ? (
-          <View style={styles.header}>
-            {eyebrow ? (
-              <AppText style={styles.eyebrow} variant="label">
-                {eyebrow}
-              </AppText>
-            ) : null}
-            {title ? <AppText variant="display">{title}</AppText> : null}
-            {subtitle ? (
-              <AppText style={styles.subtitle}>{subtitle}</AppText>
-            ) : null}
+        {heading}
+
+        {stickyHeader ? (
+          <View style={styles.sticky}>
+            <GlassSurface
+              fallbackStyle={styles.stickyFallback}
+              style={styles.stickyInner}
+            >
+              {stickyHeader}
+            </GlassSurface>
           </View>
         ) : null}
+
         {children}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -123,6 +148,20 @@ const styles = StyleSheet.create({
     gap: 22,
     paddingHorizontal: 20,
     width: "100%",
+  },
+  // The block itself carries no fill: the glass inside it does, and a fill on
+  // both would show as a hard edge where the two shapes disagree.
+  sticky: {
+    paddingVertical: 6,
+  },
+  stickyInner: {
+    borderRadius: radii.xlarge,
+    gap: 12,
+    overflow: "hidden",
+    padding: 12,
+  },
+  stickyFallback: {
+    backgroundColor: colors.porcelain,
   },
   backRow: {
     alignItems: "flex-start",

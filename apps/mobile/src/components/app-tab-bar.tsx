@@ -107,17 +107,19 @@ export function AppTabBar({
           );
         })}
       </GlassSurface>
-      <Pressable
-        accessibilityLabel="Add something"
-        accessibilityRole="button"
-        onPress={quickCapture.open}
-        style={({ pressed }) => [
-          styles.action,
-          pressed && styles.actionPressed,
-        ]}
-      >
-        <Plus color={colors.paper} size={29} weight="bold" />
-      </Pressable>
+      <View pointerEvents="box-none" style={styles.actionRow}>
+        <Pressable
+          accessibilityLabel="Add something"
+          accessibilityRole="button"
+          onPress={quickCapture.open}
+          style={({ pressed }) => [
+            styles.action,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <Plus color={colors.paper} size={29} weight="bold" />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -166,6 +168,17 @@ const styles = StyleSheet.create({
   rightTabGap: {
     marginLeft: 24,
   },
+  // Centred by a row that spans the shell rather than by an offset of half its
+  // width: the shell is padded, and a percentage is taken from inside that
+  // padding, which left the button sitting exactly one padding to the left.
+  actionRow: {
+    alignItems: "center",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 5,
+  },
   action: {
     ...floatShadow,
     alignItems: "center",
@@ -173,12 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.round,
     height: 58,
     justifyContent: "center",
-    left: "50%",
-    marginLeft: -29,
-    position: "absolute",
-    top: 0,
     width: 58,
-    zIndex: 5,
   },
   actionPressed: {
     backgroundColor: colors.coralStrong,

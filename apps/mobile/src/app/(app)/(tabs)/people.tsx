@@ -193,165 +193,168 @@ export default function PeopleScreen() {
     <Screen
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle="Names, context, and the small details that make reconnecting easy."
-      title="People"
-    >
-      <View style={styles.shortcuts}>
-        {(
-          [
-            ["/birthdays", "Birthdays", Cake],
-            ["/classes", "Classes", GraduationCap],
-            ["/map", "Map", MapPin],
-          ] as const
-        ).map(([href, label, Icon]) => (
-          <Pressable
-            accessibilityRole="button"
-            key={href}
-            onPress={() => router.push(href)}
-            style={styles.shortcut}
-          >
-            <Icon color={colors.ink} size={17} />
-            <AppText variant="caption">{label}</AppText>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.searchRow}>
-        <View style={styles.search}>
-          <MagnifyingGlass color={colors.inkMuted} size={20} />
-          <TextInput
-            accessibilityLabel="Search people"
-            autoCapitalize="none"
-            onChangeText={setQuery}
-            placeholder="Name, school, class, hometown, major, dorm, or tag"
-            placeholderTextColor={colors.inkMuted}
-            returnKeyType="search"
-            selectionColor={colors.coral}
-            style={styles.searchInput}
-            value={query}
-          />
-          {query.length > 0 ? (
+      stickyHeader={
+        <>
+        <View style={styles.shortcuts}>
+          {(
+            [
+              ["/birthdays", "Birthdays", Cake],
+              ["/classes", "Classes", GraduationCap],
+              ["/map", "Map", MapPin],
+            ] as const
+          ).map(([href, label, Icon]) => (
             <Pressable
-              accessibilityLabel="Clear search"
               accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => setQuery("")}
+              key={href}
+              onPress={() => router.push(href)}
+              style={styles.shortcut}
             >
-              <XCircle color={colors.inkMuted} size={20} weight="fill" />
+              <Icon color={colors.ink} size={17} />
+              <AppText variant="caption">{label}</AppText>
             </Pressable>
-          ) : null}
+          ))}
         </View>
-        <Pressable
-          accessibilityLabel="Show filters"
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showFilters }}
-          onPress={() => setShowFilters((visible) => !visible)}
-          style={[
-            styles.filterButton,
-            (showFilters || activeFilterCount > 0) && styles.filterButtonSelected,
-          ]}
-        >
-          <Funnel
-            color={showFilters || activeFilterCount ? colors.paper : colors.ink}
-            size={21}
-            weight={activeFilterCount ? "fill" : "regular"}
-          />
-          {activeFilterCount ? (
-            <View style={styles.filterBadge}>
-              <AppText style={styles.filterBadgeText} variant="caption">
-                {activeFilterCount}
-              </AppText>
-            </View>
-          ) : null}
-        </Pressable>
-      </View>
 
-      {showFilters ? (
-        <View style={styles.filters}>
-          <FilterGroup label="Reminder pace">
-            {relationshipStrengths.map((value) => (
-              <FilterChip
-                key={value}
-                label={relationshipTierLabels[value]}
-                onPress={() => setStrength(strength === value ? null : value)}
-                selected={strength === value}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Timing">
-            {(
-              [
-                ["all", "Everyone"],
-                ["overdue", "Overdue"],
-                ["recent", "Added recently"],
-              ] as const
-            ).map(([value, label]) => (
-              <FilterChip
-                key={value}
-                label={label}
-                onPress={() => setOverdueFilter(value)}
-                selected={overdueFilter === value}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Missing details">
-            {missingDetailOptions.map((detail) => (
-              <FilterChip
-                key={detail}
-                label={missingDetailLabels[detail]}
-                onPress={() =>
-                  setMissing((current) =>
-                    current.includes(detail)
-                      ? current.filter((entry) => entry !== detail)
-                      : [...current, detail],
-                  )
-                }
-                selected={missing.includes(detail)}
-              />
-            ))}
-          </FilterGroup>
-          {tags.length > 0 ? (
-            <FilterGroup label="Tag">
-              {tags.map((tag) => (
+        <View style={styles.searchRow}>
+          <View style={styles.search}>
+            <MagnifyingGlass color={colors.inkMuted} size={20} />
+            <TextInput
+              accessibilityLabel="Search people"
+              autoCapitalize="none"
+              onChangeText={setQuery}
+              placeholder="Name, school, class, hometown, major, dorm, or tag"
+              placeholderTextColor={colors.inkMuted}
+              returnKeyType="search"
+              selectionColor={colors.coral}
+              style={styles.searchInput}
+              value={query}
+            />
+            {query.length > 0 ? (
+              <Pressable
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={() => setQuery("")}
+              >
+                <XCircle color={colors.inkMuted} size={20} weight="fill" />
+              </Pressable>
+            ) : null}
+          </View>
+          <Pressable
+            accessibilityLabel="Show filters"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showFilters }}
+            onPress={() => setShowFilters((visible) => !visible)}
+            style={[
+              styles.filterButton,
+              (showFilters || activeFilterCount > 0) && styles.filterButtonSelected,
+            ]}
+          >
+            <Funnel
+              color={showFilters || activeFilterCount ? colors.paper : colors.ink}
+              size={21}
+              weight={activeFilterCount ? "fill" : "regular"}
+            />
+            {activeFilterCount ? (
+              <View style={styles.filterBadge}>
+                <AppText style={styles.filterBadgeText} variant="caption">
+                  {activeFilterCount}
+                </AppText>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+
+        {showFilters ? (
+          <View style={styles.filters}>
+            <FilterGroup label="Reminder pace">
+              {relationshipStrengths.map((value) => (
                 <FilterChip
-                  key={tag.id}
-                  label={tag.name}
-                  onPress={() =>
-                    setTagId(tagId === tag.id ? null : tag.id)
-                  }
-                  selected={tagId === tag.id}
+                  key={value}
+                  label={relationshipTierLabels[value]}
+                  onPress={() => setStrength(strength === value ? null : value)}
+                  selected={strength === value}
                 />
               ))}
             </FilterGroup>
-          ) : null}
-          <FilterGroup
-            icon={<ArrowsDownUp color={colors.inkMuted} size={17} />}
-            label="Sort"
-          >
-            {(Object.keys(sortLabels) as SortMode[]).map((value) => (
-              <FilterChip
-                key={value}
-                label={sortLabels[value]}
-                onPress={() => setSort(value)}
-                selected={sort === value}
-              />
-            ))}
-          </FilterGroup>
-          {activeFilterCount ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={clearFilters}
-              style={styles.clear}
+            <FilterGroup label="Timing">
+              {(
+                [
+                  ["all", "Everyone"],
+                  ["overdue", "Overdue"],
+                  ["recent", "Added recently"],
+                ] as const
+              ).map(([value, label]) => (
+                <FilterChip
+                  key={value}
+                  label={label}
+                  onPress={() => setOverdueFilter(value)}
+                  selected={overdueFilter === value}
+                />
+              ))}
+            </FilterGroup>
+            <FilterGroup label="Missing details">
+              {missingDetailOptions.map((detail) => (
+                <FilterChip
+                  key={detail}
+                  label={missingDetailLabels[detail]}
+                  onPress={() =>
+                    setMissing((current) =>
+                      current.includes(detail)
+                        ? current.filter((entry) => entry !== detail)
+                        : [...current, detail],
+                    )
+                  }
+                  selected={missing.includes(detail)}
+                />
+              ))}
+            </FilterGroup>
+            {tags.length > 0 ? (
+              <FilterGroup label="Tag">
+                {tags.map((tag) => (
+                  <FilterChip
+                    key={tag.id}
+                    label={tag.name}
+                    onPress={() =>
+                      setTagId(tagId === tag.id ? null : tag.id)
+                    }
+                    selected={tagId === tag.id}
+                  />
+                ))}
+              </FilterGroup>
+            ) : null}
+            <FilterGroup
+              icon={<ArrowsDownUp color={colors.inkMuted} size={17} />}
+              label="Sort"
             >
-              <X color={colors.coralStrong} size={13} weight="bold" />
-              <AppText style={styles.clearLabel} variant="caption">
-                Clear
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-
+              {(Object.keys(sortLabels) as SortMode[]).map((value) => (
+                <FilterChip
+                  key={value}
+                  label={sortLabels[value]}
+                  onPress={() => setSort(value)}
+                  selected={sort === value}
+                />
+              ))}
+            </FilterGroup>
+            {activeFilterCount ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={clearFilters}
+                style={styles.clear}
+              >
+                <X color={colors.coralStrong} size={13} weight="bold" />
+                <AppText style={styles.clearLabel} variant="caption">
+                  Clear
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+        </>
+      }
+      subtitle="Names, context, and the small details that make reconnecting easy."
+      title="People"
+    >
       <View style={styles.resultHeader}>
         <AppText variant="heading">
           {filteredPeople.length === 1
