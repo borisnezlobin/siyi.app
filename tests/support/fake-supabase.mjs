@@ -46,15 +46,95 @@ export const tables = {
     { auth_user_id: "u-2", created_at: iso(40 * day) },
     { auth_user_id: "u-3", created_at: iso(200 * day) },
   ],
-  people: [
-    ...Array.from({ length: 5 }, () => ({ user_id: "u-1", created_at: iso(3 * day) })),
-    ...Array.from({ length: 120 }, () => ({ user_id: "u-2", created_at: iso(35 * day) })),
-  ],
   push_subscriptions: [{ user_id: "u-1", revoked_at: null }],
   native_push_subscriptions: [{ user_id: "u-3", revoked_at: iso(day) }],
   interactions: [{ user_id: "u-1", created_at: iso(2 * day) }],
   announcements: [],
+
+  // For the signed-in Today page. PostgREST embeds are returned pre-shaped,
+  // because the stub answers with fixture JSON and ignores the select.
+  people: [
+    {
+      id: "p-1",
+      user_id: "u-1",
+      full_name: "Luis Ortega",
+      preferred_name: "Luis",
+      profile_photo_url: null,
+      instagram_username: "luislistens",
+      phone_number: "(510) 555-0188",
+      email: null,
+      birthday: null,
+      hometown: "Lima",
+      dorm_or_residence: null,
+      university: null,
+      major: "Economics",
+      graduation_year: null,
+      relationship_strength: 2,
+      relationship_label: null,
+      reminders_enabled: true,
+      reminder_interval_days: null,
+      status: "active",
+      first_met_at: iso(120 * day),
+      first_met_location: "Econ 201 study group",
+      general_notes: "Runs the student radio late-night show.",
+      created_at: iso(120 * day),
+      updated_at: iso(120 * day),
+      slug: null,
+      interactions: [{ occurred_at: iso(60 * day) }],
+      person_tags: [],
+    },
+    {
+      id: "p-2",
+      user_id: "u-1",
+      full_name: "Amelia Chen",
+      preferred_name: null,
+      profile_photo_url: null,
+      instagram_username: null,
+      phone_number: null,
+      email: "amelia@example.edu",
+      birthday: null,
+      hometown: null,
+      dorm_or_residence: null,
+      university: null,
+      major: null,
+      graduation_year: null,
+      relationship_strength: 3,
+      relationship_label: null,
+      reminders_enabled: true,
+      reminder_interval_days: null,
+      status: "active",
+      first_met_at: iso(30 * day),
+      first_met_location: null,
+      general_notes: null,
+      created_at: iso(30 * day),
+      updated_at: iso(30 * day),
+      slug: null,
+      interactions: [{ occurred_at: iso(3 * day) }],
+      person_tags: [],
+    },
+  ],
+  person_contact_methods: [],
+  reminders: [],
 };
+
+/**
+ * One `people` table has to satisfy both readers: the admin aggregates count
+ * rows per user, and Today renders them. The filler rows belong to u-2 and
+ * were all seen yesterday, so the least-recently-seen person is still Luis.
+ */
+tables.people.push(
+  ...Array.from({ length: 123 }, (unused, index) => ({
+    ...tables.people[1],
+    id: `p-fill-${index}`,
+    user_id: "u-2",
+    full_name: `Filler Person ${index}`,
+    preferred_name: null,
+    email: null,
+    created_at: iso(35 * day),
+    first_met_at: iso(35 * day),
+    interactions: [{ occurred_at: iso(day) }],
+  })),
+);
 
 function sessionCookieValue(user) {
   const session = {
