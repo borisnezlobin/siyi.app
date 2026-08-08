@@ -32,8 +32,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AmbientHeader } from "@/components/ambient-header";
-import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
+import { PersonProfileHeader } from "@/components/person-profile-header";
 import { Button } from "@/components/button";
 import { SharePersonSheet } from "@/components/share-person-sheet";
 import { ErrorState, LoadingState } from "@/components/load-state";
@@ -46,7 +46,6 @@ import {
   contactDraftsOf,
   type ContactMethodDraft,
 } from "@/lib/contact-methods";
-import { relationshipLabelFor } from "@/lib/relationship-labels";
 import {
   dueDateLabel,
   lastSeenLabel,
@@ -290,33 +289,7 @@ export default function PersonDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.profileHeader}>
-          <Avatar
-            name={person.fullName}
-            size={126}
-            uri={person.profilePhotoUrl}
-          />
-          <View style={styles.profileCopy}>
-            <AppText style={styles.name} variant="display">
-              {person.preferredName || person.fullName}
-            </AppText>
-            {person.preferredName ? (
-              <AppText style={styles.muted}>{person.fullName}</AppText>
-            ) : null}
-            <View style={styles.tagRow}>
-              <View style={styles.strengthChip}>
-                <AppText style={styles.strengthText} variant="caption">
-                  {relationshipLabelFor(person)}
-                </AppText>
-              </View>
-              {person.tags.map((tag) => (
-                <View key={tag.id} style={styles.tagChip}>
-                  <AppText variant="caption">{tag.name}</AppText>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
+        <PersonProfileHeader person={person} />
 
         <View style={styles.contactActions}>
           {person.phoneNumber ? (
@@ -720,41 +693,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 44,
   },
-  profileHeader: {
-    alignItems: "center",
-    gap: 14,
-  },
-  profileCopy: {
-    alignItems: "center",
-    gap: 4,
-  },
-  name: {
-    textAlign: "center",
-  },
   muted: {
     color: colors.inkMuted,
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    justifyContent: "center",
-    marginTop: 5,
-  },
-  strengthChip: {
-    backgroundColor: colors.coralSoft,
-    borderRadius: radii.round,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-  },
-  strengthText: {
-    color: colors.coralStrong,
-  },
-  tagChip: {
-    backgroundColor: colors.mist,
-    borderRadius: radii.round,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
   },
   contactActions: {
     flexDirection: "row",
