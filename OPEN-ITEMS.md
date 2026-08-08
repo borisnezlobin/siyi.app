@@ -56,6 +56,23 @@ for directly.
 - [ ] Relative dates differ: web says "1 day ago" / "23 minutes ago" where the
       phone says "Yesterday" / "Today". One helper, both platforms.
 
+## Keyboard — the long-running one
+
+- [ ] Inputs and the primary action must stay visible with the keyboard up,
+      everywhere: every screen, sheet, modal and inline editor on the phone,
+      and any web dialog with the same problem. Three previous attempts tweaked
+      props and did not hold.
+      The mechanism has to be structural rather than trusting the sheet library
+      to lift far enough: the primary action pinned in a footer outside the
+      scrollable region, and the focused field scrolled into view on focus.
+      IN FLIGHT.
+
+- [x] The add button in the tab bar sat at `top: -35` inside the bar, so its
+      raised half hung outside its parent. iOS does not deliver touches to a
+      subview outside its parent's bounds, so that half was dead and the tap
+      fell through to the button behind it. The shell is taller by the overhang
+      now and the button sits inside it.
+
 ## Reminders
 
 - [ ] "Due in X days" must also show the actual date.
