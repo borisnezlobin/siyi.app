@@ -83,10 +83,24 @@ export function OwnCardFields({
           );
         }
 
+        // Autocorrect helps where someone is writing words — a hometown, a
+        // subject, a hall — and gets in the way everywhere else. A handle or an
+        // address it "fixes" is simply wrong, and it mangles unusual names.
+        const isHandle =
+          field === "instagramUsername" || field === "discordUsername";
+        const isName = field === "fullName" || field === "preferredName";
+        const correctable = !isHandle && !isName && kind === "text";
+
         return (
           <FormField
-            autoCapitalize={kind === "email" ? "none" : "sentences"}
-            autoCorrect={false}
+            autoCapitalize={
+              kind === "email" || isHandle
+                ? "none"
+                : isName
+                  ? "words"
+                  : "sentences"
+            }
+            autoCorrect={correctable}
             key={field}
             keyboardType={
               kind === "number"
