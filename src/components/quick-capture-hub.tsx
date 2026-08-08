@@ -22,6 +22,19 @@ import {
 import { DateField } from "@/components/date-field";
 import { PersonPicker } from "@/components/person-picker";
 import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
+import { UpdateProposalReview } from "@/components/update-proposal-review";
+import { applyResultMessage, applyUpdateProposal } from "@/lib/update-proposal-apply";
+import { webProposalClient } from "@/lib/update-proposal-client";
+import {
+  buildProposalItems,
+  planFromItems,
+  type Decisions,
+  type ProposalFieldName,
+  type ProposalItem,
+  type ProposalPerson,
+  type ProposalSection,
+  type UpdateProposal,
+} from "@/lib/update-proposal";
 import { todayDateInputValue } from "@/lib/date-input";
 import { getApiResponseError } from "@/lib/http";
 import type { Person } from "@/lib/types";
@@ -60,7 +73,7 @@ const modeCopy: Record<
     save: "Log interaction",
   },
   update: {
-    eyebrow: "Something you learned",
+    eyebrow: "Anything you found out",
     title: "What did you find out?",
     save: "Save update",
   },
@@ -133,6 +146,13 @@ export function QuickCaptureHub({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  // Set once a model has sorted the update: what it wants to write, waiting to
+  // be agreed with. Null means the plain compose form.
+  const [review, setReview] = useState<{
+    items: ProposalItem[];
+    decisions: Decisions;
+    sectionBodies: Record<string, string>;
+  } | null>(null);
 
   const openCapture = useCallback(
     (nextMode: CaptureMode, nextPersonId?: string) => {
@@ -192,6 +212,7 @@ export function QuickCaptureHub({
     setSaving(false);
     setSaved(false);
     setError("");
+    setReview(null);
   }
 
   function closeSheet() {
@@ -277,6 +298,49 @@ export function QuickCaptureHub({
 
     setSaving(true);
     setError("");
+
+    // Ask what this belongs to. Anything at all going wrong here — no key, no
+    // network, a model having a bad day — falls through to saving the words,
+    // which is what this button did before any of this existed.
+    try {
+      const response = await fetch("/api/updates/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personId, text: updateText }),
+      });
+      if (response.ok) {
+        const payload = (await response.json()) as {
+          proposal: UpdateProposal | null;
+          person?: ProposalPerson;
+          sections?: ProposalSection[];
+          contact?: Partial<Record<ProposalFieldName, string | null>>;
+        };
+        if (payload.proposal && payload.person) {
+          const sections = payload.sections ?? [];
+          const items = buildProposalItems({
+            proposal: payload.proposal,
+            person: payload.person,
+            sections,
+            contact: payload.contact ?? {},
+            now: new Date(),
+          });
+          if (items.length > 0) {
+            setReview({
+              items,
+              decisions: {},
+              sectionBodies: Object.fromEntries(
+                sections.map((section) => [section.id, section.body]),
+              ),
+            });
+            setSaving(false);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Saved as plain words below.
+    }
+
     const failure = await saveUpdate({
       personId,
       text: updateText,
@@ -284,6 +348,25 @@ export function QuickCaptureHub({
     });
     if (failure) {
       setError(failure);
+      setSaving(false);
+      return;
+    }
+    finish();
+  }
+
+  async function saveReviewedUpdate() {
+    if (!review) return;
+    setSaving(true);
+    setError("");
+
+    const result = await applyUpdateProposal(
+      webProposalClient({ personId, sectionBodies: review.sectionBodies }),
+      { text: updateText, plan: planFromItems(review.items, review.decisions) },
+    );
+
+    const message = applyResultMessage(result);
+    if (message) {
+      setError(message);
       setSaving(false);
       return;
     }
@@ -356,7 +439,7 @@ export function QuickCaptureHub({
           <span className="min-w-0">
             <span className="block text-sm font-semibold">Add an update</span>
             <span className="block text-[11px] text-ink-muted">
-              Something you learned about them
+              Anything you found out — we file it for you
             </span>
           </span>
         </button>
@@ -416,7 +499,24 @@ export function QuickCaptureHub({
             </button>
           </div>
 
-          {!peopleLoaded || people.length ? (
+          {review ? (
+            <div className="mt-6">
+              <UpdateProposalReview
+                items={review.items}
+                decisions={review.decisions}
+                onDecisionsChange={(decisions) =>
+                  setReview((current) => (current ? { ...current, decisions } : current))
+                }
+                onBack={() => setReview(null)}
+                onConfirm={() => void saveReviewedUpdate()}
+                saving={saving}
+                sourceLabel="Sorted by Siyi"
+              />
+              {error ? (
+                <p className="mt-3 text-center text-xs text-coral-strong">{error}</p>
+              ) : null}
+            </div>
+          ) : !peopleLoaded || people.length ? (
             <>
               {mode === "interaction" ? (
                 <div className="mt-6">

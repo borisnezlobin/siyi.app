@@ -47,12 +47,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ proposal: null, reason: "rate-limited" });
     }
 
-    // Only the columns the model is allowed to know about. What is not selected
-    // cannot be sent, whatever the prompt says.
+    // The contact columns are read for the answer, never for the prompt:
+    // `buildProposalContext` does not name a contact field at all, so what the
+    // model is told stays the same whether or not they are filled. The browser
+    // needs them to say "this would replace the number you already have".
     const { data: person } = await supabase
       .from("people")
       .select(
-        "full_name, preferred_name, hometown, university, major, graduation_year, birthday, dorm_or_residence, first_met_location, relationship_label",
+        "full_name, preferred_name, hometown, university, major, graduation_year, birthday, dorm_or_residence, first_met_location, relationship_label, phone_number, email, instagram_username",
       )
       .eq("id", personId)
       .maybeSingle();
@@ -65,34 +67,45 @@ export async function POST(request: NextRequest) {
       .eq("person_id", personId)
       .order("position", { ascending: true });
 
+    // The bodies are for the browser, which needs them to append rather than
+    // replace. `buildProposalContext` reads headings only, so what a section
+    // already says never reaches the model.
     const sections = (notes ?? []).map((note) => ({
       id: note.id as string,
       heading: note.heading as string,
-      body: "",
+      body: (note.body as string | null) ?? "",
     }));
+
+    const snapshot = {
+      fullName: person.full_name as string,
+      preferredName: person.preferred_name as string | null,
+      hometown: person.hometown as string | null,
+      university: person.university as string | null,
+      major: person.major as string | null,
+      graduationYear: person.graduation_year as number | null,
+      birthday: person.birthday as string | null,
+      dormOrResidence: person.dorm_or_residence as string | null,
+      firstMetLocation: person.first_met_location as string | null,
+      relationshipLabel: person.relationship_label as string | null,
+    };
 
     const result = await sortUpdateWithGemini({
       instructions: proposalInstructions(),
-      context: buildProposalContext({
-        person: {
-          fullName: person.full_name as string,
-          preferredName: person.preferred_name as string | null,
-          hometown: person.hometown as string | null,
-          university: person.university as string | null,
-          major: person.major as string | null,
-          graduationYear: person.graduation_year as number | null,
-          birthday: person.birthday as string | null,
-          dormOrResidence: person.dorm_or_residence as string | null,
-          firstMetLocation: person.first_met_location as string | null,
-          relationshipLabel: person.relationship_label as string | null,
-        },
-        sections,
-        now: new Date(),
-      }),
+      context: buildProposalContext({ person: snapshot, sections, now: new Date() }),
       text,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      person: snapshot,
+      sections,
+      contact: {
+        phone: (person.phone_number as string | null) ?? null,
+        email: (person.email as string | null) ?? null,
+        instagram: (person.instagram_username as string | null) ?? null,
+        discord: null,
+      },
+    });
   } catch (error) {
     return apiError(errorMessage(error), 401);
   }
