@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { render, screen } from "@testing-library/react-native";
 import * as mockReact from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { OwnCardSection } from "@/components/own-card-section";
