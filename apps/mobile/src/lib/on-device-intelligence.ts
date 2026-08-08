@@ -1,4 +1,5 @@
 import ContextIntelligence from "../../modules/context-intelligence/src/ContextIntelligenceModule";
+import { normalizeProposal, type UpdateProposal } from "@/lib/update-proposal";
 import type { Person } from "@/lib/types";
 
 function personContext(person: Person) {
@@ -71,5 +72,33 @@ export async function onDeviceConversationStarters(person: Person) {
       .slice(0, 3);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Sorting one update on the phone itself.
+ *
+ * Nothing leaves the device on this path, so it works on a plane and costs
+ * nothing. Null means there was no model to ask, or it declined — the caller
+ * then tries the server, and failing that saves the update as plain words.
+ */
+export async function onDeviceSortUpdate({
+  context,
+  text,
+}: {
+  context: string;
+  text: string;
+}): Promise<UpdateProposal | null> {
+  if (!ContextIntelligence || ContextIntelligence.availability() !== "available") {
+    return null;
+  }
+
+  try {
+    const json = (await ContextIntelligence.sortUpdate(context, text)).trim();
+    if (!json) return null;
+    return normalizeProposal(JSON.parse(json));
+  } catch {
+    // Bad JSON, a guardrail, or a model that went away mid-answer.
+    return null;
   }
 }

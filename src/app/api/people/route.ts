@@ -9,6 +9,7 @@ import {
 } from "@/lib/contact-methods";
 import { personSlug } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
+import { defaultNoteHeadings } from "@/lib/update-proposal";
 import { personInputSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
@@ -74,6 +75,24 @@ export async function POST(request: NextRequest) {
     if (error) return apiError(error.message, 500);
 
     const createdId = (data as { id?: string } | null)?.id;
+    if (createdId) {
+      // Somewhere to put things from the start: an update that says "likes
+      // snowboarding" has a heading to go under without inventing one, and the
+      // profile reads as a shape to fill rather than a blank.
+      const { error: notesError } = await supabase.from("person_notes").insert(
+        defaultNoteHeadings.map((heading, position) => ({
+          user_id: user.id,
+          person_id: createdId,
+          heading,
+          body: "",
+          position,
+        })),
+      );
+      // The person is saved either way; a missing section can be added by hand,
+      // where a failed save cannot be recovered at all.
+      if (notesError) console.error("default note sections", notesError.message);
+    }
+
     if (drafts && drafts.length > 0 && createdId) {
       // The person is already saved; a contact row that fails to write should
       // not take the whole save down with it.
