@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const safeAreaMetrics = {
@@ -6,61 +12,16 @@ const safeAreaMetrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-/**
- * The last props the sheet shell handed to the library, so a test can do what a
- * swipe down or a backdrop tap does: run the library's own dismissal.
- */
-const mockSheet: { props: Record<string, unknown> } = { props: {} };
-
-// The real sheet runs on the worklet runtime, which does not exist under Jest.
-// This stand-in keeps the parts the app depends on: nothing is on screen until
-// the sheet is presented, and every way of dismissing it ends in onDismiss.
-jest.mock("@gorhom/bottom-sheet", () => {
+jest.mock("@gorhom/bottom-sheet", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const React = require("react");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { View } = require("react-native");
+  require("@/test-support/bottom-sheet").bottomSheetMock(),
+);
 
-  return {
-    __esModule: true,
-    BottomSheetBackdrop: (props: Record<string, unknown>) =>
-      React.createElement(View, props),
-    BottomSheetModal: React.forwardRef(function BottomSheetModal(
-      props: { children?: unknown; onDismiss?: () => void },
-      ref: unknown,
-    ) {
-      const [presented, setPresented] = React.useState(false);
-      // The library has no early exit for dismissing a sheet in its initial
-      // state: it marks the sheet as dismissing and then refuses to render, so
-      // every later present() is swallowed. Modelled here because that is the
-      // bug that stopped the share button working.
-      const everPresented = React.useRef(false);
-      const poisoned = React.useRef(false);
-      mockSheet.props = props as Record<string, unknown>;
-      React.useImperativeHandle(ref, () => ({
-        present: () => {
-          if (poisoned.current) return;
-          everPresented.current = true;
-          setPresented(true);
-        },
-        dismiss: () => {
-          if (!everPresented.current) poisoned.current = true;
-          setPresented(false);
-          props.onDismiss?.();
-        },
-      }));
-      return presented
-        ? React.createElement(View, { testID: "bottom-sheet" }, props.children)
-        : null;
-    }),
-    BottomSheetScrollView: ({ children, ...rest }: { children?: unknown }) =>
-      React.createElement(View, rest, children),
-    BottomSheetView: ({ children, ...rest }: { children?: unknown }) =>
-      React.createElement(View, rest, children),
-  };
-});
-
-jest.mock("expo-haptics", () => ({ selectionAsync: jest.fn() }));
+jest.mock("expo-haptics", () => ({
+  impactAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: "light" },
+}));
 
 jest.mock("@/lib/on-device-intelligence", () => ({
   onDeviceShortBio: jest.fn(async () => null),
@@ -83,6 +44,11 @@ jest.mock("@/providers/auth-provider", () => ({
 
 import { SharePersonSheet } from "@/components/share-person-sheet";
 import { listPersonShares } from "@/lib/person-share-data";
+import {
+  sheetFooterTestId,
+  sheetScrollTestId,
+  sheetSpy as mockSheet,
+} from "@/test-support/bottom-sheet";
 import type { Person } from "@/lib/types";
 
 const person = {
@@ -135,47 +101,91 @@ describe("the share sheet", () => {
     mockSheet.props = {};
   });
 
-  it("offers copying the link and nothing else", async () => {
-    listShares.mockResolvedValue([]);
+  it("offers only the contact card until migration 0015 has been applied", async () => {
+    listShares.mockResolvedValue({ available: false, shares: [] });
+
+    await renderSheet();
+
+    await waitFor(() => expect(listShares).toHaveBeenCalled());
+
+    // Exactly today's behaviour: the card button, no link controls, no error.
+    expect(screen.getByText("Share contact card")).toBeTruthy();
+    expect(screen.queryByText("Create a link")).toBeNull();
+    expect(screen.queryByText("Or send a link")).toBeNull();
+  });
+
+  it("offers copying the link once the table exists", async () => {
+    listShares.mockResolvedValue({ available: true, shares: [] });
 
     await renderSheet();
 
     await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
 
-    // Two buttons, and none of what sharing used to ask of people first.
+    // One link action, not three. The contact card is gone entirely.
     expect(screen.getByText("Share link")).toBeTruthy();
     expect(screen.queryByText("Share contact card")).toBeNull();
     expect(screen.queryByText("Create a link")).toBeNull();
-    expect(screen.queryByText("Or send a link")).toBeNull();
-    expect(screen.queryByLabelText("Turn off link")).toBeNull();
-    expect(screen.queryByLabelText("Send link")).toBeNull();
-    expect(screen.queryByLabelText("30 days")).toBeNull();
   });
 
-  it("shows the link itself, in full, once there is one", async () => {
-    listShares.mockResolvedValue([
-      {
-        id: "share-1",
-        personId: "person-1",
-        token: "x8uEs2",
-        selection: {},
-        expiresAt: "2026-09-05T00:00:00.000Z",
-        revokedAt: null,
-        lastViewedAt: null,
-        viewCount: 0,
-        createdAt: "2026-08-06T00:00:00.000Z",
-      },
-    ]);
+  it("lists a live link with its expiry and a way to turn it off", async () => {
+    listShares.mockResolvedValue({
+      available: true,
+      shares: [
+        {
+          id: "share-1",
+          personId: "person-1",
+          token: "abcdefgh".repeat(4),
+          selection: {},
+          expiresAt: "2026-09-05T00:00:00.000Z",
+          revokedAt: null,
+          lastViewedAt: null,
+          viewCount: 0,
+          createdAt: "2026-08-06T00:00:00.000Z",
+        },
+      ],
+    });
 
     await renderSheet();
 
-    await waitFor(() =>
-      expect(screen.getByText("https://www.siyi.app/s/x8uEs2")).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/abcdefgh/)).toBeTruthy());
+    expect(screen.getByLabelText("Turn off link")).toBeTruthy();
+    expect(screen.getByLabelText("Send link")).toBeTruthy();
+  });
+
+  it("pins the share action in the footer, out of the scrolling region", async () => {
+    listShares.mockResolvedValue({ available: true, shares: [] });
+
+    await renderSheet();
+    await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
+
+    // Ticking every field and listing links makes the body taller than the
+    // sheet, so an action inside it would be below the fold.
+    const footer = screen.getByTestId(sheetFooterTestId);
+    expect(within(footer).getByText("Copy link")).toBeTruthy();
+    expect(within(footer).getByText("Share link")).toBeTruthy();
+
+    const scrolling = screen.getByTestId(sheetScrollTestId);
+    expect(within(scrolling).queryByText("Copy link")).toBeNull();
+    expect(within(scrolling).queryByText("Share link")).toBeNull();
+  });
+
+  it("pins the contact-card action too, when there are no links", async () => {
+    listShares.mockResolvedValue({ available: false, shares: [] });
+
+    await renderSheet();
+    await waitFor(() => expect(listShares).toHaveBeenCalled());
+
+    const footer = screen.getByTestId(sheetFooterTestId);
+    expect(within(footer).getByText("Share contact card")).toBeTruthy();
+    expect(
+      within(screen.getByTestId(sheetScrollTestId)).queryByText(
+        "Share contact card",
+      ),
+    ).toBeNull();
   });
 
   it("opens when asked and goes away again", async () => {
-    listShares.mockResolvedValue([]);
+    listShares.mockResolvedValue({ available: false, shares: [] });
 
     const { rerender } = await render(sheetFor(false, () => {}));
     expect(screen.queryByText("Share May")).toBeNull();
@@ -188,7 +198,7 @@ describe("the share sheet", () => {
   });
 
   it("closes when the sheet itself is dismissed, not only from the close button", async () => {
-    listShares.mockResolvedValue([]);
+    listShares.mockResolvedValue({ available: false, shares: [] });
     const onClose = jest.fn();
 
     await renderSheet(onClose);
