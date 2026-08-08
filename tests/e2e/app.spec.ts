@@ -725,3 +725,40 @@ test("a catch-up offers someone else, and a way to reach whoever is picked", asy
   const discord = dialog.getByRole("link", { name: /Discord/ });
   await expect(discord).toHaveAttribute("href", "https://discord.com/app");
 });
+
+/**
+ * The admin route is unlisted, and it answers 404 rather than 403 so that
+ * nobody who is not on the allowlist learns it exists. This asserts the status
+ * code over real HTTP, because "redirected to sign in" and "403" both leak
+ * that there is something here worth signing in for.
+ */
+test("the admin route denies it exists rather than asking who you are", async ({
+  page,
+}) => {
+  const response = await page.goto("/admin");
+
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByText("How Siyi is doing")).toHaveCount(0);
+  await expect(page.getByText("Send an announcement")).toHaveCount(0);
+
+  // Indistinguishable from a URL that was never a route: same status, same
+  // page. It used to answer 200 and render the whole signed-in shell around
+  // the not-found copy, which told a scanner /admin was real.
+  const madeUp = await page.goto("/definitely-not-a-real-page-xyz");
+  expect(madeUp?.status()).toBe(404);
+  const madeUpBody = await page.locator("body").innerText();
+  await page.goto("/admin");
+  expect(await page.locator("body").innerText()).toBe(madeUpBody);
+});
+
+test("the admin endpoints say nothing to someone who is not an admin", async ({
+  request,
+}) => {
+  // Not 401, not 403, and no hint in the body about what is behind them.
+  for (const path of ["/api/admin/stats", "/api/admin/announcements"]) {
+    const response = await request.get(path);
+    expect(response.status()).toBe(404);
+    expect(await response.text()).toBe("");
+  }
+});
