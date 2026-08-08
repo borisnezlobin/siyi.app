@@ -1,5 +1,6 @@
 import {
   CalendarDots,
+  ChatCircleDots,
   ChatCircleText,
   Coffee,
   Confetti,
@@ -14,6 +15,7 @@ import { interactionLabels } from "@/lib/interaction-labels";
 import type { InteractionType } from "@/lib/types";
 
 const iconsByType: Record<InteractionType, Icon> = {
+  talked: ChatCircleDots,
   texted: ChatCircleText,
   called: Phone,
   coffee: Coffee,
@@ -26,6 +28,7 @@ const iconsByType: Record<InteractionType, Icon> = {
 };
 
 const pickerOrder: InteractionType[] = [
+  "talked",
   "texted",
   "called",
   "coffee",

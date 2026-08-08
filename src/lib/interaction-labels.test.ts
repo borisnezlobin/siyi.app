@@ -16,9 +16,13 @@ describe("working a saved label back to a type", () => {
     expect(interactionTypeFromLabel("  cOFFee ")).toBe("coffee");
   });
 
+  it("reads the old default back as the kind it now is", () => {
+    // Updates defaulted to "Talked" long before it was a kind of its own, so
+    // those rows used to come back as "other".
+    expect(interactionTypeFromLabel("Talked")).toBe("talked");
+  });
+
   it("falls back to other for labels it has never seen", () => {
-    // "Talked" was the default before the picker existed.
-    expect(interactionTypeFromLabel("Talked")).toBe("other");
     expect(interactionTypeFromLabel("Went bouldering")).toBe("other");
   });
 

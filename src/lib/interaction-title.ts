@@ -8,14 +8,15 @@ import { interactionTypes, type InteractionType } from "@/lib/types";
  * else the user invents is stored as their own words.
  */
 
-export const defaultInteractionType: InteractionType = "met";
+export const defaultInteractionType: InteractionType = "talked";
 
 /** Offered as one-tap shortcuts under the title field. */
 export const interactionTitleSuggestions = [
+  "Talked",
+  "Texted",
+  "Called",
   "Coffee",
   "Meal",
-  "Called",
-  "Texted",
   "Class",
   "Party",
   "Event",

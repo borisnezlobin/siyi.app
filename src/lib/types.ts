@@ -5,6 +5,7 @@ export const personStatuses = ["active", "muted", "archived"] as const;
 export type PersonStatus = (typeof personStatuses)[number];
 
 export const interactionTypes = [
+  "talked",
   "met",
   "texted",
   "called",
