@@ -5,6 +5,7 @@ import { Avatar } from "@/components/avatar";
 import {
   measureSharedRect,
   personAvatarSharedId,
+  profileAvatarSize,
   useSharedElement,
 } from "@/components/shared-element";
 import { AppText } from "@/components/app-text";
@@ -28,6 +29,7 @@ export function PersonRow({
   const shared = useSharedElement();
   const reduceMotion = useReduceMotion();
   const avatarRef = useRef<View | null>(null);
+  const nameRef = useRef<View | null>(null);
 
   // Measured as the row is tapped rather than on layout: a list scrolls, so
   // where the avatar was when it was drawn is not where it is when it is used.
@@ -41,18 +43,47 @@ export function PersonRow({
 
     // Never let a measurement that does not come back swallow the tap: the
     // navigation matters and the animation does not.
-    const from = await Promise.race([
-      measureSharedRect(avatarRef.current),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 80)),
+    const measured = await Promise.race([
+      Promise.all([
+        measureSharedRect(avatarRef.current),
+        measureSharedRect(nameRef.current),
+      ]),
+      new Promise<[null, null]>((resolve) =>
+        setTimeout(() => resolve([null, null]), 80),
+      ),
     ]);
-    if (from) {
-      shared.begin({
-        id: personAvatarSharedId(person.id),
-        from,
-        render: (size) => (
-          <Avatar name={person.fullName} size={size} uri={person.profilePhotoUrl} />
+    const [avatarFrom, nameFrom] = measured;
+
+    const parts = [];
+    if (avatarFrom) {
+      parts.push({
+        key: "avatar",
+        from: avatarFrom,
+        render: () => (
+          <Avatar
+            name={person.fullName}
+            size={profileAvatarSize}
+            uri={person.profilePhotoUrl}
+          />
         ),
       });
+    }
+    if (nameFrom) {
+      parts.push({
+        key: "name",
+        from: nameFrom,
+        // Drawn as the profile draws it, so what lands is already the final
+        // thing rather than the row's smaller version stretched up to size.
+        render: () => (
+          <AppText numberOfLines={1} variant="display">
+            {person.preferredName || person.fullName}
+          </AppText>
+        ),
+      });
+    }
+
+    if (parts.length > 0) {
+      shared.begin({ id: personAvatarSharedId(person.id), parts });
     }
     onPress();
   }
@@ -72,9 +103,11 @@ export function PersonRow({
         <Avatar name={person.fullName} size={48} uri={person.profilePhotoUrl} />
       </View>
       <View style={styles.copy}>
-        <AppText numberOfLines={1} variant="heading">
-          {person.preferredName || person.fullName}
-        </AppText>
+        <View collapsable={false} ref={nameRef}>
+          <AppText numberOfLines={1} variant="heading">
+            {person.preferredName || person.fullName}
+          </AppText>
+        </View>
         <View style={styles.metaRow}>
           <Clock color={colors.inkMuted} size={13} />
           <AppText numberOfLines={1} variant="caption">

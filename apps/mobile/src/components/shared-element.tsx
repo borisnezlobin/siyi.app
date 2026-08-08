@@ -36,11 +36,19 @@ export type SharedRect = {
   height: number;
 };
 
+/** One thing travelling — the avatar, the name — inside a single flight. */
+export type FlightPart = {
+  /** Identifies the part across the two screens, e.g. "avatar" or "name". */
+  key: string;
+  from: SharedRect;
+  render: () => ReactNode;
+};
+
 type Flight = {
   id: string;
-  from: SharedRect;
-  to: SharedRect | null;
-  render: (size: number) => ReactNode;
+  parts: FlightPart[];
+  /** Where each part lands, keyed as the parts are. Null until it is known. */
+  to: Record<string, SharedRect> | null;
   /** When it was started, so one that never lands cannot ambush a later visit. */
   startedAt: number;
 };
@@ -52,6 +60,9 @@ type Flight = {
  * avatar in from a row rectangle measured on another screen minutes ago.
  */
 const flightExpiresMs = 1_200;
+
+/** The size the avatar lands at, so the copy is drawn at its final size. */
+export const profileAvatarSize = 126;
 
 /**
  * Whether a flight begun at `startedAt` should still be honoured. Kept as a
@@ -67,7 +78,11 @@ type SharedElementContextValue = {
   /** Called by the source as it is pressed, before navigation. */
   begin: (flight: Omit<Flight, "to" | "startedAt">) => void;
   /** Called by the destination once it knows where it sits. */
-  arriveAt: (id: string, to: SharedRect, onLanded: () => void) => void;
+  arriveAt: (
+    id: string,
+    to: Record<string, SharedRect>,
+    onLanded: () => void,
+  ) => void;
   /** True while `id` is mid-flight, so the destination can stay hidden. */
   isFlying: (id: string) => boolean;
   /** Abandons a flight that never reached a destination. */
@@ -120,7 +135,7 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
   );
 
   const arriveAt = useCallback(
-    (id: string, to: SharedRect, onLanded: () => void) => {
+    (id: string, to: Record<string, SharedRect>, onLanded: () => void) => {
       setFlight((current) => {
         if (!current || current.id !== id || current.to) {
           // Nothing to fly: the caller still has to reveal itself.
@@ -160,59 +175,71 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
   return (
     <SharedElementContext.Provider value={value}>
       {children}
-      {flight?.to ? <FlyingCopy flight={flight} progress={progress} /> : null}
+      {flight?.to ? <FlyingCopies flight={flight} progress={progress} /> : null}
     </SharedElementContext.Provider>
   );
 }
 
 /**
- * The copy in flight. It is drawn at the destination's size and scaled down to
- * the source's, rather than the other way round, so the version that lands —
- * the one held still at the end — is rendered at its natural resolution.
+ * The copies in flight, drawn above both screens.
+ *
+ * Each is laid out at the size it will land at and scaled down to the size it
+ * left, rather than the other way round, so the frame that matters — the one
+ * held still at the end — is rendered at its natural resolution rather than a
+ * blown-up small one.
  */
-function FlyingCopy({
+function FlyingCopies({
   flight,
   progress,
 }: {
   flight: Flight;
   progress: Animated.Value;
 }) {
-  const { from, to } = flight;
+  const { parts, to } = flight;
   if (!to) return null;
-
-  const scaleFrom = to.width === 0 ? 1 : from.width / to.width;
-  const interpolate = (start: number, end: number) =>
-    progress.interpolate({ inputRange: [0, 1], outputRange: [start, end] });
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.View
-        style={{
-          height: to.height,
-          left: 0,
-          position: "absolute",
-          top: 0,
-          width: to.width,
-          transform: [
-            // Centres are what line up; sizes are handled by the scale below.
-            {
-              translateX: interpolate(
-                from.x + from.width / 2 - to.width / 2,
-                to.x,
-              ),
-            },
-            {
-              translateY: interpolate(
-                from.y + from.height / 2 - to.height / 2,
-                to.y,
-              ),
-            },
-            { scale: interpolate(scaleFrom, 1) },
-          ],
-        }}
-      >
-        {flight.render(to.width)}
-      </Animated.View>
+      {parts.map((part) => {
+        const target = to[part.key];
+        if (!target) return null;
+
+        const interpolate = (start: number, end: number) =>
+          progress.interpolate({ inputRange: [0, 1], outputRange: [start, end] });
+        const scaleFrom =
+          target.width === 0 ? 1 : part.from.width / target.width;
+
+        return (
+          <Animated.View
+            key={part.key}
+            style={{
+              height: target.height,
+              left: 0,
+              position: "absolute",
+              top: 0,
+              width: target.width,
+              transform: [
+                // Centres line up; the size difference is the scale below.
+                {
+                  translateX: interpolate(
+                    part.from.x + part.from.width / 2 - target.width / 2,
+                    target.x,
+                  ),
+                },
+                {
+                  translateY: interpolate(
+                    part.from.y + part.from.height / 2 - target.height / 2,
+                    target.y,
+                  ),
+                },
+                { scale: interpolate(scaleFrom, 1) },
+              ],
+            }}
+          >
+            {part.render()}
+          </Animated.View>
+        );
+      })}
     </View>
   );
 }

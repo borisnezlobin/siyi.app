@@ -5,6 +5,7 @@ import { Avatar } from "@/components/avatar";
 import {
   measureSharedRect,
   personAvatarSharedId,
+  profileAvatarSize,
   useSharedElement,
 } from "@/components/shared-element";
 import { colors, radii } from "@/constants/theme";
@@ -13,7 +14,7 @@ import { profileIntro } from "@/lib/profile-intro";
 import { relationshipLabelFor } from "@/lib/relationship-labels";
 import type { Person } from "@/lib/types";
 
-const avatarSize = 126;
+const avatarSize = profileAvatarSize;
 
 /**
  * The avatar and name at the top of a person's screen.
@@ -29,9 +30,13 @@ export function PersonProfileHeader({ person }: { person: Person }) {
   const shared = useSharedElement();
   const sharedId = personAvatarSharedId(person.id);
   const avatarRef = useRef<View | null>(null);
+  const nameRef = useRef<View | null>(null);
   const [arriving, setArriving] = useState(() =>
     Boolean(shared?.isFlying(sharedId)),
   );
+  // Frozen at mount: the entrance decision must not change when the flight
+  // finishes, or it plays again.
+  const [arrivingAtMount] = useState(arriving);
 
   const intro = profileIntro(useReduceMotion());
   const [avatarProgress] = useState(
@@ -41,9 +46,8 @@ export function PersonProfileHeader({ person }: { person: Person }) {
     () => new Animated.Value(intro.animate ? 0 : 1),
   );
 
-  // Hand this screen's rectangle to the flight, so the copy knows where to
-  // land. Measured after layout, which is why it is an effect rather than a
-  // value read during render.
+  // Hand this screen's rectangles to the flight, so the copies know where to
+  // land. Measured after layout, which is why this is an effect.
   useEffect(() => {
     if (!arriving || !shared) return;
     let cancelled = false;
@@ -52,13 +56,21 @@ export function PersonProfileHeader({ person }: { person: Person }) {
       if (cancelled) return;
       setArriving(false);
       avatarProgress.setValue(1);
+      nameProgress.setValue(1);
     };
 
     const handle = requestAnimationFrame(() => {
-      void measureSharedRect(avatarRef.current).then((to) => {
+      void Promise.all([
+        measureSharedRect(avatarRef.current),
+        measureSharedRect(nameRef.current),
+      ]).then(([avatarTo, nameTo]) => {
         if (cancelled) return;
-        if (to) {
-          // Revealed by the flight, when the copy actually lands.
+        const to: Record<string, { x: number; y: number; width: number; height: number }> = {};
+        if (avatarTo) to.avatar = avatarTo;
+        if (nameTo) to.name = nameTo;
+
+        if (Object.keys(to).length > 0) {
+          // Revealed by the flight, when the copies actually land.
           shared.arriveAt(sharedId, to, reveal);
         } else {
           shared.cancel(sharedId);
@@ -71,27 +83,35 @@ export function PersonProfileHeader({ person }: { person: Person }) {
       cancelled = true;
       cancelAnimationFrame(handle);
     };
-  }, [arriving, avatarProgress, shared, sharedId]);
+    // Runs once for the arrival: adding the animated values would restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Exactly once per mount. Depending on `arriving` replayed the whole
+  // entrance the moment the flight finished, and React re-invoking effects in
+  // development doubled that again — which is why the name slid in repeatedly.
+  const playedEntrance = useRef(false);
 
   useEffect(() => {
-    if (!intro.animate) {
-      avatarProgress.setValue(1);
-      nameProgress.setValue(1);
+    if (playedEntrance.current) return;
+    playedEntrance.current = true;
+
+    // Nothing flew here, so the header arrives under its own steam.
+    if (!intro.animate || arrivingAtMount) {
+      if (!arrivingAtMount) {
+        avatarProgress.setValue(1);
+        nameProgress.setValue(1);
+      }
       return;
     }
 
     const entrance = Animated.parallel([
-      // The avatar only plays the substitute entrance when nothing flew here.
-      ...(arriving
-        ? []
-        : [
-            Animated.timing(avatarProgress, {
-              duration: intro.durationMs,
-              easing: Easing.out(Easing.cubic),
-              toValue: 1,
-              useNativeDriver: true,
-            }),
-          ]),
+      Animated.timing(avatarProgress, {
+        duration: intro.durationMs,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
       Animated.timing(nameProgress, {
         delay: intro.nameDelayMs,
         duration: intro.durationMs,
@@ -103,7 +123,8 @@ export function PersonProfileHeader({ person }: { person: Person }) {
     entrance.start();
 
     return () => entrance.stop();
-  }, [arriving, avatarProgress, intro, nameProgress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <View style={styles.profileHeader}>
@@ -133,7 +154,7 @@ export function PersonProfileHeader({ person }: { person: Person }) {
         style={[
           styles.profileCopy,
           {
-            opacity: nameProgress,
+            opacity: arriving ? 0 : nameProgress,
             transform: [
               {
                 translateY: nameProgress.interpolate({
@@ -146,9 +167,13 @@ export function PersonProfileHeader({ person }: { person: Person }) {
         ]}
         testID="person-profile-name"
       >
-        <AppText style={styles.name} variant="display">
-          {person.preferredName || person.fullName}
-        </AppText>
+        {/* Measured on its own: the block around it carries the second name
+            and the tag chips, which are not travelling. */}
+        <View collapsable={false} ref={nameRef}>
+          <AppText style={styles.name} variant="display">
+            {person.preferredName || person.fullName}
+          </AppText>
+        </View>
         {person.preferredName ? (
           <AppText style={styles.muted}>{person.fullName}</AppText>
         ) : null}
