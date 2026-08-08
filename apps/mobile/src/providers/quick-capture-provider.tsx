@@ -1,5 +1,4 @@
 import {
-  BottomSheetScrollView,
   BottomSheetTextInput,
   BottomSheetView,
   type BottomSheetModal,
@@ -49,13 +48,16 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppBottomSheet } from "@/components/app-bottom-sheet";
+import {
+  AppBottomSheet,
+  AppBottomSheetScrollView,
+} from "@/components/app-bottom-sheet";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { DateField } from "@/components/date-field";
+import { useRevealOnFocus } from "@/components/focus-scroll";
 import { FormField } from "@/components/form-field";
-import { useKeyboardHeight } from "@/components/keyboard-aware-form";
 import { brand } from "@/config/brand";
 import {
   colors,
@@ -206,6 +208,7 @@ function PersonPicker({
   label?: string;
 }) {
   const [query, setQuery] = useState("");
+  const revealOnFocus = useRevealOnFocus();
   const lockedPerson = people.find((person) =>
     selectedIds.includes(person.id),
   );
@@ -261,6 +264,7 @@ function PersonPicker({
           style={styles.searchInput}
           submitBehavior="blurAndSubmit"
           value={query}
+          {...revealOnFocus}
         />
       </View>
       <AppText variant="label">
@@ -409,7 +413,6 @@ export function QuickCaptureProvider({
   children: ReactNode;
 }) {
   const modalRef = useRef<BottomSheetModal>(null);
-  const keyboardHeight = useKeyboardHeight();
   const contextRequestRef = useRef(0);
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -903,10 +906,55 @@ export function QuickCaptureProvider({
     }
   }
 
+  // The three phases that ask you to type. Their save button lives in the
+  // sheet's pinned footer, where the keyboard cannot get on top of it and no
+  // amount of form above it can push it below the fold. The error goes there
+  // too: a warning you have to scroll to find is a warning nobody reads.
+  const composing =
+    phase === "reminder" || phase === "interaction" || phase === "update";
+
+  const composerFooter = (
+    <>
+      {error ? (
+        <AppText style={styles.error} variant="caption">
+          {error}
+        </AppText>
+      ) : null}
+      {phase === "reminder" ? (
+        <Button
+          disabled={!selectedPersonIds[0] || !reminderText.trim()}
+          label="Save reminder"
+          loading={saving}
+          onPress={() => void saveReminder()}
+        />
+      ) : phase === "interaction" ? (
+        <Button
+          disabled={selectedPersonIds.length === 0}
+          label="Log interaction"
+          loading={saving}
+          onPress={() => void saveInteraction()}
+        />
+      ) : (
+        <Button
+          disabled={
+            !updateText.trim() ||
+            (!editingEntry && selectedPersonIds.length === 0)
+          }
+          label={editingEntry ? "Save changes" : "Save update"}
+          loading={saving}
+          onPress={() => void saveUpdate()}
+        />
+      )}
+    </>
+  );
+
   return (
     <QuickCaptureContext.Provider value={value}>
       {children}
-      <AppBottomSheet ref={modalRef}>
+      <AppBottomSheet
+        footer={composing ? composerFooter : undefined}
+        ref={modalRef}
+      >
         {phase === "menu" ? (
           <BottomSheetView
             style={[
@@ -963,14 +1011,7 @@ export function QuickCaptureProvider({
         ) : phase === "catch-up" ||
           phase === "choose-catch-up" ||
           phase === "contact" ? (
-          <BottomSheetScrollView
-            contentContainerStyle={[
-              styles.sheetContent,
-              { paddingBottom: Math.max(insets.bottom + 24, 36) + keyboardHeight },
-            ]}
-            keyboardDismissMode="on-drag"
-            keyboardShouldPersistTaps="handled"
-          >
+          <AppBottomSheetScrollView>
             <View style={styles.sheetHeader}>
               {phase === "contact" || phase === "choose-catch-up" ? (
                 <Pressable
@@ -1203,16 +1244,9 @@ export function QuickCaptureProvider({
                 {error}
               </AppText>
             ) : null}
-          </BottomSheetScrollView>
+          </AppBottomSheetScrollView>
         ) : (
-          <BottomSheetScrollView
-            contentContainerStyle={[
-              styles.sheetContent,
-              { paddingBottom: Math.max(insets.bottom + 24, 36) + keyboardHeight },
-            ]}
-            keyboardDismissMode="on-drag"
-            keyboardShouldPersistTaps="handled"
-          >
+          <AppBottomSheetScrollView>
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
                 <AppText variant="title">
@@ -1365,12 +1399,6 @@ export function QuickCaptureProvider({
                     Due {reminderDayLabel(dueDay)}
                   </AppText>
                 </View>
-                <Button
-                  disabled={!selectedPersonIds[0] || !reminderText.trim()}
-                  label="Save reminder"
-                  loading={saving}
-                  onPress={() => void saveReminder()}
-                />
               </>
             ) : phase === "interaction" ? (
               <>
@@ -1460,13 +1488,6 @@ export function QuickCaptureProvider({
                     />
                   </>
                 ) : null}
-
-                <Button
-                  disabled={selectedPersonIds.length === 0}
-                  label="Log interaction"
-                  loading={saving}
-                  onPress={() => void saveInteraction()}
-                />
               </>
             ) : (
               <>
@@ -1583,16 +1604,6 @@ export function QuickCaptureProvider({
                   />
                 ) : null}
 
-                <Button
-                  disabled={
-                    !updateText.trim() ||
-                    (!editingEntry && selectedPersonIds.length === 0)
-                  }
-                  label={editingEntry ? "Save changes" : "Save update"}
-                  loading={saving}
-                  onPress={() => void saveUpdate()}
-                />
-
                 {editingEntry ? (
                   confirmingDelete ? (
                     <View style={styles.confirmDelete}>
@@ -1631,12 +1642,7 @@ export function QuickCaptureProvider({
                 ) : null}
               </>
             )}
-            {error ? (
-              <AppText style={styles.error} variant="caption">
-                {error}
-              </AppText>
-            ) : null}
-          </BottomSheetScrollView>
+          </AppBottomSheetScrollView>
         )}
       </AppBottomSheet>
     </QuickCaptureContext.Provider>

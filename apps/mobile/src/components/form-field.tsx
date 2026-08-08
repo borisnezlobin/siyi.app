@@ -1,5 +1,5 @@
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -7,6 +7,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { AppText } from "@/components/app-text";
+import { useFocusScroll } from "@/components/focus-scroll";
 import {
   colors,
   fontFamilies,
@@ -32,14 +33,29 @@ export function FormField({
   accessory,
   multiline,
   style,
+  ref,
+  onFocus,
   ...props
 }: FormFieldProps) {
   const Input = bottomSheet ? BottomSheetTextInput : TextInput;
-  const input = (
+  const focusScroll = useFocusScroll();
+  // Kept alongside whatever ref the caller passed, because the field has to be
+  // measurable to be scrolled to and the caller's ref is a callback, not ours.
+  const input = useRef<TextInput | null>(null);
+
+  const field = (
     <Input
       accessibilityLabel={label}
       multiline={multiline}
+      onFocus={(event) => {
+        focusScroll?.reveal(input.current);
+        onFocus?.(event);
+      }}
       placeholderTextColor={colors.inkMuted}
+      ref={(instance: TextInput | null | undefined) => {
+        input.current = instance ?? null;
+        ref?.(instance);
+      }}
       selectionColor={colors.coral}
       style={[
         accessory ? styles.bareInput : styles.input,
@@ -58,11 +74,11 @@ export function FormField({
       {label ? <AppText variant="label">{label}</AppText> : null}
       {accessory ? (
         <View style={[styles.frame, error && styles.errorFrame]}>
-          {input}
+          {field}
           {accessory}
         </View>
       ) : (
-        input
+        field
       )}
       {error ? (
         <AppText

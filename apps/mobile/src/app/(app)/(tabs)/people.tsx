@@ -10,8 +10,9 @@ import {
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
+import { RevealingTextInput } from "@/components/focus-scroll";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";

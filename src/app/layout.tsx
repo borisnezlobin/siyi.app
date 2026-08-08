@@ -57,6 +57,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Without this the on-screen keyboard slides over the page rather than
+  // shrinking it, so a sheet sized in dvh stays full height and the field
+  // being typed in ends up underneath the keys.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

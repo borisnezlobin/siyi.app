@@ -2,10 +2,11 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ClockCountdown, MagnifyingGlass } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
+import { RevealingTextInput } from "@/components/focus-scroll";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { colors, fontFamilies, radii } from "@/constants/theme";
@@ -168,7 +169,7 @@ export default function RemindersScreen() {
       <View style={styles.filters}>
         <View style={styles.search}>
           <MagnifyingGlass color={colors.inkMuted} size={18} />
-          <TextInput
+          <RevealingTextInput
             accessibilityLabel="Filter reminders"
             onChangeText={setQuery}
             onSubmitEditing={() => Keyboard.dismiss()}

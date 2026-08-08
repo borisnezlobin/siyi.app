@@ -11,6 +11,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
+import {
+  FocusScrollProvider,
+  useFocusScrollArea,
+} from "@/components/focus-scroll";
 import { GlassIconButton, GlassSurface } from "@/components/glass-surface";
 import { colors, radii } from "@/constants/theme";
 
@@ -65,6 +69,7 @@ export function Screen({
   // Counted rather than written down: what comes before the sticky block
   // decides its index, and getting it wrong sticks the wrong thing.
   const stickyIndex = (showBack ? 1 : 0) + (heading ? 1 : 0);
+  const { focusScroll, scrollProps } = useFocusScrollArea();
 
   return (
     <KeyboardAvoidingView
@@ -73,67 +78,70 @@ export function Screen({
       }
       style={styles.fill}
     >
-      <ScrollView
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[
-          styles.content,
-          {
-            maxWidth: maxContentWidth,
-          },
-          {
-            // With a sticky block the inset is on the scroll view itself, so
-            // the block pins below the status bar rather than under it.
-            paddingTop: stickyHeader ? 10 : Math.max(insets.top + 10, 22),
-            paddingBottom: bottomInset + insets.bottom,
-          },
-          contentContainerStyle,
-        ]}
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.coral}
-            />
-          ) : undefined
-        }
-        showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={stickyHeader ? [stickyIndex] : undefined}
-        style={[styles.fill, stickyHeader ? { paddingTop: insets.top } : null]}
+      <FocusScrollProvider value={focusScroll}>
+        <ScrollView
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={[
+            styles.content,
+            {
+              maxWidth: maxContentWidth,
+            },
+            {
+              // With a sticky block the inset is on the scroll view itself, so
+              // the block pins below the status bar rather than under it.
+              paddingTop: stickyHeader ? 10 : Math.max(insets.top + 10, 22),
+              paddingBottom: bottomInset + insets.bottom,
+            },
+            contentContainerStyle,
+          ]}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.coral}
+              />
+            ) : undefined
+          }
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={stickyHeader ? [stickyIndex] : undefined}
+          style={[styles.fill, stickyHeader ? { paddingTop: insets.top } : null]}
+          {...scrollProps}
         {...props}
-      >
-        {showBack ? (
-          // On its own row and hard left: an arrow pointing left, anywhere but
-          // the left edge, reads as pointing at whatever is beside it.
-          <View style={styles.backRow}>
-            <GlassIconButton
-              accessibilityLabel="Go back"
-              fallbackStyle={styles.backFallback}
-              onPress={() => router.back()}
-              style={styles.back}
-            >
-              <ArrowLeft color={colors.ink} size={21} />
-            </GlassIconButton>
-          </View>
-        ) : null}
+        >
+          {showBack ? (
+            // On its own row and hard left: an arrow pointing left, anywhere but
+            // the left edge, reads as pointing at whatever is beside it.
+            <View style={styles.backRow}>
+              <GlassIconButton
+                accessibilityLabel="Go back"
+                fallbackStyle={styles.backFallback}
+                onPress={() => router.back()}
+                style={styles.back}
+              >
+                <ArrowLeft color={colors.ink} size={21} />
+              </GlassIconButton>
+            </View>
+          ) : null}
 
-        {heading}
+          {heading}
 
-        {stickyHeader ? (
-          <View style={styles.sticky}>
-            <GlassSurface
-              fallbackStyle={styles.stickyFallback}
-              style={styles.stickyInner}
-            >
-              {stickyHeader}
-            </GlassSurface>
-          </View>
-        ) : null}
+          {stickyHeader ? (
+            <View style={styles.sticky}>
+              <GlassSurface
+                fallbackStyle={styles.stickyFallback}
+                style={styles.stickyInner}
+              >
+                {stickyHeader}
+              </GlassSurface>
+            </View>
+          ) : null}
 
-        {children}
-      </ScrollView>
+          {children}
+        </ScrollView>
+      </FocusScrollProvider>
     </KeyboardAvoidingView>
   );
 }

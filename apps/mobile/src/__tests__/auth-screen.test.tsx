@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AuthScreen from "@/app/auth";
 
@@ -105,6 +110,18 @@ describe("the sign-in screen", () => {
       screen.getByRole("button", { name: "Continue with Apple" }).props
         .accessibilityState.disabled,
     ).toBe(true);
+  });
+
+  it("pins the way in, so the keyboard never sits on top of it", async () => {
+    await renderAuth();
+
+    const footer = screen.getByTestId("sticky-footer");
+    expect(within(footer).getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(
+      within(screen.getByTestId("form-scroll")).queryByRole("button", {
+        name: "Sign in",
+      }),
+    ).toBeNull();
   });
 
   it("says what is missing next to the field that is missing it", async () => {

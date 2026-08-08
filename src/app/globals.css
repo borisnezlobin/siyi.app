@@ -29,8 +29,16 @@
   box-sizing: border-box;
 }
 
+/* Focusing a field scrolls it flush to the edge of the viewport, which on the
+   app routes lands it underneath the fixed bottom nav or the install banner.
+   These reserve that band, so a focused field is never scrolled under it. */
+html {
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+}
+
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;

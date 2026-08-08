@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -7,65 +7,19 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type LayoutChangeEvent,
   type ScrollViewProps,
   type StyleProp,
   type TextInput,
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  FocusScrollProvider,
+  useFocusScrollArea,
+} from "@/components/focus-scroll";
+import { useKeyboardVisible } from "@/hooks/use-keyboard";
 import { colors } from "@/constants/theme";
-
-/**
- * True while the software keyboard is on screen. iOS gets the "will" events so
- * layout moves with the keyboard instead of after it.
- */
-export function useKeyboardVisible() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const shown = Keyboard.addListener(showEvent, () => setVisible(true));
-    const hidden = Keyboard.addListener(hideEvent, () => setVisible(false));
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
-
-  return visible;
-}
-
-/**
- * How much of the screen the keyboard is covering, in points. Zero when it is
- * closed. Useful for padding scrollable content so its last control can still
- * be scrolled into view.
- */
-export function useKeyboardHeight() {
-  const [height, setHeight] = useState(0);
-
-  useEffect(() => {
-    // Deliberately the show event rather than willChangeFrame: that one also
-    // fires as the keyboard leaves, still reporting its full height, which
-    // leaves the measurement stuck open.
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const shown = Keyboard.addListener(showEvent, (event) => {
-      setHeight(event?.endCoordinates?.height ?? 0);
-    });
-    const hidden = Keyboard.addListener(hideEvent, () => setHeight(0));
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
-
-  return height;
-}
 
 type FieldChainProps = {
   ref: (input: TextInput | null | undefined) => void;
@@ -130,41 +84,54 @@ export function KeyboardAwareForm({
 }: KeyboardAwareFormProps) {
   const insets = useSafeAreaInsets();
   const keyboardVisible = useKeyboardVisible();
+  // The footer sits over the bottom of the scrolling area, so a field is only
+  // really visible once it clears the footer as well as the keyboard.
+  const [footerHeight, setFooterHeight] = useState(0);
+  const { focusScroll, scrollProps } = useFocusScrollArea({
+    bottomInset: footer ? footerHeight : 0,
+  });
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.fill}
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            maxWidth: maxContentWidth,
-            paddingTop: Math.max(insets.top + 10, 22),
-            paddingBottom: bottomInset + (footer ? 0 : insets.bottom),
-          },
-          contentContainerStyle,
-        ]}
-        contentInsetAdjustmentBehavior="never"
-        keyboardDismissMode={
-          Platform.OS === "ios" ? "interactive" : "on-drag"
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        style={styles.fill}
-        {...props}
-      >
-        <Pressable
-          accessible={false}
-          onPress={() => Keyboard.dismiss()}
-          style={[styles.stack, contentStyle]}
+      <FocusScrollProvider value={focusScroll}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              maxWidth: maxContentWidth,
+              paddingTop: Math.max(insets.top + 10, 22),
+              paddingBottom: bottomInset + (footer ? 0 : insets.bottom),
+            },
+            contentContainerStyle,
+          ]}
+          contentInsetAdjustmentBehavior="never"
+          keyboardDismissMode={
+            Platform.OS === "ios" ? "interactive" : "on-drag"
+          }
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.fill}
+          testID="form-scroll"
+          {...scrollProps}
+          {...props}
         >
-          {children}
-        </Pressable>
-      </ScrollView>
+          <Pressable
+            accessible={false}
+            onPress={() => Keyboard.dismiss()}
+            style={[styles.stack, contentStyle]}
+          >
+            {children}
+          </Pressable>
+        </ScrollView>
+      </FocusScrollProvider>
       {footer ? (
         <View
+          onLayout={(event: LayoutChangeEvent) =>
+            setFooterHeight(event.nativeEvent.layout.height)
+          }
           style={[
             styles.footer,
             {
@@ -173,6 +140,7 @@ export function KeyboardAwareForm({
                 : Math.max(insets.bottom, 12),
             },
           ]}
+          testID="sticky-footer"
         >
           {footer}
         </View>

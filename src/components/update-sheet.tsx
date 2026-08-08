@@ -198,10 +198,13 @@ export function UpdateSheet({
 
       <dialog
         ref={dialogRef}
-        className="m-0 mt-auto max-h-[88vh] w-full max-w-none overflow-visible rounded-t-[2rem] bg-white p-0 text-ink shadow-float backdrop:bg-ink/40 sm:m-auto sm:w-[440px] sm:rounded-[2rem]"
+        className="m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-visible rounded-t-[2rem] bg-white p-0 text-ink shadow-float backdrop:bg-ink/40 sm:m-auto sm:w-[440px] sm:rounded-[2rem]"
         aria-labelledby={`update-sheet-${entry.id}`}
       >
-        <div className="max-h-[88vh] overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:p-6">
+        {/* Save is pinned below the scrolling body. Opening the delete
+            confirmation used to grow the form underneath it. */}
+        <div className="flex max-h-[88dvh] flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 sm:px-6 sm:pt-6">
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/12 sm:hidden" />
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -299,33 +302,6 @@ export function UpdateSheet({
             className="mt-1.5 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
           />
 
-          {error ? (
-            <p
-              role="alert"
-              className="mt-3 rounded-2xl bg-[#fbe5e0] px-4 py-3 text-xs font-semibold leading-5 text-coral-strong"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={save}
-            disabled={saving || saved}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-4 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-          >
-            {saved ? (
-              <>
-                <Check size={18} weight="bold" aria-hidden="true" />
-                Saved
-              </>
-            ) : saving ? (
-              "Saving…"
-            ) : (
-              "Save changes"
-            )}
-          </button>
-
           {confirmingDelete ? (
             <div className="mt-4 rounded-2xl bg-porcelain p-4">
               <p className="text-xs font-semibold leading-5">
@@ -361,6 +337,35 @@ export function UpdateSheet({
               Delete this entry
             </button>
           )}
+        </div>
+
+        <div className="shrink-0 border-t border-black/5 bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
+          {error ? (
+            <p
+              role="alert"
+              className="mb-3 rounded-2xl bg-[#fbe5e0] px-4 py-3 text-xs font-semibold leading-5 text-coral-strong"
+            >
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || saved}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-4 text-sm font-semibold text-white shadow-float transition-colors hover:bg-coral-strong disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+          >
+            {saved ? (
+              <>
+                <Check size={18} weight="bold" aria-hidden="true" />
+                Saved
+              </>
+            ) : saving ? (
+              "Saving…"
+            ) : (
+              "Save changes"
+            )}
+          </button>
+        </div>
         </div>
       </dialog>
     </>

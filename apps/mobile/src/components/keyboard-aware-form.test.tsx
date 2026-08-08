@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react-native";
 import { Keyboard, Text, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Button } from "@/components/button";
@@ -6,8 +11,8 @@ import { FormField } from "@/components/form-field";
 import {
   KeyboardAwareForm,
   useFieldChain,
-  useKeyboardHeight,
 } from "@/components/keyboard-aware-form";
+import { useKeyboardHeight } from "@/hooks/use-keyboard";
 import { mockKeyboardEvents } from "@/test-support/keyboard";
 
 jest.mock("expo-haptics", () => ({
@@ -55,6 +60,48 @@ describe("a keyboard-aware form", () => {
     await keyboard.show();
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+  });
+
+  it("puts the action row outside the part that scrolls", async () => {
+    await renderForm();
+
+    // A save button that is the last thing in the scroll view is a save button
+    // you have to go looking for. It has to be a sibling of the scrolling area,
+    // never a child of it.
+    const footer = screen.getByTestId("sticky-footer");
+    expect(
+      within(footer).getByRole("button", { name: "Save changes" }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("form-scroll")).queryByRole("button", {
+        name: "Save changes",
+      }),
+    ).toBeNull();
+  });
+
+  it("has no footer to speak of when the form was given no actions", async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <KeyboardAwareForm>
+          <FormField label="On its own" />
+        </KeyboardAwareForm>
+      </SafeAreaProvider>,
+    );
+
+    expect(screen.queryByTestId("sticky-footer")).toBeNull();
+  });
+
+  it("asks each field to scroll itself into view when it takes focus", async () => {
+    await renderForm();
+
+    // The wiring the scrolling area acts on. Without it a field can sit behind
+    // the keyboard with nothing prompting the form to move.
+    expect(screen.getByLabelText("First").props.onFocus).toEqual(
+      expect.any(Function),
+    );
+    expect(screen.getByLabelText("Second").props.onFocus).toEqual(
+      expect.any(Function),
+    );
   });
 
   it("points the return key at the next field rather than at submit", async () => {

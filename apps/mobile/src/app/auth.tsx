@@ -139,6 +139,15 @@ export default function AuthScreen() {
     <KeyboardAwareForm
       bottomInset={40}
       contentStyle={styles.stack}
+      // Pinned rather than sitting under the password field: the keyboard
+      // covers everything below whatever you are typing in.
+      footer={
+        <Button
+          label={primaryLabel}
+          loading={loadingAction === (usingPassword ? "password" : "magic")}
+          onPress={() => void submit()}
+        />
+      }
       maxContentWidth={520}
     >
       <AppText variant="display">Remember the people who matter.</AppText>
@@ -238,14 +247,6 @@ export default function AuthScreen() {
             {...fieldProps("password")}
           />
         ) : null}
-
-        <Button
-          label={primaryLabel}
-          loading={
-            loadingAction === (usingPassword ? "password" : "magic")
-          }
-          onPress={() => void submit()}
-        />
 
         {usingPassword && mode === "sign-in" ? (
           <Pressable

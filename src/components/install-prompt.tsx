@@ -77,7 +77,9 @@ export function InstallPrompt() {
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-end bg-ink/50 p-3 lg:hidden">
-          <div className="w-full rounded-[1.75rem] bg-white p-5 shadow-float">
+          {/* Bounded and scrollable: on a short screen the three steps used to
+              push the dismiss button off the bottom with no way back to it. */}
+          <div className="max-h-[88dvh] w-full overflow-y-auto rounded-[1.75rem] bg-white p-5 shadow-float">
             <div className="flex items-start justify-between gap-3">
               <h2 className="font-display text-2xl leading-tight">
                 Put {brand.shortName} on your home screen

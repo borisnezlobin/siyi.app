@@ -386,10 +386,13 @@ export function QuickCaptureHub({
       <dialog
         ref={dialogRef}
         onClose={resetSheet}
-        className="quick-capture-sheet m-0 mt-auto max-h-[90vh] w-full max-w-none overflow-visible rounded-t-[2rem] bg-white p-0 text-ink shadow-float backdrop:bg-ink/40 sm:m-auto sm:w-[460px] sm:rounded-[2rem]"
+        className="quick-capture-sheet m-0 mt-auto max-h-[90dvh] w-full max-w-none overflow-visible rounded-t-[2rem] bg-white p-0 text-ink shadow-float backdrop:bg-ink/40 sm:m-auto sm:w-[460px] sm:rounded-[2rem]"
         aria-labelledby="quick-capture-title"
       >
-        <div className="max-h-[90vh] overflow-y-auto px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:p-6">
+        {/* A column, not one long scroll: the body scrolls and the save button
+            is its sibling, so no amount of form can push it out of sight. */}
+        <div className="flex max-h-[90dvh] flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 sm:px-6 sm:pt-6">
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/12 sm:hidden" />
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -517,45 +520,6 @@ export function QuickCaptureHub({
                 </>
               ) : null}
 
-              {error ? (
-                <p
-                  role="alert"
-                  className="mt-4 rounded-xl bg-[#fbe5e0] px-3 py-2.5 text-xs font-semibold text-coral-strong"
-                >
-                  {error}
-                </p>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={
-                  mode === "reminder"
-                    ? saveReminder
-                    : mode === "update"
-                      ? savePersonUpdate
-                      : saveInteraction
-                }
-                disabled={saving || saved}
-                className="mt-5 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-float disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-              >
-                {saved ? (
-                  <>
-                    <Check size={18} weight="bold" aria-hidden="true" />
-                    Saved
-                  </>
-                ) : saving ? (
-                  <>
-                    <SpinnerGap
-                      size={18}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                    Saving…
-                  </>
-                ) : (
-                  copy.save
-                )}
-              </button>
             </>
           ) : (
             <div className="mt-6 rounded-2xl bg-porcelain p-5 text-center">
@@ -574,6 +538,50 @@ export function QuickCaptureHub({
               </Link>
             </div>
           )}
+        </div>
+
+        {!peopleLoaded || people.length ? (
+          <div className="shrink-0 border-t border-black/5 bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
+            {error ? (
+              <p
+                role="alert"
+                className="mb-3 rounded-xl bg-[#fbe5e0] px-3 py-2.5 text-xs font-semibold text-coral-strong"
+              >
+                {error}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={
+                mode === "reminder"
+                  ? saveReminder
+                  : mode === "update"
+                    ? savePersonUpdate
+                    : saveInteraction
+              }
+              disabled={saving || saved}
+              className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-float disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+            >
+              {saved ? (
+                <>
+                  <Check size={18} weight="bold" aria-hidden="true" />
+                  Saved
+                </>
+              ) : saving ? (
+                <>
+                  <SpinnerGap
+                    size={18}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                  Saving…
+                </>
+              ) : (
+                copy.save
+              )}
+            </button>
+          </div>
+        ) : null}
         </div>
       </dialog>
     </>

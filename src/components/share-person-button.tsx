@@ -23,14 +23,18 @@ const sensitiveFields = new Set<ContactShareField>([
   "notes",
 ]);
 
-type SharesResponse = { shares?: PersonShare[] };
-type CreateResponse = { share?: PersonShare };
+type SharesResponse = { available?: boolean; shares?: PersonShare[] };
+type CreateResponse = { available?: boolean; share?: PersonShare };
 
 export function SharePersonButton({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<ContactShareSelection>(
     defaultContactShareSelection,
   );
+  // Null while we are still finding out. Links stay hidden until we know the
+  // table exists, so a deploy that lands before migration 0015 simply shows the
+  // contact card, exactly as before.
+  const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creating, setCreating] = useState(false);
   const canShareLink = typeof navigator !== "undefined" && Boolean(navigator.share);
@@ -43,16 +47,25 @@ export function SharePersonButton({ person }: { person: Person }) {
     [shares],
   );
 
-  // Only so that a second click reuses the link the first one made.
   const loadShares = useCallback(async () => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      setLinksAvailable(false);
+      return;
+    }
+
     try {
       const response = await fetch(
         `/api/person-shares?personId=${encodeURIComponent(person.id)}`,
       );
       const payload = await readJsonResponse<SharesResponse>(response);
-      if (response.ok) setShares(payload?.shares ?? []);
+      if (!response.ok || !payload?.available) {
+        setLinksAvailable(false);
+        return;
+      }
+      setLinksAvailable(true);
+      setShares(payload.shares ?? []);
     } catch {
-      // A link can still be made; the next tap simply makes a fresh one.
+      setLinksAvailable(false);
     }
   }, [person.id]);
 
@@ -113,8 +126,9 @@ export function SharePersonButton({ person }: { person: Person }) {
         setError(await getApiResponseError(response, "That link couldn't be created."));
         return null;
       }
-      if (!payload?.share) {
-        setError("That link couldn't be created.");
+      if (!payload?.available || !payload.share) {
+        // The table isn't there yet. Nothing broke; the card still works.
+        setLinksAvailable(false);
         return null;
       }
 
@@ -160,7 +174,7 @@ export function SharePersonButton({ person }: { person: Person }) {
           setError(null);
           setOpen(true);
         }}
-        className="inline-flex h-11 items-center gap-2 rounded-full bg-porcelain px-4 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="inline-flex h-10 items-center gap-2 rounded-full bg-porcelain px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <Share size={17} weight="bold" aria-hidden="true" />
         Share
@@ -177,8 +191,9 @@ export function SharePersonButton({ person }: { person: Person }) {
             role="dialog"
             aria-modal="true"
             aria-label={`Share ${person.fullName}`}
-            className="max-h-[88vh] w-full max-w-[420px] overflow-y-auto rounded-[1.75rem] bg-white p-5 shadow-float"
+            className="flex max-h-[88dvh] w-full max-w-[420px] flex-col rounded-[1.75rem] bg-white shadow-float"
           >
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="font-display text-2xl leading-tight">
@@ -232,33 +247,10 @@ export function SharePersonButton({ person }: { person: Person }) {
               ))}
             </ul>
 
-            <button
-              type="button"
-              onClick={() => void copyShareLink()}
-              disabled={creating}
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-            >
-              {copiedToken ? (
-                <Check size={17} weight="bold" aria-hidden="true" />
-              ) : (
-                <Copy size={17} weight="bold" aria-hidden="true" />
-              )}
-              {copiedToken ? "Link copied" : creating ? "Making a link…" : "Copy link"}
-            </button>
-
-            {canShareLink ? (
-              <button
-                type="button"
-                onClick={() => void sendShareLink()}
-                className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              >
-                <Share size={16} weight="bold" aria-hidden="true" />
-                Share link
-              </button>
-            ) : null}
-
-            {error ? (
-              <p className="mt-3 text-center text-xs leading-5 text-coral-strong">{error}</p>
+            {!linksAvailable ? (
+              <p className="mt-3 text-center text-[11px] leading-4 text-ink-muted">
+                Links are not available on this account yet.
+              </p>
             ) : null}
 
             {liveShares.length > 0 ? (
@@ -266,7 +258,45 @@ export function SharePersonButton({ person }: { person: Person }) {
                 {shareUrlFor(liveShares[0])}
               </p>
             ) : null}
+            </div>
 
+            {/* Pinned: a person with every field filled in makes the list of
+                tick boxes taller than the sheet. */}
+            <div className="shrink-0 border-t border-black/5 px-5 pb-5 pt-3">
+              {error ? (
+                <p className="mb-3 text-center text-xs leading-5 text-coral-strong">
+                  {error}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void copyShareLink()}
+                disabled={creating}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
+              >
+                {copiedToken ? (
+                  <Check size={17} weight="bold" aria-hidden="true" />
+                ) : (
+                  <Copy size={17} weight="bold" aria-hidden="true" />
+                )}
+                {copiedToken
+                  ? "Link copied"
+                  : creating
+                    ? "Making a link…"
+                    : "Copy link"}
+              </button>
+
+              {canShareLink ? (
+                <button
+                  type="button"
+                  onClick={() => void sendShareLink()}
+                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-porcelain px-5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                >
+                  <Share size={16} weight="bold" aria-hidden="true" />
+                  Share link
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

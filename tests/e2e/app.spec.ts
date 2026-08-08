@@ -120,6 +120,29 @@ test("an update is written without claiming you saw them", async ({
   await expect(sheet.getByRole("button", { name: "Saved" })).toBeVisible();
 });
 
+test("the capture sheet keeps Save on screen on a short viewport", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile-chromium",
+    "The desktop sidebar needs more height than this test leaves.",
+  );
+  // A phone in landscape, or a small phone with the keyboard up: the sheet has
+  // far more form than screen. The save button has to stay put regardless.
+  await page.setViewportSize({ width: 390, height: 380 });
+  await page.goto("/today");
+  await page.getByRole("button", { name: "Open quick actions" }).click();
+  await page.getByRole("button", { name: /Add a reminder/ }).click();
+
+  const sheet = page.locator("dialog[open]");
+  const save = sheet.getByRole("button", { name: "Save reminder" });
+
+  // Whole button, not a sliver, and without scrolling to find it first. The
+  // reminder form is taller than this screen, so a button at the end of the
+  // scrolling body would be nowhere to be seen.
+  await expect(save).toBeInViewport({ ratio: 1 });
+});
+
 test("the capture sheet does not shift while the picker is used", async ({
   page,
 }, testInfo) => {
