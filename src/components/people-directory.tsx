@@ -151,54 +151,59 @@ export function PeopleDirectory({
 
   return (
     <div>
-      <div className="mt-7 flex gap-2">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search people</span>
-          <MagnifyingGlass
-            size={19}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Name, school, class, hometown, major, dorm, or tag"
-            className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-11 text-sm outline-none transition [&::-webkit-search-cancel-button]:hidden placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
-          />
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              aria-label="Clear search"
-              className="absolute right-3 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            >
-              <X size={14} weight="bold" aria-hidden="true" />
-            </button>
-          ) : null}
-        </label>
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
-          className={clsx(
-            "relative grid size-12 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-            filtersOpen || activeFilterCount
-              ? "bg-ink text-white"
-              : "bg-white text-ink-muted hover:text-ink",
-          )}
-          aria-expanded={filtersOpen}
-          aria-controls="people-filters"
-          aria-label="Show filters"
-        >
-          <Funnel size={19} weight={activeFilterCount ? "fill" : "regular"} aria-hidden="true" />
-          {activeFilterCount ? (
-            <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-coral text-[9px] font-bold text-white ring-2 ring-porcelain">
-              {activeFilterCount}
-            </span>
-          ) : null}
-        </button>
-      </div>
+      {/* Stays put while the list runs under it, so searching and filtering do
+          not mean scrolling back to the top first. The negative margins let the
+          blur reach the page edges rather than stop at the text column. */}
+      <div className="sticky top-0 z-20 -mx-4 bg-porcelain/85 px-4 pb-3 pt-7 backdrop-blur sm:-mx-7 sm:px-7 lg:-mx-10 lg:px-10">
+        <div className="flex gap-2">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search people</span>
+            <MagnifyingGlass
+              size={19}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Name, school, class, hometown, major, dorm, or tag"
+              className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-11 text-sm outline-none transition [&::-webkit-search-cancel-button]:hidden placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+              >
+                <X size={14} weight="bold" aria-hidden="true" />
+              </button>
+            ) : null}
+          </label>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className={clsx(
+              "relative grid size-12 shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+              filtersOpen || activeFilterCount
+                ? "bg-ink text-white"
+                : "bg-white text-ink-muted hover:text-ink",
+            )}
+            aria-expanded={filtersOpen}
+            aria-controls="people-filters"
+            aria-label="Show filters"
+          >
+            <Funnel size={19} weight={activeFilterCount ? "fill" : "regular"} aria-hidden="true" />
+            {activeFilterCount ? (
+              <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-coral text-[9px] font-bold text-white ring-2 ring-porcelain">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
 
+      </div>
       {filtersOpen ? (
         <div id="people-filters" className="mt-4 space-y-4 border-t border-ink/[0.08] pt-4">
           <FilterGroup label="Reminder pace">
@@ -292,7 +297,8 @@ export function PeopleDirectory({
           {sections.length
             ? sections.map((section) => (
                 <section key={section.letter}>
-                  <h3 className="sticky top-0 z-10 bg-porcelain/95 py-2 text-xs font-semibold text-ink-muted backdrop-blur">
+                  {/* Below the search row, which holds the top of the page. */}
+                  <h3 className="sticky top-[4.75rem] z-10 bg-porcelain/95 py-2 text-xs font-semibold text-ink-muted backdrop-blur">
                     {section.letter}
                   </h3>
                   <div className="divide-y divide-ink/[0.07]">

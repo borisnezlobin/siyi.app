@@ -122,7 +122,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   sectionHeading: {
-    alignItems: "flex-start",
+    // Centred, not top-aligned: the title is a tall display face, and actions
+    // pinned to the top of its line box sit visibly above the words.
+    alignItems: "center",
     flexDirection: "row",
     gap: 12,
     justifyContent: "space-between",
