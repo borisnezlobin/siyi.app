@@ -22,6 +22,10 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { SectionHeading } from "@/components/surface";
 import { TimezonePicker } from "@/components/timezone-picker";
+import {
+  suggestUniversityFromEmail,
+  universitySuggestionNote,
+} from "@/lib/university-suggestion";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import {
@@ -91,6 +95,11 @@ export default function SettingsScreen() {
   const intervals = intervalDraft ?? settings.reminderDefaults;
   const marketingOptIn = marketingDraft ?? settings.marketingOptIn;
   const defaultUniversity = universityDraft ?? settings.defaultUniversity;
+  // Offered while the field is blank, and gone the moment it is not.
+  const universitySuggestion = suggestUniversityFromEmail(
+    auth.profile?.email,
+    defaultUniversity,
+  );
   const providers = Array.from(
     new Set(
       (
@@ -335,6 +344,20 @@ export default function SettingsScreen() {
           onChangeText={setUniversityDraft}
           value={defaultUniversity}
         />
+        {universitySuggestion ? (
+          <View style={styles.suggestion}>
+            <AppText style={styles.sectionNote} variant="caption">
+              {universitySuggestionNote(universitySuggestion.domain)}:{" "}
+              {universitySuggestion.name}
+            </AppText>
+            <Button
+              compact
+              label="Use it"
+              onPress={() => setUniversityDraft(universitySuggestion.name)}
+              variant="secondary"
+            />
+          </View>
+        ) : null}
         <View style={styles.sectionAction}>
           <Button
             label="Save default"
@@ -747,6 +770,14 @@ const styles = StyleSheet.create({
   },
   sectionAction: {
     paddingTop: 16,
+  },
+  suggestion: {
+    alignItems: "flex-start",
+    backgroundColor: colors.mist,
+    borderRadius: radii.medium,
+    gap: 9,
+    marginTop: 12,
+    padding: 12,
   },
   row: {
     alignItems: "center",

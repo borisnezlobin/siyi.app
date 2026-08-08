@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CalendarBlank,
   Check,
   ClockCountdown,
   NotePencil,
@@ -20,6 +19,7 @@ import {
   InteractionComposer,
   type InteractionDraft,
 } from "@/components/interaction-composer";
+import { DateField } from "@/components/date-field";
 import { PersonPicker } from "@/components/person-picker";
 import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
 import { todayDateInputValue } from "@/lib/date-input";
@@ -480,23 +480,14 @@ export function QuickCaptureHub({
                       })}
                     </div>
                   </fieldset>
-                  <label className="mt-3 block text-xs font-semibold text-ink-muted">
-                    Or choose a date
-                    <span className="relative mt-1.5 block">
-                      <CalendarBlank
-                        size={17}
-                        className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-ink-muted"
-                        aria-hidden="true"
-                      />
-                      <input
-                        type="date"
-                        value={dueDate}
-                        min={format(new Date(), "yyyy-MM-dd")}
-                        onChange={(event) => setDueDate(event.target.value)}
-                        className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-                      />
-                    </span>
-                  </label>
+                  <DateField
+                    className="mt-3"
+                    inputClassName="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+                    label="Or choose a date"
+                    min={format(new Date(), "yyyy-MM-dd")}
+                    onChange={setDueDate}
+                    value={dueDate}
+                  />
                 </>
               ) : null}
 

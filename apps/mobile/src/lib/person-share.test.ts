@@ -41,7 +41,7 @@ function person(overrides: Partial<Person> = {}): Person {
     birthday: "2004-05-12",
     hometown: "Portland",
     dormOrResidence: "Unit 3",
-    university: "Berkeley",
+    university: "Stanford University",
     major: "Ceramics",
     graduationYear: 2027,
     relationshipStrength: 3,

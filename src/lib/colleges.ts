@@ -21,17 +21,29 @@ export type College = {
   /** Enrolled students, where the source knows. Breaks ties between schools
    * whose names match equally well: the one people mean is the bigger one. */
   size: number;
+  /** Email domains the school sends mail from, where the source knows. */
+  domains: string[];
 };
 
 
 let parsed: College[] | null = null;
 let aliasIndex: Map<string, College> | null = null;
+let domainIndex: Map<string, College> | null = null;
 
 function allColleges(): College[] {
   if (parsed) return parsed;
   parsed = collegeTable.split("\n").map((line) => {
-    const [name, country = "", region = "", aliases = "", place = "", lat = "", lon = "", size = ""] =
-      line.split("\t");
+    const [
+      name,
+      country = "",
+      region = "",
+      aliases = "",
+      place = "",
+      lat = "",
+      lon = "",
+      size = "",
+      domains = "",
+    ] = line.split("\t");
     return {
       name,
       country,
@@ -41,6 +53,7 @@ function allColleges(): College[] {
       latitude: lat ? Number(lat) : null,
       longitude: lon ? Number(lon) : null,
       size: size ? Number(size) : 0,
+      domains: domains ? domains.split(",") : [],
     };
   });
   return parsed;
@@ -102,6 +115,63 @@ export function searchColleges(rawQuery: string, limit = 8): College[] {
     )
     .slice(0, limit)
     .map((entry) => entry.college);
+}
+
+function collegesByDomain(): Map<string, College> {
+  if (domainIndex) return domainIndex;
+  domainIndex = new Map();
+  for (const college of allColleges()) {
+    for (const domain of college.domains) {
+      const holder = domainIndex.get(domain);
+      // Two schools claiming one domain is rare, and when it happens the bigger
+      // one is the one a stranger's address is likely to belong to.
+      if (!holder || college.size > holder.size) domainIndex.set(domain, college);
+    }
+  }
+  return domainIndex;
+}
+
+/**
+ * Suffixes owned by a country's education system rather than by any one school.
+ * Walking up from a subdomain has to stop before these, or a single stray row
+ * would hand every student in Britain the same university.
+ */
+const SHARED_EDUCATION_SUFFIXES = new Set([
+  "ac.uk", "ac.nz", "ac.jp", "ac.kr", "ac.in", "ac.th", "ac.id", "ac.za", "ac.il",
+  "ac.at", "ac.be", "ac.cy", "ac.ir", "ac.ma", "ac.rw", "ac.ug", "ac.ae",
+  "edu.au", "edu.cn", "edu.in", "edu.sg", "edu.my", "edu.br", "edu.mx", "edu.tr",
+  "edu.pk", "edu.ph", "edu.hk", "edu.tw", "edu.eg", "edu.sa", "edu.ar", "edu.co",
+  "edu.pe", "edu.ve", "edu.vn", "edu.pl", "edu.gr", "edu.es", "edu.it", "edu.ec",
+  "edu.uy", "edu.do", "edu.gt", "edu.jo", "edu.kw", "edu.lb", "edu.om", "edu.qa",
+  "edu.bd", "edu.np", "edu.lk", "edu.ng", "edu.gh", "edu.ke",
+]);
+
+/**
+ * The school an email address belongs to, or nothing.
+ *
+ * University mail is often on a department subdomain, so `cs.stanford.edu` has
+ * to find Stanford — the host is tried whole first, then with leading labels
+ * dropped one at a time. It never falls back to a bare suffix: `.edu` says
+ * somebody is at a university, not which one.
+ */
+export function collegeForEmail(value: string | null | undefined): College | null {
+  const host = (value ?? "").trim().toLowerCase().split("@").pop()?.replace(/^\.+|\.+$/g, "");
+  if (!host || !host.includes(".")) return null;
+
+  const index = collegesByDomain();
+  const labels = host.split(".");
+  for (let start = 0; start <= labels.length - 2; start++) {
+    const candidate = labels.slice(start).join(".");
+    if (SHARED_EDUCATION_SUFFIXES.has(candidate)) break;
+    const found = index.get(candidate);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** The part of an address worth quoting back: "From your berkeley.edu address". */
+export function emailDomain(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase().split("@").pop()?.replace(/^\.+|\.+$/g, "") ?? "";
 }
 
 export function findCollege(value: string): College | null {

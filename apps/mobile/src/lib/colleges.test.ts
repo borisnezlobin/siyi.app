@@ -1,9 +1,59 @@
 import {
+  collegeForEmail,
   collegeMatchesQuery,
   collegeSearchTerms,
+  emailDomain,
   findCollege,
   searchColleges,
 } from "@/lib/colleges";
+
+describe("collegeForEmail", () => {
+  it("recognises a school from its own domain", () => {
+    expect(collegeForEmail("someone@berkeley.edu")?.name).toBe(
+      "University of California, Berkeley",
+    );
+  });
+
+  it("recognises a department subdomain as the school it belongs to", () => {
+    expect(collegeForEmail("someone@cs.stanford.edu")?.name).toBe("Stanford University");
+    expect(collegeForEmail("someone@eecs.berkeley.edu")?.name).toBe(
+      "University of California, Berkeley",
+    );
+  });
+
+  it("says nothing for a university domain it has never heard of", () => {
+    expect(collegeForEmail("someone@not-a-real-school.edu")).toBeNull();
+  });
+
+  it("says nothing for ordinary personal mail", () => {
+    expect(collegeForEmail("someone@gmail.com")).toBeNull();
+  });
+
+  it("never guesses a school from a bare suffix", () => {
+    expect(collegeForEmail("someone@edu")).toBeNull();
+    expect(collegeForEmail("someone@ac.uk")).toBeNull();
+  });
+
+  it("takes a bare domain as readily as a whole address", () => {
+    expect(collegeForEmail("berkeley.edu")?.name).toBe(
+      "University of California, Berkeley",
+    );
+  });
+
+  it("survives nothing at all", () => {
+    expect(collegeForEmail("")).toBeNull();
+    expect(collegeForEmail(null)).toBeNull();
+    expect(collegeForEmail(undefined)).toBeNull();
+  });
+});
+
+describe("emailDomain", () => {
+  it("quotes back the part worth naming", () => {
+    expect(emailDomain("Someone@Berkeley.edu")).toBe("berkeley.edu");
+    expect(emailDomain("someone@cs.stanford.edu")).toBe("cs.stanford.edu");
+    expect(emailDomain(null)).toBe("");
+  });
+});
 
 describe("searchColleges", () => {
   it("puts the school an acronym stands for first", () => {

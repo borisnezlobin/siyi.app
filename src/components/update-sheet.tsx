@@ -8,6 +8,7 @@ import {
   CustomTypeIconPicker,
   useRecentCustomLabels,
 } from "@/components/custom-type-fields";
+import { DateField } from "@/components/date-field";
 import { isPreviewOnly } from "@/lib/capture-client";
 import {
   isCustomTypeIconKey,
@@ -271,19 +272,15 @@ export function UpdateSheet({
             </>
           ) : null}
 
-          <label
-            className="mt-5 block text-xs font-semibold text-ink-muted"
-            htmlFor={`occurred-on-${entry.id}`}
-          >
-            {entry.countsAsContact ? "When did this happen?" : "When did you learn this?"}
-          </label>
-          <input
-            id={`occurred-on-${entry.id}`}
-            type="date"
-            value={occurredOn}
+          <DateField
+            className="mt-5"
+            inputClassName="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            label={
+              entry.countsAsContact ? "When did this happen?" : "When did you learn this?"
+            }
             max={today}
-            onChange={(event) => setOccurredOn(event.target.value)}
-            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            onChange={setOccurredOn}
+            value={occurredOn}
           />
 
           <label

@@ -1,9 +1,31 @@
 import {
   normalizeOwnCard,
   ownCardIsEmpty,
+  ownCardShareState,
   ownCardSummary,
   filledOwnCardFields,
 } from "@/lib/own-card";
+
+describe("ownCardShareState", () => {
+  it("cannot share a field that has nothing in it, whatever the saved choice says", () => {
+    expect(ownCardShareState({}, {}, "hometown")).toBe("unavailable");
+    // A stale "yes" from before the value was cleared must not read as shared.
+    expect(ownCardShareState({}, { hometown: true }, "hometown")).toBe("unavailable");
+  });
+
+  it("is hidden when there is something to share and the answer is no", () => {
+    expect(ownCardShareState({ hometown: "Seoul" }, {}, "hometown")).toBe("hidden");
+    expect(ownCardShareState({ hometown: "Seoul" }, { hometown: false }, "hometown")).toBe(
+      "hidden",
+    );
+  });
+
+  it("is shared only when there is a value and it is switched on", () => {
+    expect(ownCardShareState({ hometown: "Seoul" }, { hometown: true }, "hometown")).toBe(
+      "shared",
+    );
+  });
+});
 
 describe("normalizeOwnCard", () => {
   it("keeps the fields it knows and trims them", () => {
@@ -57,7 +79,7 @@ describe("ownCardSummary", () => {
         email: "a@b.c",
         major: "History",
         hometown: "Seoul",
-        university: "Berkeley",
+        university: "Stanford University",
       }),
     ).toBe("Email, Hometown and 2 more");
   });

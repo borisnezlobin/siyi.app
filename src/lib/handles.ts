@@ -1,5 +1,5 @@
 /**
- * A public handle is a readable name plus a short tag: `boris.nezlobin#4f21`.
+ * A public handle is a readable name plus a short tag: `alex.vale#4f21`.
  *
  * The tag is the point. Without it a handle is guessable from somebody's name,
  * and a page anyone can load becomes a page anyone can find. Four hex characters
@@ -71,7 +71,7 @@ export function buildProfileUrl(baseUrl: string, handle: string, tag: string) {
   return `${baseUrl.replace(/\/+$/, "")}${profilePath(handle, tag)}`;
 }
 
-/** Splits `boris.nezlobin-4f21` back apart. Anything else is not a profile. */
+/** Splits `alex.vale-4f21` back apart. Anything else is not a profile. */
 export function parseProfileSlug(
   slug: string,
 ): { handle: string; tag: string } | null {

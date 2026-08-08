@@ -70,7 +70,7 @@ function personRow(overrides: Record<string, unknown> = {}) {
     instagram_username: "mayamakes",
     birthday: "2004-05-12",
     hometown: "Portland",
-    university: "Berkeley",
+    university: "Stanford University",
     major: "Ceramics",
     general_notes: "Going through a rough breakup; do not bring it up.",
     status: "active",

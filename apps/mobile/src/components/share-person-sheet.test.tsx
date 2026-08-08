@@ -65,7 +65,7 @@ const person = {
   birthday: "2004-05-12",
   hometown: "Portland",
   dormOrResidence: null,
-  university: "Berkeley",
+  university: "Stanford University",
   major: "Ceramics",
   graduationYear: 2027,
   relationshipStrength: 3,

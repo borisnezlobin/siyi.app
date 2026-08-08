@@ -1,5 +1,5 @@
 /**
- * Person URLs read as `/people/boris-nezlobin-7fk2`. The suffix is appended to
+ * Person URLs read as `/people/alex-vale-7fk2`. The suffix is appended to
  * every slug, never only on collision: a slug that grows a suffix exactly when
  * someone else already owns that name would tell one account what another
  * account has stored.

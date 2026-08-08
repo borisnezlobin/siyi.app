@@ -48,8 +48,8 @@ describe("saving your own card", () => {
     const response = await PATCH(
       patch({
         card: {
-          fullName: "Boris Nezlobin",
-          email: "borisn@berkeley.edu",
+          fullName: "Alex Vale",
+          email: "alex@example.edu",
           major: "Applied Mathematics, IEOR",
         },
         enabled: true,
@@ -58,8 +58,8 @@ describe("saving your own card", () => {
 
     expect(response.status).toBe(200);
     expect(authState.upserted[0].own_card).toEqual({
-      fullName: "Boris Nezlobin",
-      email: "borisn@berkeley.edu",
+      fullName: "Alex Vale",
+      email: "alex@example.edu",
       major: "Applied Mathematics, IEOR",
     });
   });

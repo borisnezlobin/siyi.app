@@ -70,14 +70,14 @@ describe("matchesPeopleQuery", () => {
 describe("sectionPeopleAlphabetically", () => {
   it("groups by the name shown, not the legal name", () => {
     const sections = sectionPeopleAlphabetically([
-      person({ fullName: "Boris Nezlobin" }),
+      person({ fullName: "Bea Nolan" }),
       person({ fullName: "Ana Kim" }),
       person({ fullName: "Robert Zhang", preferredName: "Bobby" }),
     ]);
     expect(sections.map((section) => section.letter)).toEqual(["A", "B"]);
     expect(sections[1].people.map((entry) => entry.preferredName ?? entry.fullName)).toEqual([
+      "Bea Nolan",
       "Bobby",
-      "Boris Nezlobin",
     ]);
   });
 

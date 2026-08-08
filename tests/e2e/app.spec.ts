@@ -611,7 +611,7 @@ test("robots.txt keeps crawlers away from shared cards", async ({ request }) => 
   expect(body).toContain("Disallow: /s/");
 });
 
-test("Your card leads with the switch and disables the rest while it is off", async ({
+test("Your card leads with the switch and hides the rest while it is off", async ({
   page,
 }) => {
   await page.goto("/settings");
@@ -620,14 +620,40 @@ test("Your card leads with the switch and disables the rest while it is off", as
   await expect(shareSwitch).toBeVisible();
   await expect(shareSwitch).toHaveAttribute("aria-checked", "false");
 
-  // Off has to mean off. The fieldset is what does it, so the controls below
-  // refuse input and are announced as disabled rather than only looking grey.
-  await expect(page.getByLabel("Your handle")).toBeDisabled();
-  await expect(page.getByText("What goes on it")).toBeVisible();
+  // Off has to mean gone, not greyed. A disabled control still invites you to
+  // try it; an absent one asks the only question worth asking.
+  await expect(page.getByLabel("Your handle")).toBeHidden();
+  await expect(
+    page.getByRole("link", { name: "Configure what gets shared" }),
+  ).toBeHidden();
 
   // A default for the people you add is not a detail about you, so it lives
   // with the other defaults now.
   await expect(
     page.getByRole("heading", { name: "New person defaults" }),
   ).toBeVisible();
+});
+
+test("choosing what gets shared is its own page, reached from Your card", async ({
+  page,
+}) => {
+  await page.goto("/settings/card");
+
+  await expect(
+    page.getByRole("heading", { name: "What gets shared" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What goes on it" })).toBeVisible();
+
+  // The card's own fields are editable here, which they never were on the web.
+  await expect(page.getByLabel("University", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Graduation year")).toHaveAttribute(
+    "inputmode",
+    "numeric",
+  );
+
+  // A detail with nothing in it cannot be shared, and says so rather than
+  // offering a switch that would do nothing.
+  await expect(
+    page.getByRole("button", { name: /Discord.*nothing to share yet/ }),
+  ).toHaveAttribute("aria-disabled", "true");
 });

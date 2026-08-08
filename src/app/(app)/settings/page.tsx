@@ -1,4 +1,3 @@
-import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
 import { DefaultUniversityControl } from "@/components/default-university-control";
 import { ProfileControls } from "@/components/profile-controls";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
@@ -33,8 +32,6 @@ export default async function SettingsPage() {
   let initialHandle = "";
   let initialHandleTag = "";
   let initialProfilePublic = false;
-  let initialPublicFields: Record<string, boolean> = {};
-  let initialOwnCard: OwnCard = {};
   let initialDefaultUniversity = "";
   let initialTimezone = "America/Los_Angeles";
   let initialMarketingOptIn = false;
@@ -62,7 +59,6 @@ export default async function SettingsPage() {
     initialHandle = profile?.handle ?? "";
     initialHandleTag = profile?.handle_tag ?? "";
     initialProfilePublic = profile?.profile_public ?? false;
-    initialPublicFields = (profile?.public_fields ?? {}) as Record<string, boolean>;
 
     // Read consent on its own so a deployment that lands before migration
     // 0007 cannot null out the whole profile row and reset the timezone.
@@ -72,7 +68,6 @@ export default async function SettingsPage() {
       .eq("auth_user_id", user.id)
       .maybeSingle();
     initialMarketingOptIn = consent?.marketing_opt_in ?? false;
-    initialOwnCard = normalizeOwnCard(settings?.own_card);
     initialDefaultUniversity = settings?.default_university ?? "";
     if (settings) {
       initialIntervals = {
@@ -96,15 +91,13 @@ export default async function SettingsPage() {
         <section className="py-7 first:pt-0">
           <h2 className="text-sm font-bold">Your card</h2>
           <p className="mt-1 text-xs leading-5 text-ink-muted">
-            What you hand out about yourself, the address people can find you
-            at, and a code they can scan.
+            A code and an address people can reach you at, and the choice of
+            what they find there.
           </p>
           <div className="mt-5">
             <ProfileControls
-              card={initialOwnCard}
               initialHandle={initialHandle}
               initialPublic={initialProfilePublic}
-              initialPublicFields={initialPublicFields}
               initialTag={initialHandleTag}
             />
           </div>
@@ -133,7 +126,10 @@ export default async function SettingsPage() {
             Filled in for you when you add someone new. Leave blank for none.
           </p>
           <div className="mt-4">
-            <DefaultUniversityControl initialValue={initialDefaultUniversity} />
+            <DefaultUniversityControl
+              accountEmail={user?.email ?? ""}
+              initialValue={initialDefaultUniversity}
+            />
           </div>
         </section>
       </div>
