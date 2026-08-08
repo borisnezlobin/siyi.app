@@ -104,6 +104,20 @@ export function markStale(key: string) {
   notify();
 }
 
+/**
+ * The cache key for a person, given whatever the route carried.
+ *
+ * A link from outside arrives as the readable slug and an in-app tap as the
+ * uuid, so keying on the raw parameter filed one person under two keys and
+ * fetched them separately. The already-loaded people list is enough to map one
+ * to the other without waiting on anything.
+ */
+export function personCacheKey(identifier: string): string {
+  const people = readQuery<{ id: string; slug: string | null }[]>("people");
+  const bySlug = people?.find((person) => person.slug === identifier);
+  return `person:${bySlug?.id ?? identifier}`;
+}
+
 /** Every key currently held, so callers can invalidate by pattern. */
 export function queryKeys(): string[] {
   return [...entries.keys()];
