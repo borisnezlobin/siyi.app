@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { brand } from "@/config/brand";
 import { PersonPicker } from "@/components/person-picker";
 import {
   chooseCatchUpPerson,
@@ -136,7 +137,7 @@ export function CatchUpDialog({ people }: { people: Person[] }) {
                     ? `How about reaching out to ${firstNameOf(person)}?`
                     : "Nobody to pick just yet."
                   : phase === "choose"
-                    ? "Search your people, or let Siyi pick."
+                    ? `Search your people, or let ${brand.shortName} pick.`
                     : "Pick the app that feels natural."}
               </p>
             </div>
@@ -173,8 +174,8 @@ export function CatchUpDialog({ people }: { people: Person[] }) {
             <div className="mt-8 text-center">
               <p className="text-base font-bold">No one to choose yet</p>
               <p className="mx-auto mt-1.5 max-w-[36ch] text-xs text-ink-muted">
-                Add someone, then Siyi can bring back useful context when you
-                want to catch up.
+                Add someone, then {brand.shortName} can bring back useful
+                context when you want to catch up.
               </p>
             </div>
           ) : phase === "context" ? (
@@ -292,8 +293,8 @@ export function CatchUpDialog({ people }: { people: Person[] }) {
               !person.email ? (
                 <p className="mt-4 text-xs text-ink-muted">
                   Add a phone number, email, or Instagram handle for a direct
-                  shortcut. Discord can open your inbox, but Siyi can’t target
-                  someone from a username alone.
+                  shortcut. Discord can open your inbox, but {brand.shortName}
+                  can’t target someone from a username alone.
                 </p>
               ) : null}
             </>
