@@ -27,7 +27,7 @@ export default async function PeoplePage({
     <div className="mx-auto max-w-[760px] px-4 py-7 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
       <PageHeader
         title="People"
-        description="Names, context, and the small details that make reconnecting easy."
+        description="Search by name, school, class, hometown, major, dorm, or tag."
         action={
           <div className="flex shrink-0 items-center gap-2">
             <Link

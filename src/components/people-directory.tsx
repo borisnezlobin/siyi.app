@@ -167,7 +167,7 @@ export function PeopleDirectory({
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name, school, class, hometown, major, dorm, or tag"
+              placeholder="Search…"
               className="h-12 w-full rounded-2xl border border-black/10 bg-white pl-11 pr-11 text-sm outline-none transition [&::-webkit-search-cancel-button]:hidden placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
             />
             {search ? (

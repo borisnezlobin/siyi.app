@@ -15,8 +15,8 @@ import {
   FocusScrollProvider,
   useFocusScrollArea,
 } from "@/components/focus-scroll";
-import { GlassIconButton, GlassSurface } from "@/components/glass-surface";
-import { colors, radii } from "@/constants/theme";
+import { GlassIconButton, liquidGlassAvailable } from "@/components/glass-surface";
+import { colors } from "@/constants/theme";
 
 type ScreenProps = ScrollViewProps & {
   title?: string;
@@ -129,13 +129,13 @@ export function Screen({
           {heading}
 
           {stickyHeader ? (
-            <View style={styles.sticky}>
-              <GlassSurface
-                fallbackStyle={styles.stickyFallback}
-                style={styles.stickyInner}
-              >
-                {stickyHeader}
-              </GlassSurface>
+            <View
+              style={[
+                styles.sticky,
+                liquidGlassAvailable ? null : styles.stickyFallback,
+              ]}
+            >
+              {stickyHeader}
             </View>
           ) : null}
 
@@ -157,17 +157,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     width: "100%",
   },
-  // The block itself carries no fill: the glass inside it does, and a fill on
-  // both would show as a hard edge where the two shapes disagree.
+  // The block itself carries no fill: each control inside it is its own piece
+  // of glass, and a slab behind them would read as a card they float on.
   sticky: {
-    paddingVertical: 6,
-  },
-  stickyInner: {
-    borderRadius: radii.xlarge,
     gap: 12,
-    overflow: "hidden",
-    padding: 12,
+    paddingVertical: 8,
   },
+  // Without Liquid Glass there is nothing between the controls, so the page
+  // colour goes back in and the list stops showing through the gaps.
   stickyFallback: {
     backgroundColor: colors.porcelain,
   },
