@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
@@ -224,6 +225,8 @@ export default function TodayScreen() {
       subtitle="Here’s what needs attention and who might appreciate a hello."
       title="Today"
     >
+      <AnnouncementBanner />
+
       <PressableCard
         onPress={() => router.push("/check-in")}
         style={styles.checkInPrompt}

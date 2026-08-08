@@ -1,4 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { authenticatedWebRequest } from "@/lib/web-api";
 import {
   defaultNoteHeadings,
   type ProposalFieldName,
@@ -2747,42 +2748,6 @@ export async function deleteAccount(
   await clearOfflineUserData(session.user.id);
   await supabase.auth.signOut({ scope: "local" });
   return result;
-}
-
-function requireWebUrl(webUrl: string) {
-  if (!webUrl) {
-    throw new Error("Set the production web URL before using this feature.");
-  }
-  return webUrl.replace(/\/$/, "");
-}
-
-async function authenticatedWebRequest(
-  session: Session,
-  webUrl: string,
-  path: string,
-  init?: RequestInit,
-) {
-  const response = await fetch(`${requireWebUrl(webUrl)}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      ...init?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json")
-      ? ((await response.json().catch(() => null)) as
-          | { error?: string }
-          | null)
-      : null;
-    throw new Error(
-      payload?.error ||
-        `The server returned ${response.status}. Please try again.`,
-    );
-  }
-  return response;
 }
 
 export type ExportFormat =
