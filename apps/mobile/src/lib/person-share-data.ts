@@ -3,9 +3,8 @@
  * client, so the owner-only policies from migration 0015 are what guard the
  * table — the phone never holds a service key.
  *
- * A link needs the server by definition, so none of this is queued offline. If
- * the table is not there yet, or the phone is offline, `available` comes back
- * false and the sheet keeps offering the contact card exactly as before.
+ * A link needs the server by definition, so none of this is queued offline. A
+ * lookup that fails comes back empty and the next tap makes a fresh link.
  */
 
 import * as Crypto from "expo-crypto";
@@ -14,6 +13,7 @@ import type { ContactShareSelection } from "@/lib/contact-card";
 import {
   buildShareUrl,
   createShareToken,
+  defaultShareExpiryChoiceId,
   mapPersonShare,
   shareExpiryFromChoice,
   shareIsLive,
@@ -27,9 +27,6 @@ const shareColumns =
 
 type ShareClient = Pick<typeof supabase, "from">;
 
-export type PersonShareList = { available: boolean; shares: PersonShare[] };
-
-const noShares: PersonShareList = { available: false, shares: [] };
 
 export function shareUrl(share: PersonShare) {
   return buildShareUrl(brand.webUrl || "https://www.siyi.app", share.token);
@@ -38,7 +35,7 @@ export function shareUrl(share: PersonShare) {
 export async function listPersonShares(
   personId: string,
   client: ShareClient = supabase,
-): Promise<PersonShareList> {
+): Promise<PersonShare[]> {
   try {
     const { data, error } = await client
       .from("person_shares")
@@ -47,37 +44,31 @@ export async function listPersonShares(
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
 
-    if (error) return noShares;
+    if (error) return [];
 
-    return {
-      available: true,
-      shares: (data ?? [])
-        .map(mapPersonShare)
-        .filter((share) => shareIsLive(share)),
-    };
+    return (data ?? []).map(mapPersonShare).filter((share) => shareIsLive(share));
   } catch {
-    return noShares;
+    return [];
   }
 }
 
 export type CreateShareResult =
-  | { share: PersonShare; unavailable?: false; error?: null }
-  /** The table isn't there yet: hide links, keep the card. */
-  | { share: null; unavailable: true; error?: null }
+  | { share: PersonShare; error?: null }
   /** Something went wrong that the sharer should hear about. */
-  | { share: null; unavailable?: false; error: string };
+  | { share: null; error: string };
 
 export async function createPersonShare(
   {
     userId,
     personId,
     selection,
-    expiry,
+    // There is no expiry control any more; a link keeps the default life.
+    expiry = defaultShareExpiryChoiceId,
   }: {
     userId: string;
     personId: string;
     selection: ContactShareSelection;
-    expiry: ShareExpiryChoiceId;
+    expiry?: ShareExpiryChoiceId;
   },
   client: ShareClient = supabase,
   randomBytes: (size: number) => Uint8Array = Crypto.getRandomBytes,
@@ -103,7 +94,9 @@ export async function createPersonShare(
         error: "That link couldn't be created. Try again in a moment.",
       };
     }
-    if (!data) return { share: null, unavailable: true };
+    if (!data) {
+      return { share: null, error: "That link couldn't be created." };
+    }
 
     return { share: mapPersonShare(data) };
   } catch {

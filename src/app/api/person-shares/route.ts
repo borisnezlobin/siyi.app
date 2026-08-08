@@ -31,10 +31,7 @@ export async function GET(request: NextRequest) {
       return apiError(error.message, 400);
     }
 
-    return NextResponse.json({
-      available: true,
-      shares: (data ?? []).map(mapPersonShare),
-    });
+    return NextResponse.json({ shares: (data ?? []).map(mapPersonShare) });
   } catch (error) {
     return apiError(errorMessage(error), 401);
   }
@@ -81,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { available: true, share: mapPersonShare(data) },
+      { share: mapPersonShare(data) },
       { status: 201 },
     );
   } catch (error) {
