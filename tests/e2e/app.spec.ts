@@ -678,3 +678,50 @@ test("choosing what gets shared is its own page, reached from Your card", async 
     page.getByRole("button", { name: /Discord.*nothing to share yet/ }),
   ).toHaveAttribute("aria-disabled", "true");
 });
+
+/**
+ * The catch-up flow was phone-only until now. These walk the same three phases
+ * the sheet has on the phone: the person and their context, choosing someone
+ * else, and choosing how to say hello.
+ */
+test("catching up brings back the context saved about someone", async ({
+  page,
+}) => {
+  await page.goto("/today");
+  await page.getByRole("heading", { name: "Today" }).waitFor();
+  // The prompt card only shows when nothing needs attention, so the demo data
+  // may not offer it; the dialog itself is what is under test here.
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent("siyi:catch-up")),
+  );
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Good idea" })).toBeVisible();
+  await expect(dialog.getByText("A few easy openings")).toBeVisible();
+  await expect(dialog.getByText(/^Last interaction/)).toBeVisible();
+});
+
+test("a catch-up offers someone else, and a way to reach whoever is picked", async ({
+  page,
+}) => {
+  await page.goto("/today");
+  await page.getByRole("heading", { name: "Today" }).waitFor();
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent("siyi:catch-up")),
+  );
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Choose someone else" }).click();
+  await expect(
+    dialog.getByRole("heading", { name: "Choose someone" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Pick someone for me" }),
+  ).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Back to catch-up context" }).click();
+  await dialog.getByRole("button", { name: "Choose how to say hello" }).click();
+  // Discord is always offered, because it never depends on a saved field.
+  const discord = dialog.getByRole("link", { name: /Discord/ });
+  await expect(discord).toHaveAttribute("href", "https://discord.com/app");
+});

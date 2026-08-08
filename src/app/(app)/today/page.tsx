@@ -8,10 +8,12 @@ import {
 import { differenceInCalendarDays, startOfDay } from "date-fns";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
+import { CatchUpDialog, CatchUpTrigger } from "@/components/catch-up-dialog";
 import { CompleteReminderButton } from "@/components/complete-reminder-button";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
+import { brand } from "@/config/brand";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
 import { daysUntilBirthday } from "@/lib/birthday-calendar";
 import { lastSeenLabel } from "@/lib/relative-time";
@@ -127,6 +129,7 @@ export default async function TodayPage() {
     }),
   }, now);
   const counts = agendaCounts(agenda);
+  const activePeople = people.filter((person) => person.status === "active");
   const recentlyMet = recentlyMetPeople(people, now);
   const checkInPeople = pickCheckInSuggestions(
     people,
@@ -208,6 +211,19 @@ export default async function TodayPage() {
           )}
         </div>
       </section>
+
+      {counts.needAttention === 0 && activePeople.length ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-5 shadow-card">
+          <div className="min-w-0">
+            <p className="text-base font-bold">Have a little room today?</p>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              {brand.shortName} can pick someone and bring back the context you
+              saved.
+            </p>
+          </div>
+          <CatchUpTrigger label="Catch up with someone" />
+        </div>
+      ) : null}
 
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">
@@ -297,6 +313,8 @@ export default async function TodayPage() {
           />
         </div>
       ) : null}
+
+      <CatchUpDialog people={activePeople} />
     </div>
   );
 }

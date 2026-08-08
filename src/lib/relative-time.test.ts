@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   dueDateLabel,
   dueDateLabelFromDaysAway,
+  lastInteractionLine,
   lastSeenLabel,
   relativeDateLabel,
 } from "@/lib/relative-time";
@@ -57,6 +58,24 @@ describe("lastSeenLabel", () => {
 
   it("otherwise reads exactly like every other relative date", () => {
     expect(lastSeenLabel(new Date(2026, 2, 10, 9, 0), now)).toBe("Yesterday");
+  });
+});
+
+describe("lastInteractionLine", () => {
+  it("folds a relative phrase into the sentence", () => {
+    expect(lastInteractionLine(new Date(2026, 2, 10, 9, 0), now)).toBe(
+      "Last interaction yesterday",
+    );
+  });
+
+  it("leaves a real date its capital month, rather than saying jul 1", () => {
+    expect(lastInteractionLine(new Date(2026, 0, 18, 9, 0), now)).toBe(
+      "Last interaction Jan 18",
+    );
+  });
+
+  it("says nothing has happened yet instead of pasting that into the sentence", () => {
+    expect(lastInteractionLine(null, now)).toBe("No interactions yet");
   });
 });
 
