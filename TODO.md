@@ -128,6 +128,24 @@ because the offline queue is awkward is how it fell behind in the first place.
 - Running mobile jest from an agent worktree needs
       `apps/mobile/node_modules` symlinked from the main checkout — Node
       resolution walks up to the root but never reaches the workspace folder.
+- [x] Announcements now reach the phone. Until this landed the phone had no
+      announcement handling at all, so a banner published from /admin was seen
+      by web users only. Same endpoint, and the dismissal is recorded
+      server-side, so dismissing on the phone also clears it on the web.
+      Deliberate difference: the web mounts the banner in the shell, above
+      every page; the phone mounts it on Today only. Putting it above the
+      native Stack would have fought every screen's own safe-area padding,
+      and Today is where the app opens.
+- [x] /admin is no longer web-only. Same aggregates, same segment picker,
+      same two-step publish and separate push. It is deliberately unlisted on
+      both platforms — nothing links to it, the web is reached by typing the
+      URL and the phone by deep link (`siyi://admin`, confirmed present in
+      expo-router's generated route table). A non-admin gets "This page does
+      not exist" rather than a locked page, because every admin endpoint
+      answers 404 rather than 403.
+      The phone talks to the existing `/api/admin/*` routes with its Supabase
+      access token, so no admin logic and no service-role key is duplicated
+      into the app binary.
 - [x] Catch-up is no longer phone-only. Web gets the same three phases in a
       dialog off Today: the picked person with what you saved and a few
       openings, choosing someone else, and choosing how to say hello.
