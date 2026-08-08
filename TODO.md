@@ -136,6 +136,19 @@ because the offline queue is awkward is how it fell behind in the first place.
       every page; the phone mounts it on Today only. Putting it above the
       native Stack would have fought every screen's own safe-area padding,
       and Today is where the app opens.
+- [x] The repo can now test signed-in pages. Every E2E run was previously
+      signed out against demo data, so no authenticated page had ever gone
+      through the real server. `playwright.auth.config.ts` boots Next against
+      `tests/support/fake-supabase.mjs`, which stands in for the auth service
+      and the database and nothing else — middleware, the @supabase/ssr
+      client, cookies and HTTP are all real, and the app is unmodified. Runs
+      as part of `npm run check`. /admin is covered by it end to end: an
+      allowlisted admin gets the console with the real aggregates, the segment
+      counts match the fixture data, and an ordinary signed-in user cannot
+      tell the route is there. Guard proven by disabling the middleware check
+      and watching the refusal fail with 200.
+      Worth extending to settings, your card and notifications, which are all
+      still only tested signed out.
 - [x] SECURITY, found while verifying the port: /admin answered **200** with
       the whole signed-in shell wrapped around the not-found copy, while a
       made-up URL answered 404. That difference told a scanner the route was
