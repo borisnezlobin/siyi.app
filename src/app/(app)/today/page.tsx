@@ -149,15 +149,20 @@ export default async function TodayPage() {
         description="Here’s what needs attention and who might appreciate a hello."
       />
 
+      {/* The one thing most days ask of you, so it leads and carries the
+          accent rather than sitting in the list of things to read. */}
       <Link
         href="/check-in"
-        className="mt-9 flex items-center justify-between gap-4 rounded-2xl bg-white p-4 transition-colors hover:bg-mist/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="mt-9 flex items-center gap-3.5 rounded-3xl bg-coral p-5 text-white shadow-float transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
       >
-        <span>
-          <span className="block text-sm font-bold">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/20">
+          <UsersThree size={22} weight="fill" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-bold">
             Who did you talk to today?
           </span>
-          <span className="mt-0.5 block text-xs text-ink-muted">
+          <span className="mt-0.5 block text-xs text-white/80">
             One pass, one tap each — log everyone you saw.
           </span>
         </span>
@@ -165,7 +170,7 @@ export default async function TodayPage() {
           size={16}
           weight="bold"
           aria-hidden="true"
-          className="shrink-0 text-ink-muted"
+          className="shrink-0"
         />
       </Link>
 

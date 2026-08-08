@@ -8,14 +8,14 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
-import { getPeople } from "@/lib/data";
+import { getPeople, getPeopleCached } from "@/lib/data";
 import { type MapMode, summariseHometowns } from "@/lib/geocode";
 import type { Person } from "@/lib/types";
-import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useCachedData } from "@/hooks/use-cached-data";
 
 export default function MapScreen() {
   const router = useRouter();
-  const screenData = useRefreshableData<Person[]>(() => getPeople());
+  const screenData = useCachedData<Person[]>("people", getPeople, { cached: getPeopleCached });
   const [mode, setMode] = useState<MapMode>("hometown");
 
   const summary = useMemo(() => {
@@ -48,7 +48,7 @@ export default function MapScreen() {
       showBack
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
-      subtitle={`Built from the ${noun}s you have written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this.`}
+      subtitle={`Built from the ${noun}s you have written down.`}
       title={mode === "college" ? "Where everyone studies" : "Where everyone's from"}
     >
       <View style={styles.toggle}>

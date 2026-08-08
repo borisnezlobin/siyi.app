@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HometownMap } from "@/components/hometown-map";
 import { PageHeader } from "@/components/page-header";
-import { brand } from "@/config/brand";
 import { type MapMode, summariseHometowns } from "@/lib/geocode";
 import { getPeople } from "@/lib/data";
 
@@ -71,7 +70,7 @@ export default async function MapPage({
 
       <PageHeader
         title={mode === "college" ? "Where everyone studies" : "Where everyone's from"}
-        description={`Built from the ${noun}s you have written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this.`}
+        description={`Built from the ${noun}s you have written down.`}
       />
 
       <div
@@ -231,8 +230,7 @@ export default async function MapPage({
         >
           Natural Earth
         </a>
-        . Both are stored with {brand.name}, so nobody&rsquo;s {noun} is ever
-        sent anywhere to draw this map.
+        .
       </p>
     </div>
   );

@@ -18,6 +18,7 @@ import {
   isSupabaseConfigured,
   supabase,
 } from "@/lib/supabase";
+import { clearQueryCache } from "@/lib/query-cache";
 import type { UserProfile } from "@/lib/types";
 import {
   getOfflineSnapshot,
@@ -202,6 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
+      // Covers the paths the button does not: an expired refresh token, or the
+      // session being revoked from another device.
+      if (!nextSession) clearQueryCache();
       setSession(nextSession);
       setTimeout(() => {
         void loadProfile(nextSession)
@@ -347,6 +351,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // The screen cache lives outside React and outlives this component, so
+    // without this the next account to sign in on this device would be shown
+    // the previous one's people until each screen happened to refresh.
+    clearQueryCache();
   }
 
   const value = useMemo<AuthContextValue>(
