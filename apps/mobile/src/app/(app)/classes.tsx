@@ -51,6 +51,7 @@ export default function ClassesScreen() {
 
   return (
     <Screen
+      showBack
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle="Who you have a course with, built from what you have written down."

@@ -9,7 +9,11 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { EmptyState } from "@/components/surface";
 import { colors, radii } from "@/constants/theme";
-import { alreadyLoggedIds, checkInCandidates } from "@/lib/daily-check-in";
+import {
+  alreadyLoggedIds,
+  checkInCandidates,
+  keepCheckInOrder,
+} from "@/lib/daily-check-in";
 import { createInteraction, getPeople } from "@/lib/data";
 import { lastSeenLabel } from "@/lib/relative-time";
 import { todayDateInputValue, timestampFromDateInput } from "@/lib/date-input";
@@ -34,10 +38,17 @@ export default function CheckInScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const people = useMemo(() => screenData.data ?? [], [screenData.data]);
+  // Fixed when the screen opens, so saving a tick cannot rearrange the list.
+  const [order, setOrder] = useState<string[]>([]);
   const candidates = useMemo(
-    () => checkInCandidates(people, new Date(), 24),
-    [people],
+    () => keepCheckInOrder(checkInCandidates(people, new Date(), 24), order),
+    [people, order],
   );
+
+  useEffect(() => {
+    if (order.length > 0 || people.length === 0) return;
+    setOrder(checkInCandidates(people, new Date(), 24).map((person) => person.id));
+  }, [order.length, people]);
   const loggedAlready = useMemo(
     () => alreadyLoggedIds(people, new Date()),
     [people],

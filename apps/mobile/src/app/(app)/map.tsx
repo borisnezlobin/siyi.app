@@ -45,6 +45,7 @@ export default function MapScreen() {
 
   return (
     <Screen
+      showBack
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
       subtitle={`Built from the ${noun}s you have written down, matched against a list of places kept inside the app. Nothing about your people is sent anywhere to draw this.`}

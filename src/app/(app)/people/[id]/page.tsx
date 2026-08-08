@@ -22,6 +22,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArchivePersonButton } from "@/components/archive-person-button";
 import { SharePersonButton } from "@/components/share-person-button";
+import { AmbientHeader } from "@/components/ambient-header";
 import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { CustomTypeIcon } from "@/components/custom-type-icon";
@@ -180,8 +181,10 @@ export default async function PersonDetailPage({
   ].filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-5 sm:px-7 sm:py-9 lg:px-10 lg:py-12">
-      <div className="flex items-center justify-between">
+    <div className="relative mx-auto max-w-[760px] px-4 py-5 sm:px-7 sm:py-9 lg:px-10 lg:py-12">
+      <AmbientHeader name={person.fullName} imageUrl={person.profilePhotoUrl} />
+
+      <div className="relative flex items-center justify-between">
         <Link
           href="/people"
           className="inline-flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
@@ -202,7 +205,7 @@ export default async function PersonDetailPage({
         </div>
       </div>
 
-      <section className="mt-6 flex flex-col items-center text-center">
+      <section className="relative mt-6 flex flex-col items-center text-center">
         <Avatar name={person.fullName} imageUrl={person.profilePhotoUrl} size="hero" />
         <h1 className="mt-4 font-display text-[2.75rem] leading-[0.95] tracking-[-0.04em]">
           {displayName}
