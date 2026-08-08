@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Check, ClockCountdown, MagnifyingGlass } from "phosphor-react-native";
+import { Bell, Check, MagnifyingGlass } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
@@ -195,7 +195,7 @@ export default function RemindersScreen() {
 
       {openTotal === 0 && !showCompleted ? (
         <View style={styles.empty}>
-          <ClockCountdown color={colors.inkMuted} size={28} />
+          <Bell color={colors.inkMuted} size={28} />
           <AppText variant="heading">
             {(screenData.data || []).length === 0
               ? "No reminders yet"
@@ -270,7 +270,7 @@ export default function RemindersScreen() {
       ) : null}
 
       <Button
-        icon={ClockCountdown}
+        icon={Bell}
         label="Add a reminder"
         onPress={() => quickCapture.addReminder()}
       />

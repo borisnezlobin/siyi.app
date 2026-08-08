@@ -10,11 +10,11 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUUpLeft,
+  Bell,
   ChatCircle,
   ChatCircleDots,
   Check,
   Clock,
-  ClockCountdown,
   DiscordLogo,
   Envelope,
   InstagramLogo,
@@ -1176,7 +1176,7 @@ export function QuickCaptureProvider({
               />
               <CaptureAction
                 body="Something to do before you forget"
-                icon={ClockCountdown}
+                icon={Bell}
                 onPress={() => present("reminder")}
                 title="Add a reminder"
               />

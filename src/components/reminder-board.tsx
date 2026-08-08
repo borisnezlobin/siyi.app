@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ClockCountdown, MagnifyingGlass } from "@phosphor-icons/react";
+import { Bell, Check, MagnifyingGlass } from "@phosphor-icons/react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -188,7 +188,7 @@ export function ReminderBoard({
 
       {openTotal === 0 && !showCompleted ? (
         <div className="py-10">
-          <ClockCountdown size={28} className="text-ink-muted" aria-hidden="true" />
+          <Bell size={28} className="text-ink-muted" aria-hidden="true" />
           <p className="mt-3 font-display text-2xl">
             {reminders.length === 0 ? "No reminders yet" : "Nothing is waiting"}
           </p>

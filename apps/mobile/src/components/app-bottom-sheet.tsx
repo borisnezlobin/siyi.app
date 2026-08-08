@@ -134,7 +134,6 @@ export function AppBottomSheetScrollView({
   ...props
 }: ComponentProps<typeof BottomSheetScrollView>) {
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
   const footerHeight = useSheetFooterHeight();
   const { focusScroll, scrollProps } = useFocusScrollArea({
     bottomInset: footerHeight,
@@ -146,8 +145,12 @@ export function AppBottomSheetScrollView({
         contentContainerStyle={[
           styles.sheetContent,
           {
-            paddingBottom:
-              Math.max(insets.bottom + 24, 36) + keyboardHeight + footerHeight,
+            // No room is left for the keyboard here. The sheet is already
+            // whole-sale above it — "interactive" lifts it, and the ceiling
+            // below comes down by the same amount — so padding for it a second
+            // time subtracted the keyboard twice and squeezed the form to
+            // nothing on a small screen.
+            paddingBottom: Math.max(insets.bottom + 24, 36) + footerHeight,
           },
           contentContainerStyle,
         ]}
