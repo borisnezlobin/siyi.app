@@ -76,7 +76,6 @@ export function SharePersonSheet({
   // Null while we are still finding out. Links stay hidden until we know the
   // table exists, so a build that ships before migration 0015 simply offers the
   // contact card, exactly as before.
-  const [linksAvailable, setLinksAvailable] = useState<boolean | null>(null);
   const [shares, setShares] = useState<PersonShare[]>([]);
   const [creatingLink, setCreatingLink] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -94,9 +93,7 @@ export function SharePersonSheet({
   );
 
   const loadShares = useCallback(async () => {
-    const result = await listPersonShares(person.id);
-    setLinksAvailable(result.available);
-    setShares(result.shares);
+    setShares(await listPersonShares(person.id));
   }, [person.id]);
 
   useEffect(() => {
@@ -161,10 +158,6 @@ export function SharePersonSheet({
         expiry,
       });
 
-      if (result.unavailable) {
-        setLinksAvailable(false);
-        return null;
-      }
       if (result.error || !result.share) {
         setLinkError(result.error ?? "That link couldn't be created.");
         return null;
@@ -217,7 +210,7 @@ export function SharePersonSheet({
 
   // The share actions are pinned rather than trailing the list of fields:
   // ticking every box and adding a link makes that list longer than the sheet.
-  const shareActions = linksAvailable ? (
+  const shareActions = (
     <>
       <Button
         icon={Copy}
@@ -232,13 +225,13 @@ export function SharePersonSheet({
         onPress={() => void shareLink()}
         variant="secondary"
       />
+      <Button
+        label="Share contact card"
+        loading={sharing}
+        onPress={() => void share()}
+        variant="quiet"
+      />
     </>
-  ) : (
-    <Button
-      label="Share contact card"
-      loading={sharing}
-      onPress={() => void share()}
-    />
   );
 
   return (
@@ -322,8 +315,7 @@ export function SharePersonSheet({
             </View>
           ) : null}
 
-          {linksAvailable ? (
-            <View style={styles.linkSection}>
+          <View style={styles.linkSection}>
               <AppText style={styles.linkHeading}>Or send a link</AppText>
               <AppText style={styles.rowHint}>
                 A page on siyi.app showing only what you ticked above. Anyone
@@ -391,8 +383,7 @@ export function SharePersonSheet({
               {linkError ? (
                 <AppText style={styles.linkError}>{linkError}</AppText>
               ) : null}
-            </View>
-          ) : null}
+          </View>
         </View>
       </AppBottomSheetScrollView>
     </AppBottomSheet>

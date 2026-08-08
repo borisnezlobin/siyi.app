@@ -101,36 +101,21 @@ describe("the share sheet", () => {
     mockSheet.props = {};
   });
 
-  it("offers only the contact card until migration 0015 has been applied", async () => {
-    listShares.mockResolvedValue({ available: false, shares: [] });
-
-    await renderSheet();
-
-    await waitFor(() => expect(listShares).toHaveBeenCalled());
-
-    // Exactly today's behaviour: the card button, no link controls, no error.
-    expect(screen.getByText("Share contact card")).toBeTruthy();
-    expect(screen.queryByText("Create a link")).toBeNull();
-    expect(screen.queryByText("Or send a link")).toBeNull();
-  });
-
   it("offers copying the link once the table exists", async () => {
-    listShares.mockResolvedValue({ available: true, shares: [] });
+    listShares.mockResolvedValue([]);
 
     await renderSheet();
 
     await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
 
-    // One link action, not three. The contact card is gone entirely.
+    // A link and the card, both pinned; no separate "create" step.
     expect(screen.getByText("Share link")).toBeTruthy();
-    expect(screen.queryByText("Share contact card")).toBeNull();
+    expect(screen.getByText("Share contact card")).toBeTruthy();
     expect(screen.queryByText("Create a link")).toBeNull();
   });
 
   it("lists a live link with its expiry and a way to turn it off", async () => {
-    listShares.mockResolvedValue({
-      available: true,
-      shares: [
+    listShares.mockResolvedValue([
         {
           id: "share-1",
           personId: "person-1",
@@ -140,10 +125,9 @@ describe("the share sheet", () => {
           revokedAt: null,
           lastViewedAt: null,
           viewCount: 0,
-          createdAt: "2026-08-06T00:00:00.000Z",
-        },
-      ],
-    });
+        createdAt: "2026-08-06T00:00:00.000Z",
+      },
+    ]);
 
     await renderSheet();
 
@@ -153,7 +137,7 @@ describe("the share sheet", () => {
   });
 
   it("pins the share action in the footer, out of the scrolling region", async () => {
-    listShares.mockResolvedValue({ available: true, shares: [] });
+    listShares.mockResolvedValue([]);
 
     await renderSheet();
     await waitFor(() => expect(screen.getByText("Copy link")).toBeTruthy());
@@ -170,7 +154,7 @@ describe("the share sheet", () => {
   });
 
   it("pins the contact-card action too, when there are no links", async () => {
-    listShares.mockResolvedValue({ available: false, shares: [] });
+    listShares.mockResolvedValue([]);
 
     await renderSheet();
     await waitFor(() => expect(listShares).toHaveBeenCalled());
@@ -185,7 +169,7 @@ describe("the share sheet", () => {
   });
 
   it("opens when asked and goes away again", async () => {
-    listShares.mockResolvedValue({ available: false, shares: [] });
+    listShares.mockResolvedValue([]);
 
     const { rerender } = await render(sheetFor(false, () => {}));
     expect(screen.queryByText("Share May")).toBeNull();
@@ -198,7 +182,7 @@ describe("the share sheet", () => {
   });
 
   it("closes when the sheet itself is dismissed, not only from the close button", async () => {
-    listShares.mockResolvedValue({ available: false, shares: [] });
+    listShares.mockResolvedValue([]);
     const onClose = jest.fn();
 
     await renderSheet(onClose);

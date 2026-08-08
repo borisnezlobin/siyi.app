@@ -219,7 +219,7 @@ export default function PeopleScreen() {
         <View style={styles.searchRow}>
           <View style={styles.search}>
             <MagnifyingGlass color={colors.inkMuted} size={20} />
-            <TextInput
+            <RevealingTextInput
               accessibilityLabel="Search people"
               autoCapitalize="none"
               onChangeText={setQuery}
