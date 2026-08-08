@@ -123,7 +123,11 @@ export function ProfileControls({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 border-b border-ink/[0.08] pb-5">
+      <div
+        className={`flex items-center justify-between gap-4 ${
+          isPublic ? "border-b border-ink/[0.08] pb-5" : ""
+        }`}
+      >
         <p className="text-sm font-semibold text-ink">Enable shareable link</p>
         <button
           type="button"
