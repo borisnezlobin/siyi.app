@@ -30,10 +30,21 @@ jest.mock("@gorhom/bottom-sheet", () => {
       ref: unknown,
     ) {
       const [presented, setPresented] = React.useState(false);
+      // The library has no early exit for dismissing a sheet in its initial
+      // state: it marks the sheet as dismissing and then refuses to render, so
+      // every later present() is swallowed. Modelled here because that is the
+      // bug that stopped the share button working.
+      const everPresented = React.useRef(false);
+      const poisoned = React.useRef(false);
       mockSheet.props = props as Record<string, unknown>;
       React.useImperativeHandle(ref, () => ({
-        present: () => setPresented(true),
+        present: () => {
+          if (poisoned.current) return;
+          everPresented.current = true;
+          setPresented(true);
+        },
         dismiss: () => {
+          if (!everPresented.current) poisoned.current = true;
           setPresented(false);
           props.onDismiss?.();
         },

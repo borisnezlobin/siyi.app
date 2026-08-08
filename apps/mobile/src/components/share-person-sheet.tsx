@@ -101,7 +101,15 @@ export function SharePersonSheet({
     setShares(result.shares);
   }, [person.id]);
 
+  // Only on a change, never on the way in. Dismissing a sheet that has never
+  // been presented does not no-op: the library has no early exit for a sheet in
+  // its initial state, so it marks the sheet as dismissing, and from then on it
+  // refuses to render. The sheet then swallowed every later present() and the
+  // share button did nothing at all.
+  const presented = useRef(false);
   useEffect(() => {
+    if (visible === presented.current) return;
+    presented.current = visible;
     if (visible) sheetRef.current?.present();
     else sheetRef.current?.dismiss();
   }, [visible]);
