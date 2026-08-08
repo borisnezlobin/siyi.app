@@ -6,7 +6,7 @@ describe("looksLikeUuid", () => {
   });
 
   it("does not mistake a slug for an id", () => {
-    expect(looksLikeUuid("boris-nezlobin-7fk2")).toBe(false);
+    expect(looksLikeUuid("alex-vale-7fk2")).toBe(false);
   });
 });
 
@@ -18,8 +18,8 @@ describe("personRouteIdentifier", () => {
   });
 
   it("reads a slug link", () => {
-    expect(personRouteIdentifier("/people/boris-nezlobin-7fk2")).toBe(
-      "boris-nezlobin-7fk2",
+    expect(personRouteIdentifier("/people/alex-vale-7fk2")).toBe(
+      "alex-vale-7fk2",
     );
   });
 

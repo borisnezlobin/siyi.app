@@ -13,7 +13,12 @@ for directly.
       anything.
 - [x] Default shared fields: **full name and major only**.
 - [x] **QR code and copy link move to the top** of the screen.
-- [x] When the switch is off, **everything below it greys out**.
+- [x] When the switch is off, **everything below it disappears**. Greying it out
+      was the first answer and has been superseded: a disabled control still
+      invites you to try it.
+- [x] Choosing what goes on the card is **its own page**, reached from Your
+      card. The card's own details are editable there — on the web they never
+      were at all.
 - [x] "People can find you as" → **"People can find you at <link>"**. Nothing in
       the app offers a name#number, so "as" describes something that does not
       exist.

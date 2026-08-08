@@ -5,10 +5,11 @@ import ProfileScreen from "@/app/(app)/profile";
 import type { OwnProfile } from "@/lib/profile-data";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock("expo-router", () => {
   return {
-    useRouter: () => ({ back: mockBack }),
+    useRouter: () => ({ back: mockBack, push: mockPush }),
     useFocusEffect: (callback: () => void) =>
       mockReact.useEffect(() => callback(), [callback]),
   };
@@ -16,6 +17,7 @@ jest.mock("expo-router", () => {
 
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
+  selectionAsync: jest.fn(),
   ImpactFeedbackStyle: { Light: "light" },
 }));
 
@@ -37,17 +39,6 @@ jest.mock("@/lib/profile-data", () => ({
   saveOwnProfile: (...args: unknown[]) => mockSaveOwnProfile(...args),
 }));
 
-const mockSaveOwnCard = jest.fn().mockResolvedValue(undefined);
-
-jest.mock("@/lib/data", () => ({
-  getAccountSettings: jest.fn().mockResolvedValue({
-    ownCard: { fullName: "Boris Nezlobin", major: "Computer Science" },
-    ownCardEnabled: true,
-    defaultUniversity: "",
-  }),
-  saveOwnCard: (...args: unknown[]) => mockSaveOwnCard(...args),
-}));
-
 jest.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({ session: { user: { id: "user-1" } } }),
 }));
@@ -58,16 +49,16 @@ const metrics = {
 };
 
 /** What a profile created after migration 0020 arrives with. */
-const newProfile: OwnProfile = {
-  handle: "boris.nezlobin",
+const sharedProfile: OwnProfile = {
+  handle: "alex.vale",
   tag: "4f21",
   isPublic: true,
   publicFields: { fullName: true, major: true },
 };
 
 /** Somebody who was here first and turned their page off. */
-const existingProfileTurnedOff: OwnProfile = {
-  handle: "boris.nezlobin",
+const profileTurnedOff: OwnProfile = {
+  handle: "alex.vale",
   tag: "4f21",
   isPublic: false,
   publicFields: {},
@@ -85,83 +76,79 @@ async function renderProfile(profile: OwnProfile) {
 describe("the Your card screen", () => {
   beforeEach(() => {
     mockBack.mockClear();
+    mockPush.mockClear();
     mockSaveOwnProfile.mockClear();
-    mockSaveOwnCard.mockClear();
   });
 
   it("can be left the way every other pushed screen can", async () => {
-    await renderProfile(newProfile);
+    await renderProfile(sharedProfile);
 
     await fireEvent.press(screen.getByLabelText("Go back"));
 
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it("leads with the switch, then the link and the code", async () => {
-    await renderProfile(newProfile);
+  it("leads with the switch, then the code, the link and the handle", async () => {
+    await renderProfile(sharedProfile);
 
     expect(screen.getByLabelText("Enable shareable link")).toBeTruthy();
     expect(
-      screen.getByText("People can find you at https://www.siyi.app/@boris.nezlobin-4f21"),
+      screen.getByText("People can find you at https://www.siyi.app/@alex.vale-4f21"),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Show code" })).toBeTruthy();
+    expect(screen.getByLabelText("Your handle")).toBeTruthy();
   });
 
-  it("starts a new profile shared, with the full name and the major ticked", async () => {
-    await renderProfile(newProfile);
+  it("shows the code without asking, rather than hiding it behind a button", async () => {
+    await renderProfile(sharedProfile);
 
-    expect(screen.getByLabelText("Enable shareable link").props.value).toBe(true);
-    expect(
-      screen.getByRole("checkbox", { name: "Full name" }).props.accessibilityState
-        .checked,
-    ).toBe(true);
-    expect(
-      screen.getByRole("checkbox", { name: "Major" }).props.accessibilityState.checked,
-    ).toBe(true);
-    expect(
-      screen.getByRole("checkbox", { name: "Hometown" }).props.accessibilityState
-        .checked,
-    ).toBe(false);
+    expect(screen.getByTestId("profile-qr-code")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Show code" })).toBeNull();
+  });
+
+  it("sends you to a separate page to choose what is on the card", async () => {
+    await renderProfile(sharedProfile);
+
+    await fireEvent.press(
+      screen.getByRole("link", { name: "Configure what gets shared" }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith("/configure-card");
   });
 
   it("never turns an existing profile back on by itself", async () => {
-    await renderProfile(existingProfileTurnedOff);
+    await renderProfile(profileTurnedOff);
 
     expect(screen.getByLabelText("Enable shareable link").props.value).toBe(false);
     expect(mockSaveOwnProfile).not.toHaveBeenCalled();
   });
 
-  it("disables everything below the switch rather than only greying it", async () => {
-    await renderProfile(existingProfileTurnedOff);
+  it("removes everything below the switch when it is off, rather than greying it", async () => {
+    await renderProfile(profileTurnedOff);
 
-    const handleField = screen.getByLabelText("Your handle");
-    expect(handleField.props.editable).toBe(false);
-    expect(handleField.props.accessibilityState.disabled).toBe(true);
+    // The switch itself is the one thing that stays.
+    expect(screen.getByLabelText("Enable shareable link")).toBeTruthy();
 
-    const chip = screen.getByRole("checkbox", { name: "Major" });
-    expect(chip.props.accessibilityState.disabled).toBe(true);
-    await fireEvent.press(chip);
-    expect(mockSaveOwnProfile).not.toHaveBeenCalled();
-
-    const copyLink = screen.getByRole("button", { name: "Copy link" });
-    expect(copyLink.props.accessibilityState.disabled).toBe(true);
-
-    const saveDetails = screen.getByRole("button", { name: "Save my details" });
-    expect(saveDetails.props.accessibilityState.disabled).toBe(true);
-    await fireEvent.press(saveDetails);
-    expect(mockSaveOwnCard).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Your handle")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Configure what gets shared" }),
+    ).toBeNull();
+    expect(screen.queryByText(/People can find you at/)).toBeNull();
+    expect(screen.queryByTestId("profile-qr-code")).toBeNull();
   });
 
-  it("keeps everything usable while the link is on", async () => {
-    await renderProfile(newProfile);
+  it("brings it all back when the switch goes on", async () => {
+    await renderProfile(profileTurnedOff);
 
-    expect(screen.getByLabelText("Your handle").props.editable).toBe(true);
+    mockGetOwnProfile.mockResolvedValue(sharedProfile);
+    await fireEvent(
+      screen.getByLabelText("Enable shareable link"),
+      "valueChange",
+      true,
+    );
 
-    await fireEvent.press(screen.getByRole("checkbox", { name: "Hometown" }));
-
-    expect(mockSaveOwnProfile).toHaveBeenCalledWith("user-1", {
-      publicFields: { fullName: true, major: true, hometown: true },
-    });
+    expect(mockSaveOwnProfile).toHaveBeenCalledWith("user-1", { isPublic: true });
+    expect(await screen.findByLabelText("Your handle")).toBeTruthy();
   });
 });

@@ -10,11 +10,11 @@ import {
   usersInSegment,
 } from "@/lib/admin";
 
-const allowlist = "boris@example.com, jerry@example.com";
+const allowlist = "alex@example.com, jerry@example.com";
 
 describe("who is allowed into /admin", () => {
   it("lets an allowlisted email through", () => {
-    expect(isAdminEmail("boris@example.com", allowlist)).toBe(true);
+    expect(isAdminEmail("alex@example.com", allowlist)).toBe(true);
     expect(isAdminEmail("jerry@example.com", allowlist)).toBe(true);
   });
 
@@ -29,19 +29,19 @@ describe("who is allowed into /admin", () => {
   });
 
   it("ignores case and stray whitespace on both sides", () => {
-    expect(isAdminEmail("  Boris@Example.COM  ", allowlist)).toBe(true);
-    expect(isAdminEmail("BORIS@EXAMPLE.COM", "  BoRiS@example.com  ")).toBe(true);
+    expect(isAdminEmail("  Alex@Example.COM  ", allowlist)).toBe(true);
+    expect(isAdminEmail("ALEX@EXAMPLE.COM", "  AlEx@example.com  ")).toBe(true);
   });
 
   it("lets nobody in when the allowlist is unset or empty", () => {
-    expect(isAdminEmail("boris@example.com", undefined)).toBe(false);
-    expect(isAdminEmail("boris@example.com", "")).toBe(false);
-    expect(isAdminEmail("boris@example.com", " , , ")).toBe(false);
+    expect(isAdminEmail("alex@example.com", undefined)).toBe(false);
+    expect(isAdminEmail("alex@example.com", "")).toBe(false);
+    expect(isAdminEmail("alex@example.com", " , , ")).toBe(false);
   });
 
   it("does not treat a lookalike email as a match", () => {
-    expect(isAdminEmail("boris@example.com.evil.com", allowlist)).toBe(false);
-    expect(isAdminEmail("xboris@example.com", allowlist)).toBe(false);
+    expect(isAdminEmail("alex@example.com.evil.com", allowlist)).toBe(false);
+    expect(isAdminEmail("xalex@example.com", allowlist)).toBe(false);
   });
 
   it("parses the environment variable into normalised emails", () => {
@@ -161,10 +161,10 @@ describe("contact-count buckets", () => {
 describe("deciding who is an admin", () => {
   const confirmed = {
     id: "11111111-1111-4111-8111-111111111111",
-    email: "boris@example.com",
+    email: "alex@example.com",
     emailConfirmedAt: "2026-01-01T00:00:00Z",
   };
-  const emails = { adminEmails: "boris@example.com", adminUserIds: null };
+  const emails = { adminEmails: "alex@example.com", adminUserIds: null };
 
   it("lets a confirmed allowlisted address in", () => {
     expect(isAdminUser(confirmed, emails)).toBe(true);
@@ -179,7 +179,7 @@ describe("deciding who is an admin", () => {
 
   it("ignores the email allowlist entirely once user ids are set", () => {
     const byId = {
-      adminEmails: "boris@example.com",
+      adminEmails: "alex@example.com",
       adminUserIds: "99999999-9999-4999-8999-999999999999",
     };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { CollegeInput } from "@/components/college-input";
+import { DateField } from "@/components/date-field";
 import { Camera, Check, ImageSquare, SpinnerGap, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -422,6 +423,7 @@ export function EditPersonForm({
               type="number"
               min="1900"
               max="2200"
+              inputMode="numeric"
               defaultValue={person.graduationYear ?? ""}
               className={inputClassName}
             />
@@ -434,15 +436,13 @@ export function EditPersonForm({
               className={inputClassName}
             />
           </label>
-          <label className={`${labelClassName} sm:col-span-2`}>
-            Birthday
-            <input
-              name="birthday"
-              type="date"
-              defaultValue={person.birthday ?? ""}
-              className={inputClassName}
-            />
-          </label>
+          <DateField
+            className="sm:col-span-2"
+            defaultValue={person.birthday ?? ""}
+            inputClassName={inputClassName}
+            label="Birthday"
+            name="birthday"
+          />
         </div>
       </FormSection>
 
@@ -457,16 +457,13 @@ export function EditPersonForm({
         )}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={labelClassName}>
-            When did you meet?
-            <input
-              name="firstMetAt"
-              type="date"
-              max={today}
-              defaultValue={initialValues.firstMetAt}
-              className={inputClassName}
-            />
-          </label>
+          <DateField
+            defaultValue={initialValues.firstMetAt}
+            inputClassName={inputClassName}
+            label="When did you meet?"
+            max={today}
+            name="firstMetAt"
+          />
           <label className={labelClassName}>
             Where did you meet?
             <input

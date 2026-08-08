@@ -40,7 +40,7 @@ function signedInAs(
 describe("guarding the admin area", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ADMIN_EMAILS = "boris@example.com, jerry@example.com";
+    process.env.ADMIN_EMAILS = "alex@example.com, jerry@example.com";
     delete process.env.ADMIN_USER_IDS;
   });
 
@@ -69,7 +69,7 @@ describe("guarding the admin area", () => {
 
   it("turns everyone away when the allowlist is unset", async () => {
     delete process.env.ADMIN_EMAILS;
-    signedInAs("boris@example.com");
+    signedInAs("alex@example.com");
     await expect(resolveAdminRequest(request)).resolves.toBeNull();
   });
 
@@ -78,7 +78,7 @@ describe("guarding the admin area", () => {
   });
 
   it("renders the page only for an admin, and 404s for anyone else", async () => {
-    signedInAs("boris@example.com");
+    signedInAs("alex@example.com");
     await expect(requireAdminPageUser()).resolves.toMatchObject({ id: "user-1" });
     expect(notFound).not.toHaveBeenCalled();
 
@@ -93,19 +93,19 @@ describe("guarding the admin area", () => {
 describe("guarding the admin area against a claimed address", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ADMIN_EMAILS = "boris@example.com";
+    process.env.ADMIN_EMAILS = "alex@example.com";
     delete process.env.ADMIN_USER_IDS;
   });
 
   it("turns away an allowlisted address that was never confirmed", async () => {
     // Signup is open, so anyone can register an address they do not own.
-    signedInAs("boris@example.com", { confirmed: false });
+    signedInAs("alex@example.com", { confirmed: false });
     await expect(resolveAdminRequest(request)).resolves.toBeNull();
   });
 
   it("ignores the email allowlist once user ids are configured", async () => {
     process.env.ADMIN_USER_IDS = "the-real-admin";
-    signedInAs("boris@example.com");
+    signedInAs("alex@example.com");
     await expect(resolveAdminRequest(request)).resolves.toBeNull();
 
     signedInAs("someone-else@example.com", { id: "the-real-admin" });

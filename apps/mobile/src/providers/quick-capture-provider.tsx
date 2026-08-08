@@ -3,14 +3,12 @@ import {
   BottomSheetView,
   type BottomSheetModal,
 } from "@gorhom/bottom-sheet";
-import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
   ArrowRight,
-  CalendarBlank,
   ChatCircle,
   ChatCircleDots,
   Check,
@@ -95,6 +93,7 @@ import {
   fallbackConversationStarters,
 } from "@/lib/catch-up";
 import {
+  dateFromDateInput,
   daysAgoDateInputValue,
   isFutureDateInput,
   isValidDateInput,
@@ -423,8 +422,15 @@ export function QuickCaptureProvider({
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
   const [reminderText, setReminderText] = useState("");
-  const [dueDay, setDueDay] = useState(() => reminderDayFromDaysAway(1));
-  const [pickingDueDate, setPickingDueDate] = useState(false);
+  // Held as text, so the date can be typed as readily as tapped. The chips and
+  // everything downstream read the day back out of it.
+  const [dueDateText, setDueDateText] = useState(() =>
+    reminderDayValue(reminderDayFromDaysAway(1)),
+  );
+  // Whatever was typed, read as a day. A half-typed date keeps the last one it
+  // understood rather than leaving the reminder with no due date at all.
+  const dueDay =
+    dateFromDateInput(dueDateText) ?? reminderDayFromDaysAway(1);
   const [updateText, setUpdateText] = useState("");
   const [title, setTitle] = useState("");
   const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
@@ -466,8 +472,7 @@ export function QuickCaptureProvider({
 
   const resetForm = useCallback(() => {
     setReminderText("");
-    setDueDay(reminderDayFromDaysAway(1));
-    setPickingDueDate(false);
+    setDueDateText(reminderDayValue(reminderDayFromDaysAway(1)));
     setUpdateText("");
     setTitle("");
     setCustomIcon("");
@@ -1324,17 +1329,15 @@ export function QuickCaptureProvider({
                         option.daysAway,
                       );
                       const selected =
-                        !pickingDueDate &&
                         reminderDayValue(dueDay) ===
-                          reminderDayValue(optionDay);
+                        reminderDayValue(optionDay);
                       return (
                         <Pressable
                           accessibilityRole="radio"
                           accessibilityState={{ checked: selected }}
                           key={option.label}
                           onPress={() => {
-                            setPickingDueDate(false);
-                            setDueDay(optionDay);
+                            setDueDateText(reminderDayValue(optionDay));
                             void Haptics.selectionAsync();
                           }}
                           style={[
@@ -1355,46 +1358,14 @@ export function QuickCaptureProvider({
                         </Pressable>
                       );
                     })}
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: pickingDueDate }}
-                      onPress={() => {
-                        setPickingDueDate(true);
-                        void Haptics.selectionAsync();
-                      }}
-                      style={[
-                        styles.optionChip,
-                        pickingDueDate && styles.optionChipSelected,
-                      ]}
-                    >
-                      <CalendarBlank
-                        color={pickingDueDate ? colors.paper : colors.inkMuted}
-                        size={15}
-                      />
-                      <AppText
-                        style={pickingDueDate ? styles.lightText : undefined}
-                        variant="caption"
-                      >
-                        {pickingDueDate
-                          ? reminderDayLabel(dueDay)
-                          : "Pick a date"}
-                      </AppText>
-                    </Pressable>
                   </View>
-                  {pickingDueDate ? (
-                    <DateTimePicker
-                      accentColor={colors.coral}
-                      display="inline"
-                      minimumDate={reminderDayFromDaysAway(0)}
-                      mode="date"
-                      onValueChange={(_event, date) => {
-                        setDueDay(date);
-                      }}
-                      presentation="inline"
-                      style={styles.datePicker}
-                      value={dueDay}
-                    />
-                  ) : null}
+                  <DateField
+                    bottomSheet
+                    label="Or choose a date"
+                    minimumDate={reminderDayFromDaysAway(0)}
+                    onChangeText={setDueDateText}
+                    value={dueDateText}
+                  />
                   <AppText style={styles.dueSummary} variant="caption">
                     Due {reminderDayLabel(dueDay)}
                   </AppText>
@@ -1836,9 +1807,6 @@ const styles = StyleSheet.create({
   },
   optionChipSelected: {
     backgroundColor: colors.ink,
-  },
-  datePicker: {
-    alignSelf: "stretch",
   },
   dueSummary: {
     color: colors.inkMuted,

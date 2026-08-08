@@ -11,7 +11,7 @@ import {
 
 describe("normalizeHandle", () => {
   it("lowercases, strips accents and drops what cannot appear", () => {
-    expect(normalizeHandle("  Boris.Nezlobin ")).toBe("boris.nezlobin");
+    expect(normalizeHandle("  Alex.Vale ")).toBe("alex.vale");
     expect(normalizeHandle("José Álvarez")).toBe("josealvarez");
     expect(normalizeHandle("a/b?c")).toBe("abc");
   });
@@ -23,7 +23,7 @@ describe("normalizeHandle", () => {
 
 describe("handleProblem", () => {
   it("accepts an ordinary handle", () => {
-    expect(handleProblem("boris.nezlobin")).toBeNull();
+    expect(handleProblem("alex.vale")).toBeNull();
     expect(handleProblem("ana_kim")).toBeNull();
   });
 
@@ -32,8 +32,8 @@ describe("handleProblem", () => {
   });
 
   it("rejects one that starts or ends with punctuation", () => {
-    expect(handleProblem(".boris")).toBe("bad-characters");
-    expect(handleProblem("boris.")).toBe("bad-characters");
+    expect(handleProblem(".alex")).toBe("bad-characters");
+    expect(handleProblem("alex.")).toBe("bad-characters");
   });
 
   it("refuses handles that would shadow a page", () => {
@@ -54,28 +54,28 @@ describe("handle tags", () => {
   });
 
   it("reads the way somebody would say it", () => {
-    expect(formatHandle("boris.nezlobin", "4f21")).toBe("boris.nezlobin#4f21");
+    expect(formatHandle("alex.vale", "4f21")).toBe("alex.vale#4f21");
   });
 });
 
 describe("profile addresses", () => {
   it("builds a path and a full URL", () => {
-    expect(profilePath("boris.nezlobin", "4f21")).toBe("/@boris.nezlobin-4f21");
+    expect(profilePath("alex.vale", "4f21")).toBe("/@alex.vale-4f21");
     expect(buildProfileUrl("https://www.siyi.app/", "ana_kim", "00ab")).toBe(
       "https://www.siyi.app/@ana_kim-00ab",
     );
   });
 
   it("reads a slug back apart", () => {
-    expect(parseProfileSlug("boris.nezlobin-4f21")).toEqual({
-      handle: "boris.nezlobin",
+    expect(parseProfileSlug("alex.vale-4f21")).toEqual({
+      handle: "alex.vale",
       tag: "4f21",
     });
   });
 
   it("refuses a slug with no tag, a bad tag, or a bad handle", () => {
-    expect(parseProfileSlug("boris.nezlobin")).toBeNull();
-    expect(parseProfileSlug("boris.nezlobin-zzzz")).toBeNull();
+    expect(parseProfileSlug("alex.vale")).toBeNull();
+    expect(parseProfileSlug("alex.vale-zzzz")).toBeNull();
     expect(parseProfileSlug("ab-4f21")).toBeNull();
   });
 });

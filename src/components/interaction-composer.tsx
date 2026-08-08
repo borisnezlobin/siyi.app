@@ -4,6 +4,7 @@ import { Check, MagnifyingGlass } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useId, useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { DateField } from "@/components/date-field";
 import { todayDateInputValue } from "@/lib/date-input";
 import { interactionTitleSuggestions } from "@/lib/interaction-title";
 import { rankPeopleForPicker, type PickablePerson } from "@/lib/person-search";
@@ -174,21 +175,13 @@ export function InteractionComposer({
             ))}
           </div>
 
-          <label
-            htmlFor={`${fieldId}-date`}
-            className="mt-5 block text-xs font-semibold text-ink-muted"
-          >
-            When?
-          </label>
-          <input
-            id={`${fieldId}-date`}
-            type="date"
-            value={draft.occurredOn}
+          <DateField
+            className="mt-5"
+            inputClassName="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            label="When?"
             max={today}
-            onChange={(event) =>
-              onDraftChange({ ...draft, occurredOn: event.target.value })
-            }
-            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/20"
+            onChange={(next) => onDraftChange({ ...draft, occurredOn: next })}
+            value={draft.occurredOn}
           />
 
           <label

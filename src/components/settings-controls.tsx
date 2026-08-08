@@ -376,6 +376,7 @@ export function SettingsControls({
                   type="number"
                   min="1"
                   max="3650"
+                  inputMode="numeric"
                   value={intervals[strength]}
                   onChange={(event) =>
                     setIntervals((currentIntervals) => ({

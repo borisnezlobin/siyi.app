@@ -1,6 +1,7 @@
 "use client";
 
 import { CollegeInput } from "@/components/college-input";
+import { DateField } from "@/components/date-field";
 import { timestampFromDateInput, todayDateInputValue } from "@/lib/date-input";
 import {
   Camera,
@@ -237,16 +238,13 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
             />
           </label>
 
-          <label className={labelClassName}>
-            When did you meet?
-            <input
-              type="date"
-              name="firstMetAt"
-              max={todayDateInputValue()}
-              defaultValue={todayDateInputValue()}
-              className={inputClassName}
-            />
-          </label>
+          <DateField
+            defaultValue={todayDateInputValue()}
+            inputClassName={inputClassName}
+            label="When did you meet?"
+            max={todayDateInputValue()}
+            name="firstMetAt"
+          />
 
           <label className={labelClassName}>
             Short note
@@ -307,10 +305,11 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
             Dorm or residence
             <input name="dormOrResidence" className={inputClassName} />
           </label>
-          <label className={labelClassName}>
-            Birthday
-            <input name="birthday" type="date" className={inputClassName} />
-          </label>
+          <DateField
+            inputClassName={inputClassName}
+            label="Birthday"
+            name="birthday"
+          />
           <RelationshipFields personName={fullName.trim() || undefined} />
         </div>
       </details>

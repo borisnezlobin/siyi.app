@@ -53,7 +53,7 @@ function personRow(overrides: Record<string, unknown> = {}) {
   return {
     id: personId,
     user_id: "user",
-    full_name: "Boris Nezlobin",
+    full_name: "Alex Vale",
     preferred_name: null,
     profile_photo_url: null,
     instagram_username: null,
@@ -87,24 +87,24 @@ beforeEach(() => {
 describe("getPerson", () => {
   it("looks a uuid up by id", async () => {
     queryResult = {
-      data: personRow({ slug: "boris-nezlobin-7fk2" }),
+      data: personRow({ slug: "alex-vale-7fk2" }),
       error: null,
     };
     const person = await getPerson(personId);
 
     expect(lookups).toEqual([{ column: "id", value: personId }]);
-    expect(person.slug).toBe("boris-nezlobin-7fk2");
+    expect(person.slug).toBe("alex-vale-7fk2");
   });
 
   it("looks anything else up by slug", async () => {
     queryResult = {
-      data: personRow({ slug: "boris-nezlobin-7fk2" }),
+      data: personRow({ slug: "alex-vale-7fk2" }),
       error: null,
     };
-    await getPerson("boris-nezlobin-7fk2");
+    await getPerson("alex-vale-7fk2");
 
     expect(lookups).toEqual([
-      { column: "slug", value: "boris-nezlobin-7fk2" },
+      { column: "slug", value: "alex-vale-7fk2" },
     ]);
   });
 
@@ -119,7 +119,7 @@ describe("getPerson", () => {
 
   it("404s rather than throwing when the slug column is missing", async () => {
     queryResult = { data: null, error: { code: "42703" } };
-    await expect(getPerson("boris-nezlobin-7fk2")).rejects.toThrow(
+    await expect(getPerson("alex-vale-7fk2")).rejects.toThrow(
       "NEXT_NOT_FOUND",
     );
   });

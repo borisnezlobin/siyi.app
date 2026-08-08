@@ -12,7 +12,7 @@ const suffix = /-[23456789bcdfghjkmnpqrstvwxz]{4}$/;
 
 describe("slugifyName", () => {
   it("lowercases and hyphenates a plain name", () => {
-    expect(slugifyName("Boris Nezlobin")).toBe("boris-nezlobin");
+    expect(slugifyName("Alex Vale")).toBe("alex-vale");
   });
 
   it("folds accents to their base letters", () => {
@@ -84,8 +84,8 @@ describe("randomSlugSuffix", () => {
 
 describe("personSlug", () => {
   it("always appends a suffix, even with no collision in sight", () => {
-    expect(personSlug("Boris Nezlobin")).toMatch(
-      /^boris-nezlobin-[23456789bcdfghjkmnpqrstvwxz]{4}$/,
+    expect(personSlug("Alex Vale")).toMatch(
+      /^alex-vale-[23456789bcdfghjkmnpqrstvwxz]{4}$/,
     );
     expect(personSlug("Zzyzx Quorndale")).toMatch(suffix);
   });
@@ -105,7 +105,7 @@ describe("personSlug", () => {
 
   it("always produces a well formed slug", () => {
     const names = [
-      "Boris Nezlobin",
+      "Alex Vale",
       "Renée Élodie",
       "Sam 🎉 Rivera",
       "山田太郎",
@@ -128,15 +128,15 @@ describe("looksLikeUuid", () => {
   });
 
   it("does not mistake a slug for an id", () => {
-    expect(looksLikeUuid("boris-nezlobin-7fk2")).toBe(false);
+    expect(looksLikeUuid("alex-vale-7fk2")).toBe(false);
     expect(looksLikeUuid("beefcafe-dead-beef-cafe")).toBe(false);
   });
 });
 
 describe("personPath", () => {
   it("prefers the slug", () => {
-    expect(personPath({ id: "abc", slug: "boris-nezlobin-7fk2" })).toBe(
-      "/people/boris-nezlobin-7fk2",
+    expect(personPath({ id: "abc", slug: "alex-vale-7fk2" })).toBe(
+      "/people/alex-vale-7fk2",
     );
   });
 

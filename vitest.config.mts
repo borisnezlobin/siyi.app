@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Component tests are .tsx; nothing else here needs a JSX transform.
+  oxc: { jsx: { runtime: "automatic", importSource: "react" } },
   resolve: {
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
@@ -8,7 +10,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // Component tests opt into a DOM with a `@vitest-environment jsdom`
+    // docblock; everything else stays on node, which is faster.
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: ["tests/e2e/**", "node_modules/**"],
     coverage: {
       provider: "v8",
