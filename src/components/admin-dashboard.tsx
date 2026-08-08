@@ -308,25 +308,29 @@ export function AdminDashboard({
               />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Who sees it</span>
-                <select
-                  value={segmentId}
-                  onChange={(event) => setSegmentId(event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-mist bg-porcelain px-3.5 py-2.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-sage-strong"
-                >
-                  {segments.map((segment) => (
-                    <option key={segment.id} value={segment.id}>
-                      {segment.label} ({segment.users})
-                    </option>
-                  ))}
-                </select>
+              <div>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Who sees it</span>
+                  <select
+                    value={segmentId}
+                    onChange={(event) => setSegmentId(event.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-mist bg-porcelain px-3.5 py-2.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-sage-strong"
+                  >
+                    {segments.map((segment) => (
+                      <option key={segment.id} value={segment.id}>
+                        {segment.label} ({segment.users})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {/* Outside the label on purpose: inside it, the description
+                    became part of the select's accessible name. */}
                 {selectedSegment ? (
-                  <span className="mt-1.5 block text-xs text-ink-muted">
+                  <p className="mt-1.5 text-xs text-ink-muted">
                     {selectedSegment.description}
-                  </span>
+                  </p>
                 ) : null}
-              </label>
+              </div>
               <label className="block">
                 <span className="text-sm font-medium text-ink">
                   Hide it after (optional)
