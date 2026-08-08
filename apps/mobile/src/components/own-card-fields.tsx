@@ -11,15 +11,15 @@ import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 
 const placeholders: Partial<Record<(typeof ownCardFields)[number], string>> = {
-  fullName: "Boris Nezlobin",
-  preferredName: "Boris",
+  fullName: "Alex Vale",
+  preferredName: "Alex",
   phoneNumber: "(555) 555-0123",
   email: "you@example.edu",
   instagramUsername: "@username",
   discordUsername: "username",
   birthday: "2005-04-12",
-  hometown: "Berkeley, California",
-  university: "University of California, Berkeley",
+  hometown: "Portland, Oregon",
+  university: "Start typing, or an acronym like CMU",
   major: "Computer Science",
   graduationYear: "2027",
   dormOrResidence: "Unit 2",

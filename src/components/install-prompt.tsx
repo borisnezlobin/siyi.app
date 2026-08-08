@@ -111,9 +111,7 @@ export function InstallPrompt() {
                   ]
               ).map((step, index) => (
                 <li key={step.text} className="flex items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sage text-sage-strong">
-                    <step.icon size={17} weight="fill" aria-hidden="true" />
-                  </span>
+                  <step.icon size={17} className="shrink-0 text-ink-muted" aria-hidden="true" />
                   <p className="flex-1 text-xs leading-5">
                     <span className="font-bold">{index + 1}. </span>
                     {step.text}

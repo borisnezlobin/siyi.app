@@ -198,7 +198,7 @@ export default function ProfileScreen() {
           label="Your handle"
           maxLength={30}
           onChangeText={(value) => setHandle(normalizeHandle(value))}
-          placeholder="boris.nezlobin"
+          placeholder="alex.vale"
           value={currentHandle}
         />
         {problem ? (

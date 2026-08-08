@@ -216,7 +216,7 @@ export function ProfileControls({
             <input
               value={handle}
               onChange={(event) => setHandle(normalizeHandle(event.target.value))}
-              placeholder="boris.nezlobin"
+              placeholder="alex.vale"
               maxLength={30}
               className={inputClassName}
             />

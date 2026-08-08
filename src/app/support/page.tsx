@@ -39,9 +39,7 @@ export default function SupportPage() {
         </Link>
 
         <section className="mt-8 rounded-[1.5rem] bg-white p-6 shadow-card sm:p-9">
-          <span className="grid size-11 place-items-center rounded-xl bg-sage text-sage-strong">
-            <Question aria-hidden="true" size={23} weight="duotone" />
-          </span>
+          <Question aria-hidden="true" className="text-sage-strong" size={23} />
           <h1 className="mt-5 font-display text-5xl tracking-[-0.04em]">
             How can we help?
           </h1>
