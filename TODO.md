@@ -136,6 +136,21 @@ because the offline queue is awkward is how it fell behind in the first place.
       every page; the phone mounts it on Today only. Putting it above the
       native Stack would have fought every screen's own safe-area padding,
       and Today is where the app opens.
+- [x] SECURITY, found while verifying the port: /admin answered **200** with
+      the whole signed-in shell wrapped around the not-found copy, while a
+      made-up URL answered 404. That difference told a scanner the route was
+      real, which is the one thing the 404-not-403 rule exists to prevent. A
+      page cannot set its own status, so `notFound()` inside /admin could
+      never have produced a 404 — the middleware now rewrites non-admins to an
+      unrouted path, and /admin is byte-identical to a made-up URL, status and
+      body. `requireAdminPageUser()` stays in the page: the middleware fixes
+      the status code, not the authorisation, and the page must not depend on
+      it having run. Guard proven by reverting the fix and watching the test
+      fail with 200.
+- [ ] BLOCKER, not a chore: with neither ADMIN_USER_IDS nor ADMIN_EMAILS set,
+      `isAdminUser` matches nobody, so /admin 404s for the owner too and the
+      admin console cannot be opened on either platform. Set one before
+      relying on it.
 - [x] /admin is no longer web-only. Same aggregates, same segment picker,
       same two-step publish and separate push. It is deliberately unlisted on
       both platforms — nothing links to it, the web is reached by typing the
