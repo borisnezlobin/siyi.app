@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { RevealingTextInput } from "@/components/focus-scroll";
+import { GlassGroup, GlassSurface } from "@/components/glass-surface";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
@@ -196,7 +197,7 @@ export default function PeopleScreen() {
       refreshing={screenData.refreshing}
       stickyHeader={
         <>
-        <View style={styles.shortcuts}>
+        <GlassGroup style={styles.shortcuts}>
           {(
             [
               ["/birthdays", "Birthdays", Cake],
@@ -204,26 +205,35 @@ export default function PeopleScreen() {
               ["/map", "Map", MapPin],
             ] as const
           ).map(([href, label, Icon]) => (
-            <Pressable
-              accessibilityRole="button"
+            <GlassSurface
+              fallbackStyle={styles.shortcutFallback}
+              isInteractive
               key={href}
-              onPress={() => router.push(href)}
               style={styles.shortcut}
             >
-              <Icon color={colors.ink} size={17} />
-              <AppText variant="caption">{label}</AppText>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push(href)}
+                style={({ pressed }) => [
+                  styles.shortcutPress,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Icon color={colors.ink} size={17} />
+                <AppText variant="caption">{label}</AppText>
+              </Pressable>
+            </GlassSurface>
           ))}
-        </View>
+        </GlassGroup>
 
         <View style={styles.searchRow}>
-          <View style={styles.search}>
+          <GlassSurface fallbackStyle={styles.searchFallback} style={styles.search}>
             <MagnifyingGlass color={colors.inkMuted} size={20} />
             <RevealingTextInput
               accessibilityLabel="Search people"
               autoCapitalize="none"
               onChangeText={setQuery}
-              placeholder="Name, school, class, hometown, major, dorm, or tag"
+              placeholder="Search…"
               placeholderTextColor={colors.inkMuted}
               returnKeyType="search"
               selectionColor={colors.coral}
@@ -240,30 +250,48 @@ export default function PeopleScreen() {
                 <XCircle color={colors.inkMuted} size={20} weight="fill" />
               </Pressable>
             ) : null}
-          </View>
-          <Pressable
-            accessibilityLabel="Show filters"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showFilters }}
-            onPress={() => setShowFilters((visible) => !visible)}
-            style={[
-              styles.filterButton,
-              (showFilters || activeFilterCount > 0) && styles.filterButtonSelected,
-            ]}
-          >
-            <Funnel
-              color={showFilters || activeFilterCount ? colors.paper : colors.ink}
-              size={21}
-              weight={activeFilterCount ? "fill" : "regular"}
-            />
+          </GlassSurface>
+          {/* The badge is a sibling of the glass rather than a child of it,
+              because glass clips what its children draw outside its shape and
+              the count sits deliberately outside the circle. */}
+          <View style={styles.filterSlot}>
+            <GlassSurface
+              fallbackStyle={
+                showFilters || activeFilterCount > 0
+                  ? styles.filterButtonSelectedFallback
+                  : styles.filterButtonFallback
+              }
+              isInteractive
+              style={styles.filterButton}
+              tintColor={
+                showFilters || activeFilterCount > 0 ? colors.ink : undefined
+              }
+            >
+              <Pressable
+                accessibilityLabel="Show filters"
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showFilters }}
+                onPress={() => setShowFilters((visible) => !visible)}
+                style={({ pressed }) => [
+                  styles.filterPress,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Funnel
+                  color={showFilters || activeFilterCount ? colors.paper : colors.ink}
+                  size={21}
+                  weight={activeFilterCount ? "fill" : "regular"}
+                />
+              </Pressable>
+            </GlassSurface>
             {activeFilterCount ? (
-              <View style={styles.filterBadge}>
+              <View pointerEvents="none" style={styles.filterBadge}>
                 <AppText style={styles.filterBadgeText} variant="caption">
                   {activeFilterCount}
                 </AppText>
               </View>
             ) : null}
-          </Pressable>
+          </View>
         </View>
 
         {showFilters ? (
@@ -353,7 +381,7 @@ export default function PeopleScreen() {
         ) : null}
         </>
       }
-      subtitle="Names, context, and the small details that make reconnecting easy."
+      subtitle="Search by name, school, class, hometown, major, dorm, or tag."
       title="People"
     >
       <View style={styles.resultHeader}>
@@ -473,17 +501,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
+  // No fill here: the glass is the fill. The paper and its hairline come back
+  // only where the system has no Liquid Glass to draw.
   search: {
     alignItems: "center",
-    backgroundColor: colors.paper,
-    borderColor: colors.mist,
     borderRadius: radii.medium,
-    borderWidth: 1,
     flex: 1,
     flexDirection: "row",
     gap: 9,
     minHeight: 52,
     paddingHorizontal: 15,
+  },
+  searchFallback: {
+    backgroundColor: colors.paper,
+    borderColor: colors.mist,
+    borderWidth: 1,
   },
   searchInput: {
     color: colors.ink,
@@ -491,16 +523,29 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.body,
     fontSize: 15,
   },
-  filterButton: {
-    alignItems: "center",
-    backgroundColor: colors.paper,
-    borderRadius: radii.round,
+  filterSlot: {
     height: 52,
-    justifyContent: "center",
     width: 52,
   },
-  filterButtonSelected: {
+  filterButton: {
+    borderRadius: radii.round,
+    height: 52,
+    width: 52,
+  },
+  filterPress: {
+    alignItems: "center",
+    height: "100%",
+    justifyContent: "center",
+    width: "100%",
+  },
+  filterButtonFallback: {
+    backgroundColor: colors.paper,
+  },
+  filterButtonSelectedFallback: {
     backgroundColor: colors.ink,
+  },
+  pressed: {
+    opacity: 0.6,
   },
   filterBadge: {
     alignItems: "center",
@@ -580,10 +625,14 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   shortcut: {
-    alignItems: "center",
-    backgroundColor: colors.paper,
     borderRadius: radii.medium,
     flex: 1,
+  },
+  shortcutFallback: {
+    backgroundColor: colors.paper,
+  },
+  shortcutPress: {
+    alignItems: "center",
     flexDirection: "row",
     gap: 7,
     justifyContent: "center",

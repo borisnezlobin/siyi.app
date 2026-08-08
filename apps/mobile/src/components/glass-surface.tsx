@@ -1,4 +1,8 @@
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import {
+  GlassContainer,
+  GlassView,
+  isLiquidGlassAvailable,
+} from "expo-glass-effect";
 import type { ReactNode } from "react";
 import {
   Pressable,
@@ -23,6 +27,8 @@ type GlassSurfaceProps = {
   fallbackStyle?: StyleProp<ViewStyle>;
   isInteractive?: boolean;
   glassEffectStyle?: "clear" | "regular";
+  /** Colours the material itself, for a control that reads as selected. */
+  tintColor?: string;
 };
 
 export function GlassSurface({
@@ -31,6 +37,7 @@ export function GlassSurface({
   fallbackStyle,
   isInteractive = false,
   glassEffectStyle = "regular",
+  tintColor,
 }: GlassSurfaceProps) {
   if (!liquidGlassAvailable) {
     return <View style={[style, fallbackStyle]}>{children}</View>;
@@ -42,9 +49,36 @@ export function GlassSurface({
       isInteractive={isInteractive}
       // Glass draws its own material; a fill on top of it defeats the point.
       style={[style, styles.transparent]}
+      tintColor={tintColor}
     >
       {children}
     </GlassView>
+  );
+}
+
+type GlassGroupProps = {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  /** How near two pieces of glass have to be before they flow together. */
+  spacing?: number;
+};
+
+/**
+ * A row of glass controls that belong to each other. Inside a container the
+ * system lets neighbouring pieces bend towards one another and merge as they
+ * close, which is what makes a set of buttons read as one set rather than
+ * three coincidences. Without Liquid Glass there is nothing to merge, so the
+ * group is a plain row.
+ */
+export function GlassGroup({ children, style, spacing }: GlassGroupProps) {
+  if (!liquidGlassAvailable) {
+    return <View style={style}>{children}</View>;
+  }
+
+  return (
+    <GlassContainer spacing={spacing} style={style}>
+      {children}
+    </GlassContainer>
   );
 }
 

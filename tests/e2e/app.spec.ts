@@ -369,6 +369,27 @@ test("people can be searched by contextual notes", async ({ page }) => {
   ).not.toBeVisible();
 });
 
+/**
+ * The phone says exactly this, word for word: an unadorned "Search…" in the
+ * field, and the list of what is searchable moved under the heading where it
+ * can be read once rather than crowding the field forever.
+ */
+test("the search field asks for a search and the heading says what it covers", async ({
+  page,
+}) => {
+  await page.goto("/people");
+
+  await expect(
+    page.getByRole("heading", { name: "People", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Search by name, school, class, hometown, major, dorm, or tag."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("searchbox", { name: "Search people" }),
+  ).toHaveAttribute("placeholder", "Search…");
+});
+
 test("switching tabs paints immediately instead of waiting on the server", async ({
   page,
 }) => {
