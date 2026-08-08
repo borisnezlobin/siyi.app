@@ -17,6 +17,10 @@ import {
   floatShadow,
   radii,
 } from "@/constants/theme";
+import {
+  actionOverhang,
+  tabBarHeight,
+} from "@/components/app-tab-bar-layout";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
 type TabsProps = React.ComponentProps<typeof Tabs>;
@@ -40,10 +44,13 @@ export function AppTabBar({
 
   return (
     <View
+      // box-none so the clear strip the plus button rises into does not
+      // swallow taps meant for the screen behind it.
+      pointerEvents="box-none"
       style={[
         styles.shell,
         {
-          height: 70 + Math.max(insets.bottom, 10),
+          height: tabBarHeight + Math.max(insets.bottom, 10) + actionOverhang,
           paddingBottom: Math.max(insets.bottom, 10),
         },
       ]}
@@ -99,18 +106,18 @@ export function AppTabBar({
             </Pressable>
           );
         })}
-        <Pressable
-          accessibilityLabel="Add something"
-          accessibilityRole="button"
-          onPress={quickCapture.open}
-          style={({ pressed }) => [
-            styles.action,
-            pressed && styles.actionPressed,
-          ]}
-        >
-          <Plus color={colors.paper} size={29} weight="bold" />
-        </Pressable>
       </GlassSurface>
+      <Pressable
+        accessibilityLabel="Add something"
+        accessibilityRole="button"
+        onPress={quickCapture.open}
+        style={({ pressed }) => [
+          styles.action,
+          pressed && styles.actionPressed,
+        ]}
+      >
+        <Plus color={colors.paper} size={29} weight="bold" />
+      </Pressable>
     </View>
   );
 }
@@ -129,6 +136,9 @@ const styles = StyleSheet.create({
   },
   tabs: {
     alignItems: "center",
+    // The shell is this much taller than the bar; the gap is what the plus
+    // button rises into, while staying inside the shell so it stays tappable.
+    marginTop: actionOverhang,
     borderRadius: radii.xlarge,
     flex: 1,
     flexDirection: "row",
@@ -166,7 +176,7 @@ const styles = StyleSheet.create({
     left: "50%",
     marginLeft: -29,
     position: "absolute",
-    top: -35,
+    top: 0,
     width: 58,
     zIndex: 5,
   },
