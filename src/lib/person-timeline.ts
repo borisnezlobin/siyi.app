@@ -35,6 +35,7 @@ const updateTitle = "Update";
  * chips do, and existing entries have to keep reading the way they read today.
  */
 const timelineTitles: Record<InteractionType, string> = {
+  talked: "Talked",
   met: "Met",
   texted: "Texted",
   called: "Called",

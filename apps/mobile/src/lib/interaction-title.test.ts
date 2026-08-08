@@ -10,11 +10,11 @@ describe("titling an interaction", () => {
       customLabel: null,
     });
     expect(interactionFromTitle(null)).toEqual({
-      type: "met",
+      type: "talked",
       customLabel: null,
     });
     expect(interactionFromTitle("   ")).toEqual({
-      type: "met",
+      type: "talked",
       customLabel: null,
     });
   });

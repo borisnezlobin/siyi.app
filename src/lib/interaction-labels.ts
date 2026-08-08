@@ -5,6 +5,7 @@ import { interactionTypes, type InteractionType } from "@/lib/types";
  * without pulling a React icon library into the bundle.
  */
 export const interactionLabels: Record<InteractionType, string> = {
+  talked: "Talked",
   texted: "Texted",
   called: "Called",
   coffee: "Coffee",
@@ -18,8 +19,8 @@ export const interactionLabels: Record<InteractionType, string> = {
 
 /**
  * Updates store the label they were saved with rather than the type, so editing
- * one has to work back to a type. Anything unrecognised — including the older
- * default of "Talked" — starts from "other" rather than guessing.
+ * one has to work back to a type. "Talked" was the default long before it was a
+ * kind of its own, so those older rows land on it now instead of "other".
  */
 export function interactionTypeFromLabel(
   label: string | null | undefined,
