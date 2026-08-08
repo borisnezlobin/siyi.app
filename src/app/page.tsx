@@ -153,9 +153,7 @@ export default async function HomePage() {
                       {person.note}
                     </span>
                   </span>
-                  <span className="grid size-10 place-items-center rounded-full bg-sage text-sage-strong">
-                    <Plus size={18} weight="bold" aria-hidden="true" />
-                  </span>
+                  <Plus size={18} weight="bold" className="text-sage-strong" aria-hidden="true" />
                 </article>
               ))}
             </div>
@@ -193,9 +191,7 @@ export default async function HomePage() {
             },
           ].map(({ icon: Icon, title, copy }) => (
             <article key={title} className="rounded-[1.5rem] bg-porcelain p-5">
-              <span className="grid size-10 place-items-center rounded-full bg-sage text-sage-strong">
-                <Icon size={19} weight="fill" aria-hidden="true" />
-              </span>
+              <Icon size={19} className="text-sage-strong" aria-hidden="true" />
               <h2 className="mt-4 text-sm font-bold">{title}</h2>
               <p className="mt-2 text-xs leading-6 text-ink-muted">{copy}</p>
             </article>

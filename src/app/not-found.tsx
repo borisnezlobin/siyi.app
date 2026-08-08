@@ -5,9 +5,7 @@ export default function NotFound() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-porcelain px-4 py-10">
       <div className="w-full max-w-[420px] rounded-[2rem] bg-white p-7 text-center shadow-card ring-1 ring-black/[0.035]">
-        <span className="mx-auto grid size-14 place-items-center rounded-full bg-sage text-sage-strong">
-          <Compass size={26} weight="fill" aria-hidden="true" />
-        </span>
+        <Compass size={26} className="mx-auto text-ink-muted" aria-hidden="true" />
         <h1 className="mt-5 font-display text-4xl leading-none tracking-[-0.035em]">
           We can&apos;t find that page.
         </h1>
