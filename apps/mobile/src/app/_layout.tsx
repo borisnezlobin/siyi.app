@@ -16,6 +16,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ContactSyncOverlay } from "@/components/contact-sync-overlay";
 import { colors } from "@/constants/theme";
+import { startCacheInvalidation } from "@/lib/cache-invalidation";
+import { SharedElementProvider } from "@/components/shared-element";
 import { AuthProvider } from "@/providers/auth-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { OfflineSyncProvider } from "@/providers/offline-sync-provider";
@@ -26,6 +28,10 @@ import {
 } from "@/lib/native-push";
 
 void SplashScreen.preventAutoHideAsync();
+
+// Module scope on purpose: the listener has to outlive any one screen, which
+// is the whole reason the cache it guards is worth having.
+startCacheInvalidation();
 configureNotificationPresentation();
 
 function AppRuntime() {
@@ -93,7 +99,11 @@ export default function RootLayout() {
         <BottomSheetModalProvider>
           <AuthProvider>
             <OfflineSyncProvider>
-              <AppRuntime />
+              {/* Outside the navigator on purpose: the copy in flight has to
+                  draw above both the screen it leaves and the one it joins. */}
+              <SharedElementProvider>
+                <AppRuntime />
+              </SharedElementProvider>
             </OfflineSyncProvider>
           </AuthProvider>
         </BottomSheetModalProvider>

@@ -44,7 +44,7 @@ import {
   recentlyMetPeople,
   type AgendaItem,
 } from "@/lib/today-agenda";
-import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useCachedData } from "@/hooks/use-cached-data";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
@@ -120,7 +120,7 @@ export default function TodayScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const quickCapture = useQuickCapture();
-  const screenData = useRefreshableData<TodayData>(() =>
+  const screenData = useCachedData<TodayData>("today", () =>
     loadToday(session!.user.id),
   );
 
@@ -227,17 +227,24 @@ export default function TodayScreen() {
     >
       <AnnouncementBanner />
 
+      {/* The one thing most days ask of you, so it leads and carries the
+          accent rather than sitting in the list of things to read. */}
       <PressableCard
         onPress={() => router.push("/check-in")}
         style={styles.checkInPrompt}
       >
+        <View style={styles.checkInIcon}>
+          <UsersThree color={colors.porcelain} size={22} weight="fill" />
+        </View>
         <View style={styles.checkInBody}>
-          <AppText variant="label">Who did you talk to today?</AppText>
-          <AppText variant="caption">
+          <AppText style={styles.checkInTitle} variant="heading">
+            Who did you talk to today?
+          </AppText>
+          <AppText style={styles.checkInSubtitle} variant="caption">
             One pass, one tap each — log everyone you saw.
           </AppText>
         </View>
-        <CaretRight color={colors.inkMuted} size={16} weight="bold" />
+        <CaretRight color={colors.porcelain} size={16} weight="bold" />
       </PressableCard>
 
       <Card style={styles.overview}>
@@ -381,9 +388,24 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   checkInPrompt: {
     alignItems: "center",
+    backgroundColor: colors.coral,
     flexDirection: "row",
-    gap: 12,
-    padding: 15,
+    gap: 13,
+    padding: 17,
+  },
+  checkInIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderRadius: radii.round,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  checkInTitle: {
+    color: colors.porcelain,
+  },
+  checkInSubtitle: {
+    color: "rgba(255,255,255,0.82)",
   },
   checkInBody: {
     flex: 1,

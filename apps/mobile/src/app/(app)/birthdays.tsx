@@ -12,15 +12,15 @@ import {
   birthdaysByMonth,
   upcomingBirthdays,
 } from "@/lib/birthday-calendar";
-import { getPeople } from "@/lib/data";
+import { getPeople, getPeopleCached } from "@/lib/data";
 import type { Person } from "@/lib/types";
-import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useCachedData } from "@/hooks/use-cached-data";
 
 type BirthdayView = "upcoming" | "year";
 
 export default function BirthdaysScreen() {
   const router = useRouter();
-  const screenData = useRefreshableData<Person[]>(() => getPeople());
+  const screenData = useCachedData<Person[]>("people", getPeople, { cached: getPeopleCached });
   const [view, setView] = useState<BirthdayView>("upcoming");
 
   const people = useMemo(

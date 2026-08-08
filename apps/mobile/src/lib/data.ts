@@ -713,6 +713,42 @@ async function getPersonDetailsRemote(identifier: string) {
   } satisfies PersonDetails;
 }
 
+/**
+ * What is already on the device, with no network involved. Screens draw this
+ * first so an "info page" whose contents were saved long ago appears at once
+ * instead of waiting on a refresh of the whole dataset.
+ */
+/** The signed-in user id, for the cache layer's own bookkeeping. */
+export async function currentUserIdForCache() {
+  return currentUserId();
+}
+
+export async function getPersonDetailsCached(
+  identifier: string,
+): Promise<PersonDetails | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+  const snapshot = await getOfflineSnapshot(userId);
+  const personId = looksLikeUuid(identifier)
+    ? identifier
+    : snapshot.people.find(({ slug }) => slug === identifier)?.id ?? identifier;
+  return snapshot.personDetails[personId] ?? null;
+}
+
+export async function getPeopleCached(): Promise<Person[] | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+  const snapshot = await getOfflineSnapshot(userId);
+  return snapshot.people.length > 0 ? snapshot.people : null;
+}
+
+export async function getRemindersCached(): Promise<Reminder[] | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+  const snapshot = await getOfflineSnapshot(userId);
+  return snapshot.reminders.length > 0 ? snapshot.reminders : null;
+}
+
 export async function getPeople() {
   const userId = await currentUserId();
   if (!userId) throw new Error("Sign in to see your people.");

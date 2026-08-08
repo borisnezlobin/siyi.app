@@ -38,7 +38,7 @@ import {
   type RelationshipStrength,
   type ReminderDefaults,
 } from "@/lib/types";
-import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useCachedData } from "@/hooks/use-cached-data";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
@@ -69,7 +69,7 @@ export default function PeopleScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const quickCapture = useQuickCapture();
-  const screenData = useRefreshableData<PeopleData>(async () => {
+  const screenData = useCachedData<PeopleData>("peopleTab", async () => {
     const [people, settings, classes] = await Promise.all([
       getPeople(),
       getAccountSettings(session!.user.id),
@@ -500,6 +500,9 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     gap: 10,
+    // The shortcuts sit directly above rather than in the header as they do on
+    // the web, so the gap the web gets from its sticky padding is set here.
+    marginTop: 12,
   },
   // No fill here: the glass is the fill. The paper and its hairline come back
   // only where the system has no Liquid Glass to draw.

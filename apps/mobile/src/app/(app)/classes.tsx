@@ -9,16 +9,19 @@ import { peopleByCourse, type PersonClass } from "@/lib/classes";
 import { getClasses } from "@/lib/classes-data";
 import { getPeople } from "@/lib/data";
 import type { Person } from "@/lib/types";
-import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { useCachedData } from "@/hooks/use-cached-data";
 import { useAuth } from "@/providers/auth-provider";
 
 export default function ClassesScreen() {
   const router = useRouter();
   const { session } = useAuth();
-  const screenData = useRefreshableData<{
+  // Keyed separately from "people" because it needs the class rows too. No
+  // disk seed yet: classes are not in the offline snapshot, so a cold start
+  // still fetches once, while every return visit comes from memory.
+  const screenData = useCachedData<{
     people: Person[];
     classes: PersonClass[];
-  }>(async () => {
+  }>("classes", async () => {
     const [people, classes] = await Promise.all([
       getPeople(),
       getClasses(session!.user.id),

@@ -41,7 +41,12 @@ import { Screen } from "@/components/screen";
 import { Card, SectionAction, SectionHeading } from "@/components/surface";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { ageOnDate } from "@/lib/birthday-age";
-import { archivePerson, getPersonDetails, noteSectionsOf } from "@/lib/data";
+import {
+  archivePerson,
+  getPersonDetails,
+  getPersonDetailsCached,
+  noteSectionsOf,
+} from "@/lib/data";
 import {
   contactDraftsOf,
   type ContactMethodDraft,
@@ -60,6 +65,7 @@ import {
   editableEntryFromUpdate,
 } from "@/lib/update-entries";
 import type { InteractionType } from "@/lib/types";
+import { useCachedData } from "@/hooks/use-cached-data";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 import { PersonClasses } from "@/components/person-classes";
@@ -96,7 +102,14 @@ export default function PersonDetailScreen() {
   const catchUpOpenedRef = useRef(false);
   const [sharing, setSharing] = useState(false);
   const quickCapture = useQuickCapture();
-  const personData = useRefreshableData(() => getPersonDetails(id));
+  // Keyed per person, so revisiting somebody you have already opened draws
+  // from memory, and opening them for the first time draws from the snapshot
+  // while the fresh copy loads behind it.
+  const personData = useCachedData(
+    `person:${id}`,
+    () => getPersonDetails(id),
+    { cached: () => getPersonDetailsCached(id) },
+  );
   const { session } = useAuth();
   const classData = useRefreshableData(() =>
     session ? getClasses(session.user.id) : Promise.resolve([]),
