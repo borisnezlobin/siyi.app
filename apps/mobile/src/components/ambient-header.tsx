@@ -10,7 +10,8 @@ import {
   useImage,
   vec,
 } from "@shopify/react-native-skia";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import { useState } from "react";
+import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import { colors } from "@/constants/theme";
 import { avatarColorFor } from "@/lib/avatar-colors";
 
@@ -33,12 +34,26 @@ export function AmbientHeader({
   uri?: string | null;
   height: number;
 }) {
-  const { width } = useWindowDimensions();
+  // Measured rather than assumed: this sits outside the page's own padding, so
+  // it is wider than the screen, and drawing it a screen wide left a band of
+  // bare background down one side.
+  const [width, setWidth] = useState(0);
   const image = useImage(uri ?? null);
   const color = avatarColorFor(name);
 
+  const measure = (event: LayoutChangeEvent) =>
+    setWidth(event.nativeEvent.layout.width);
+
+  if (width === 0) {
+    return <View onLayout={measure} style={styles.canvas} />;
+  }
+
   return (
-    <Canvas pointerEvents="none" style={[styles.canvas, { height, width }]}>
+    <Canvas
+      onLayout={measure}
+      pointerEvents="none"
+      style={[styles.canvas, { height, width }]}
+    >
       <Group layer={<Paint><Blur blur={52} /></Paint>}>
         {image ? (
           // Drawn well outside the frame: a blur this heavy would otherwise
@@ -96,6 +111,7 @@ const styles = StyleSheet.create({
   canvas: {
     left: 0,
     position: "absolute",
+    right: 0,
     top: 0,
   },
 });
