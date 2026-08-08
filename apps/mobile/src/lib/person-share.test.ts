@@ -82,10 +82,20 @@ describe("share tokens", () => {
     }
   });
 
-  it("still accepts every link shape issued before this", () => {
-    // 32 characters, and later a surname with a tail.
-    expect(isValidShareToken("a".repeat(32))).toBe(true);
-    expect(isValidShareToken("zhang-k7f2m9qpAB3d")).toBe(true);
+  it("turns down any shape other than the six-character one", () => {
+    // Longer, shorter, and the older surname-with-a-tail shape.
+    expect(isValidShareToken("a".repeat(32))).toBe(false);
+    expect(isValidShareToken("zhang-k7f2m9qpAB3d")).toBe(false);
+    expect(isValidShareToken("abcde")).toBe(false);
+    expect(isValidShareToken("abcdefg")).toBe(false);
+  });
+
+  it("turns down the confusable characters the alphabet leaves out", () => {
+    for (const token of ["abcdei", "abcdel", "abcdeo", "abcde0", "abcde1"]) {
+      expect(isValidShareToken(token)).toBe(false);
+    }
+    // Uppercase L is in the alphabet, so it has to pass.
+    expect(isValidShareToken("abcdeL")).toBe(true);
   });
 
   it("draws every character of the alphabet rather than favouring a few", () => {

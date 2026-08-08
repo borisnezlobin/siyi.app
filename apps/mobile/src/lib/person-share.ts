@@ -32,7 +32,10 @@ import type { Person } from "@/lib/types";
 export const shareTokenLength = 6;
 export const shareTokenAlphabet =
   "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-export const shareTokenPattern = /^[A-Za-z0-9_-]{6,64}$/;
+// The alphabet above, spelled as a range: the confusable characters (i, l, o,
+// 0, 1) are absent, and the length is exact. The database check constraint is
+// the same expression, so anything this accepts will insert.
+export const shareTokenPattern = /^[a-hjkmnp-zA-HJ-NP-Z2-9]{6}$/;
 
 /**
  * `randomBytes` must come from a cryptographically secure source. It is passed

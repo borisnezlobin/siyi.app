@@ -23,6 +23,7 @@ type GlassSurfaceProps = {
   fallbackStyle?: StyleProp<ViewStyle>;
   isInteractive?: boolean;
   glassEffectStyle?: "clear" | "regular";
+  pointerEvents?: "none" | "auto" | "box-none" | "box-only";
 };
 
 export function GlassSurface({
@@ -31,15 +32,21 @@ export function GlassSurface({
   fallbackStyle,
   isInteractive = false,
   glassEffectStyle = "regular",
+  pointerEvents,
 }: GlassSurfaceProps) {
   if (!liquidGlassAvailable) {
-    return <View style={[style, fallbackStyle]}>{children}</View>;
+    return (
+      <View pointerEvents={pointerEvents} style={[style, fallbackStyle]}>
+        {children}
+      </View>
+    );
   }
 
   return (
     <GlassView
       glassEffectStyle={glassEffectStyle}
       isInteractive={isInteractive}
+      pointerEvents={pointerEvents}
       // Glass draws its own material; a fill on top of it defeats the point.
       style={[style, styles.transparent]}
     >
@@ -73,8 +80,12 @@ type GlassIconButtonProps = {
 };
 
 /**
- * A round icon button that sits on glass. The press target is the whole shape,
- * so the glass is behind the touch rather than competing with it.
+ * A round icon button that sits on glass.
+ *
+ * The Pressable is on the outside, with the glass drawn inside it. Nesting it
+ * the other way let the glass answer the touch itself — it has its own press
+ * animation — while the handler underneath never ran, so the button appeared to
+ * respond and then did nothing.
  */
 export function GlassIconButton({
   children,
@@ -84,15 +95,21 @@ export function GlassIconButton({
   fallbackStyle,
 }: GlassIconButtonProps) {
   return (
-    <GlassSurface fallbackStyle={fallbackStyle} isInteractive style={style}>
-      <Pressable
-        accessibilityLabel={accessibilityLabel}
-        accessibilityRole="button"
-        onPress={onPress}
-        style={({ pressed }) => [styles.fill, pressed && styles.pressed]}
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      hitSlop={6}
+      onPress={onPress}
+      style={({ pressed }) => [style, pressed && styles.pressed]}
+    >
+      <GlassSurface
+        fallbackStyle={fallbackStyle}
+        // The glass must not take the touch; the Pressable around it has it.
+        pointerEvents="none"
+        style={[styles.fill, style]}
       >
         {children}
-      </Pressable>
-    </GlassSurface>
+      </GlassSurface>
+    </Pressable>
   );
 }
