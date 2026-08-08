@@ -14,6 +14,7 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
+import { OwnCardSection } from "@/components/own-card-section";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { CollegeField } from "@/components/college-field";
@@ -316,12 +317,10 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Inline, not behind a link: the code is the thing people came for, and
+          the web puts it on this page too. */}
       <Section title="Your card">
-        <NavigationRow
-          detail="What you hand out, the address people find you at, and a code to scan"
-          label="Your card"
-          onPress={() => router.push("/profile")}
-        />
+        <OwnCardSection />
       </Section>
 
       <Section title="Notifications">
