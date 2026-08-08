@@ -1,3 +1,5 @@
+import { useRouter } from "expo-router";
+import { ArrowLeft } from "phosphor-react-native";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
+import { GlassIconButton } from "@/components/glass-surface";
 import { colors } from "@/constants/theme";
 
 type ScreenProps = ScrollViewProps & {
@@ -20,6 +23,8 @@ type ScreenProps = ScrollViewProps & {
   bottomInset?: number;
   maxContentWidth?: number;
   keyboardAvoiding?: boolean;
+  /** For anything pushed on top of a tab, which the tab bar cannot get back from. */
+  showBack?: boolean;
 };
 
 export function Screen({
@@ -32,10 +37,12 @@ export function Screen({
   bottomInset = 124,
   maxContentWidth = 1040,
   keyboardAvoiding = true,
+  showBack = false,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <KeyboardAvoidingView
@@ -72,6 +79,21 @@ export function Screen({
         style={styles.fill}
         {...props}
       >
+        {showBack ? (
+          // On its own row and hard left: an arrow pointing left, anywhere but
+          // the left edge, reads as pointing at whatever is beside it.
+          <View style={styles.backRow}>
+            <GlassIconButton
+              accessibilityLabel="Go back"
+              fallbackStyle={styles.backFallback}
+              onPress={() => router.back()}
+              style={styles.back}
+            >
+              <ArrowLeft color={colors.ink} size={21} />
+            </GlassIconButton>
+          </View>
+        ) : null}
+
         {eyebrow || title || subtitle ? (
           <View style={styles.header}>
             {eyebrow ? (
@@ -101,6 +123,19 @@ const styles = StyleSheet.create({
     gap: 22,
     paddingHorizontal: 20,
     width: "100%",
+  },
+  backRow: {
+    alignItems: "flex-start",
+  },
+  back: {
+    alignItems: "center",
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  backFallback: {
+    backgroundColor: colors.paper,
   },
   header: {
     gap: 7,

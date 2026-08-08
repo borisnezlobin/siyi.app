@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   alreadyLoggedIds,
   checkInCandidates,
+  keepCheckInOrder,
   startOfCheckInDay,
   loggedToday,
   shouldAskToday,
@@ -102,3 +103,24 @@ describe("shouldAskToday", () => {
   });
 });
 
+
+describe("keepCheckInOrder", () => {
+  const person = (id: string) => ({ id, fullName: id });
+
+  it("keeps the order the page opened with, however the answer re-sorts", () => {
+    const resorted = [person("c"), person("a"), person("b")];
+
+    expect(
+      keepCheckInOrder(resorted, ["a", "b", "c"]).map((entry) => entry.id)
+    ).toEqual(["a", "b", "c"]);
+  });
+
+  it("puts anyone who turns up later at the end, in the order given", () => {
+    const kept = keepCheckInOrder(
+      [person("new"), person("b"), person("later"), person("a")],
+      ["a", "b"]
+    );
+
+    expect(kept.map((entry) => entry.id)).toEqual(["a", "b", "new", "later"]);
+  });
+});

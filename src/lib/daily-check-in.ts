@@ -92,3 +92,28 @@ export function shouldAskToday(people: CheckInPerson[], today = new Date()) {
     (person) => !loggedToday(person, today)
   );
 }
+
+/**
+ * The same people, in the order they were first shown.
+ *
+ * Ticking someone changes where they belong: they join the logged group and the
+ * list re-sorts under the finger that just tapped. Worse, the answer only comes
+ * back after the save, so the page sits still and then rearranges a second
+ * later. The order is fixed for as long as the page is open, and anyone who
+ * turns up later joins the end.
+ */
+export function keepCheckInOrder<T extends CheckInPerson>(
+  candidates: T[],
+  order: string[]
+): T[] {
+  const placeOf = new Map(order.map((id, index) => [id, index]));
+  return candidates
+    .map((person, index) => ({ person, index }))
+    .sort((left, right) => {
+      const gap =
+        (placeOf.get(left.person.id) ?? order.length + left.index) -
+        (placeOf.get(right.person.id) ?? order.length + right.index);
+      return gap;
+    })
+    .map((entry) => entry.person);
+}

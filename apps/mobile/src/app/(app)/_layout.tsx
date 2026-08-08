@@ -18,6 +18,10 @@ export default function AuthenticatedLayout() {
       <Stack
         screenOptions={{
           animation: "slide_from_right",
+          // Back from anywhere, by dragging from anywhere — not only from the
+          // few pixels at the very edge of the screen.
+          fullScreenGestureEnabled: true,
+          gestureEnabled: true,
           contentStyle: { backgroundColor: colors.porcelain },
           headerShown: false,
         }}

@@ -31,6 +31,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AmbientHeader } from "@/components/ambient-header";
 import { Avatar } from "@/components/avatar";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
@@ -238,6 +239,20 @@ export default function PersonDetailScreen() {
         bottomInset={112 + insets.bottom}
         contentContainerStyle={styles.content}
       >
+        <View
+          pointerEvents="none"
+          style={[
+            styles.ambient,
+            { height: insets.top + 320, top: -Math.max(insets.top + 10, 22) },
+          ]}
+        >
+          <AmbientHeader
+            height={insets.top + 320}
+            name={person.fullName}
+            uri={person.profilePhotoUrl}
+          />
+        </View>
+
         <View style={styles.topBar}>
           <GlassIconButton
             accessibilityLabel="Go back"
@@ -679,6 +694,13 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
+  },
+  // Out past the page's own padding, and up over the safe area, so the colour
+  // starts at the very top of the screen rather than under the clock.
+  ambient: {
+    left: -20,
+    position: "absolute",
+    right: -20,
   },
   topBar: {
     flexDirection: "row",

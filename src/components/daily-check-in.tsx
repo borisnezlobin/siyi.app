@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { EmptyState } from "@/components/empty-state";
-import { alreadyLoggedIds, checkInCandidates } from "@/lib/daily-check-in";
+import {
+  alreadyLoggedIds,
+  checkInCandidates,
+  keepCheckInOrder,
+} from "@/lib/daily-check-in";
 import { getApiResponseError } from "@/lib/http";
 import { lastSeenLabel } from "@/lib/relative-time";
 import type { Person } from "@/lib/types";
@@ -21,7 +25,14 @@ import type { Person } from "@/lib/types";
  */
 export function DailyCheckIn({ people }: { people: Person[] }) {
   const router = useRouter();
-  const candidates = useMemo(() => checkInCandidates(people, new Date(), 24), [people]);
+  // Fixed when the page opens, so saving a tick cannot rearrange the list.
+  const [order] = useState(() =>
+    checkInCandidates(people, new Date(), 24).map((person) => person.id),
+  );
+  const candidates = useMemo(
+    () => keepCheckInOrder(checkInCandidates(people, new Date(), 24), order),
+    [people, order],
+  );
   const [selected, setSelected] = useState<string[]>(() =>
     alreadyLoggedIds(people, new Date()),
   );
