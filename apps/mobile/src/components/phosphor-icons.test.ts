@@ -1,6 +1,6 @@
 import {
+  Bell,
   BellRinging,
-  ClockCountdown,
   House,
   Plus,
   Share,
@@ -13,7 +13,8 @@ describe("Phosphor icon layer", () => {
     expect(UsersThree).toBeDefined();
     expect(Plus).toBeDefined();
     expect(BellRinging).toBeDefined();
-    expect(ClockCountdown).toBeDefined();
+    // Reminders. A clock said "time"; what it actually does is tell you.
+    expect(Bell).toBeDefined();
   });
 
   it("exports the plain Share arrow the share button uses", () => {

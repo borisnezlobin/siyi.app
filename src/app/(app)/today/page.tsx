@@ -1,8 +1,8 @@
 import {
+  Bell,
   Cake,
   CaretRight,
   CheckCircle,
-  ClockCountdown,
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
 import { differenceInCalendarDays, startOfDay } from "date-fns";
@@ -30,7 +30,7 @@ import type { Person } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 const agendaIcons = {
-  reminder: ClockCountdown,
+  reminder: Bell,
   "check-in": UsersThree,
   birthday: Cake,
 };

@@ -2,10 +2,10 @@ import * as Haptics from "expo-haptics";
 import {
   Cake,
   CaretRight,
+  Bell,
   ChatCircleDots,
   Check,
   CheckCircle,
-  ClockCountdown,
   HandWaving,
   UsersThree,
 } from "phosphor-react-native";
@@ -50,7 +50,7 @@ import { useQuickCapture } from "@/providers/quick-capture-provider";
 type TodayData = Awaited<ReturnType<typeof loadToday>>;
 
 const agendaIcons = {
-  reminder: ClockCountdown,
+  reminder: Bell,
   "check-in": UsersThree,
   birthday: Cake,
 };

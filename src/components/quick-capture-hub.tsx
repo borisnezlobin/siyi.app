@@ -1,8 +1,8 @@
 "use client";
 
 import {
+  Bell,
   Check,
-  ClockCountdown,
   NotePencil,
   SpinnerGap,
   UserPlus,
@@ -94,7 +94,7 @@ export function QuickCaptureTrigger({
 }) {
   const Icon =
     mode === "reminder"
-      ? ClockCountdown
+      ? Bell
       : mode === "interaction"
         ? UsersThree
         : NotePencil;
@@ -452,11 +452,7 @@ export function QuickCaptureHub({
           }}
           className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
         >
-          <ClockCountdown
-            size={19}
-            className="shrink-0 text-ink"
-            aria-hidden="true"
-          />
+          <Bell size={19} className="shrink-0 text-ink" aria-hidden="true" />
           <span className="min-w-0">
             <span className="block text-sm font-semibold">Add a reminder</span>
             <span className="block text-[11px] text-ink-muted">

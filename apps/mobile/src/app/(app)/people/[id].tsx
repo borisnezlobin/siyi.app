@@ -2,12 +2,12 @@ import * as Haptics from "expo-haptics";
 import {
   ArrowLeft,
   Archive,
+  Bell,
   Buildings,
   Cake,
   CalendarBlank,
   CaretRight,
   ChatCircleDots,
-  ClockCountdown,
   EnvelopeSimple,
   GraduationCap,
   Handshake,
@@ -452,7 +452,7 @@ export default function PersonDetailScreen() {
             actions={
               <>
                 <SectionAction
-                  icon={ClockCountdown}
+                  icon={Bell}
                   label="Add reminder"
                   onPress={() => quickCapture.addReminder(person.id)}
                 />
@@ -492,7 +492,7 @@ export default function PersonDetailScreen() {
               </AppText>
               <Button
                 compact
-                icon={ClockCountdown}
+                icon={Bell}
                 label="Add one"
                 onPress={() => quickCapture.addReminder(person.id)}
                 variant="secondary"
@@ -626,7 +626,7 @@ export default function PersonDetailScreen() {
           onPress={() => quickCapture.addReminder(person.id)}
           style={styles.footerSecondary}
         >
-          <ClockCountdown color={colors.sageStrong} size={22} weight="bold" />
+          <Bell color={colors.sageStrong} size={22} weight="bold" />
         </Pressable>
       </View>
 
