@@ -1,5 +1,11 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
-import { defaultNoteHeadings } from "@/lib/update-proposal";
+import {
+  defaultNoteHeadings,
+  type ProposalFieldName,
+  type ProposalPerson,
+  type ProposalSection,
+  type UpdateProposal,
+} from "@/lib/update-proposal";
 import type { Session } from "@supabase/supabase-js";
 import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
@@ -2883,3 +2889,37 @@ export async function importAccountData(
     };
   };
 }
+
+/**
+ * Asking the server where an update belongs, for phones with no model of their
+ * own. The person's details never leave here — the server reads them itself,
+ * from rows it is already allowed to see.
+ */
+export async function classifyUpdateViaWeb(
+  session: Session,
+  webUrl: string,
+  input: { personId: string; text: string },
+): Promise<ClassifiedUpdate | null> {
+  const response = await authenticatedWebRequest(
+    session,
+    webUrl,
+    "/api/updates/classify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+
+  const payload = (await response.json()) as ClassifiedUpdate & {
+    proposal: UpdateProposal | null;
+  };
+  return payload.proposal ? payload : null;
+}
+
+export type ClassifiedUpdate = {
+  proposal: UpdateProposal | null;
+  person?: ProposalPerson;
+  sections?: ProposalSection[];
+  contact?: Partial<Record<ProposalFieldName, string | null>>;
+};

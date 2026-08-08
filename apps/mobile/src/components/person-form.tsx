@@ -1,4 +1,5 @@
 import { CollegeField } from "@/components/college-field";
+import { storedPersonInput } from "@/lib/person-input";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -151,35 +152,6 @@ export function PersonForm({
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Everything except the photo is taken from the person as stored, not from
-   * the form. Picking a photo should not also commit a half-typed name that
-   * the user has not decided about yet.
-   */
-  function storedInput(current: Person): PersonInput {
-    return {
-      fullName: current.fullName,
-      preferredName: current.preferredName,
-      instagramUsername: current.instagramUsername,
-      phoneNumber: current.phoneNumber,
-      email: current.email,
-      birthday: current.birthday ?? "",
-      hometown: current.hometown,
-      dormOrResidence: current.dormOrResidence,
-      university: current.university,
-      major: current.major,
-      graduationYear: current.graduationYear,
-      relationshipStrength: current.relationshipStrength,
-      relationshipLabel: current.relationshipLabel,
-      remindersEnabled: current.remindersEnabled,
-      reminderIntervalDays: current.reminderIntervalDays,
-      status: current.status,
-      firstMetAt: current.firstMetAt,
-      firstMetLocation: current.firstMetLocation,
-      generalNotes: current.generalNotes,
-    };
-  }
-
   async function choosePhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -207,7 +179,7 @@ export function PersonForm({
       await updatePerson(
         session.user.id,
         person.id,
-        storedInput(person),
+        storedPersonInput(person),
         picked,
         person.profilePhotoPath,
       );

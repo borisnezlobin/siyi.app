@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUUpLeft,
   ChatCircle,
   ChatCircleDots,
   Check,
@@ -26,6 +27,7 @@ import {
   Trash,
   UserPlus,
   UsersThree,
+  Warning,
   X,
 } from "phosphor-react-native";
 import {
@@ -73,8 +75,31 @@ import {
   getPeople,
   getPersonDetails,
   getRecentCustomLabels,
+  noteSectionsOf,
+  classifyUpdateViaWeb,
   type PersonDetails,
 } from "@/lib/data";
+import {
+  classifyUpdate,
+  sourceLabel,
+  type ClassifierSource,
+} from "@/lib/update-classifier";
+import { onDeviceSortUpdate } from "@/lib/on-device-intelligence";
+import { mobileProposalClient } from "@/lib/update-proposal-client";
+import {
+  applyResultMessage,
+  applyUpdateProposal,
+} from "@/lib/update-proposal-apply";
+import {
+  buildProposalContext,
+  buildProposalItems,
+  describeItem,
+  planFromItems,
+  planSize,
+  proposalFieldLabels,
+  type Decisions,
+  type ProposalItem,
+} from "@/lib/update-proposal";
 import { CustomTypeIconPicker } from "@/components/custom-type-fields";
 import {
   isCustomTypeIconKey,
@@ -127,6 +152,7 @@ import { useAuth } from "@/providers/auth-provider";
 
 type CapturePhase =
   | "menu"
+  | "update-review"
   | "reminder"
   | "interaction"
   | "update"
@@ -417,6 +443,10 @@ export function QuickCaptureProvider({
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [phase, setPhase] = useState<CapturePhase>("menu");
+  // What a model made of the update, waiting to be agreed with.
+  const [reviewItems, setReviewItems] = useState<ProposalItem[]>([]);
+  const [reviewDecisions, setReviewDecisions] = useState<Decisions>({});
+  const [reviewSource, setReviewSource] = useState<ClassifierSource>("none");
   const [people, setPeople] = useState<Person[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
@@ -806,6 +836,16 @@ export function QuickCaptureProvider({
           ...naming,
         });
       } else {
+        // One person at a time: sorting one sentence into several profiles
+        // would have to guess which parts belong to whom.
+        if (selectedPersonIds.length === 1) {
+          const sorted = await sortThisUpdate(selectedPersonIds[0]);
+          if (sorted) {
+            setSaving(false);
+            return;
+          }
+        }
+
         await createPersonUpdate(
           session.user.id,
           learnedUpdateFor({
@@ -814,6 +854,111 @@ export function QuickCaptureProvider({
             recordedOn: updateDate,
           }),
         );
+      }
+      await finishSaving();
+    } catch (saveError) {
+      reportFailure(saveError, "That update could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * Ask where this update belongs, and show what came back.
+   *
+   * Returns true when there is something to agree with, so the caller waits.
+   * Everything else — no model, nothing found, a model having a bad day — is a
+   * false, and the update saves as plain words exactly as it always did.
+   */
+  async function sortThisUpdate(personId: string): Promise<boolean> {
+    if (!session) return false;
+
+    try {
+      return await proposeSortedUpdate(personId);
+    } catch {
+      // Sorting is an extra, never a gate. Anything at all going wrong here
+      // leaves the update to be saved as plain words, which is what this did
+      // before there was a model involved.
+      return false;
+    }
+  }
+
+  async function proposeSortedUpdate(personId: string): Promise<boolean> {
+    if (!session) return false;
+
+    const details = await getPersonDetails(personId).catch(() => null);
+    if (!details) return false;
+
+    const sections = noteSectionsOf(details).sections.map((note) => ({
+      id: note.id,
+      heading: note.heading,
+      body: note.body,
+    }));
+    const context = buildProposalContext({
+      person: details.person,
+      sections,
+      now: new Date(),
+    });
+
+    const { proposal, source } = await classifyUpdate({
+      context,
+      text: updateText,
+      onDevice: onDeviceSortUpdate,
+      onServer: brand.webUrl
+        ? async () => {
+            const answer = await classifyUpdateViaWeb(session, brand.webUrl, {
+              personId,
+              text: updateText,
+            });
+            return answer?.proposal ?? null;
+          }
+        : null,
+    });
+
+    if (!proposal) return false;
+
+    const items = buildProposalItems({
+      proposal,
+      person: details.person,
+      sections,
+      contact: {
+        phone: details.person.phoneNumber,
+        email: details.person.email,
+        instagram: details.person.instagramUsername,
+      },
+      now: new Date(),
+    });
+    if (items.length === 0) return false;
+
+    setReviewItems(items);
+    setReviewDecisions({});
+    setReviewSource(source);
+    setPhase("update-review");
+    return true;
+  }
+
+  /** Write what was agreed to, the typed words first. */
+  async function saveReviewedUpdate() {
+    if (!session || selectedPersonIds.length !== 1) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await applyUpdateProposal(
+        mobileProposalClient({
+          userId: session.user.id,
+          personId: selectedPersonIds[0],
+          recordedOn: updateDate,
+        }),
+        {
+          text: updateText,
+          plan: planFromItems(reviewItems, reviewDecisions),
+        },
+      );
+
+      const message = applyResultMessage(result);
+      if (message) {
+        setError(message);
+        return;
       }
       await finishSaving();
     } catch (saveError) {
@@ -916,7 +1061,16 @@ export function QuickCaptureProvider({
   // amount of form above it can push it below the fold. The error goes there
   // too: a warning you have to scroll to find is a warning nobody reads.
   const composing =
-    phase === "reminder" || phase === "interaction" || phase === "update";
+    phase === "reminder" ||
+    phase === "interaction" ||
+    phase === "update" ||
+    phase === "update-review";
+
+  const reviewCount = planSize(planFromItems(reviewItems, reviewDecisions));
+  const reviewSaveLabel =
+    reviewCount === 0
+      ? "Save the note"
+      : `Save ${reviewCount} ${reviewCount === 1 ? "change" : "changes"}`;
 
   const composerFooter = (
     <>
@@ -925,7 +1079,22 @@ export function QuickCaptureProvider({
           {error}
         </AppText>
       ) : null}
-      {phase === "reminder" ? (
+      {phase === "update-review" ? (
+        <View style={styles.reviewActions}>
+          <Button
+            label="Back"
+            onPress={() => setPhase("update")}
+            style={styles.flex}
+            variant="secondary"
+          />
+          <Button
+            label={reviewSaveLabel}
+            loading={saving}
+            onPress={() => void saveReviewedUpdate()}
+            style={styles.flex}
+          />
+        </View>
+      ) : phase === "reminder" ? (
         <Button
           disabled={!selectedPersonIds[0] || !reminderText.trim()}
           label="Save reminder"
@@ -1000,7 +1169,7 @@ export function QuickCaptureProvider({
                 title="Log an interaction"
               />
               <CaptureAction
-                body="Something you learned about them"
+                body="Anything you found out — we file it for you"
                 icon={NotePencil}
                 onPress={() => present("update")}
                 title="Add an update"
@@ -1250,6 +1419,134 @@ export function QuickCaptureProvider({
               </AppText>
             ) : null}
           </AppBottomSheetScrollView>
+        ) : phase === "update-review" ? (
+          <AppBottomSheetScrollView>
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <AppText variant="title">Here is what I found</AppText>
+                <AppText style={styles.sheetSubtitle}>
+                  Everything below gets saved. Drop anything that is wrong.
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.reviewList}>
+              {reviewItems.map((item) => {
+                const decision = reviewDecisions[item.id] ?? {};
+                const described = describeItem(item);
+                const conflicted = item.kind === "field" && item.conflict;
+
+                return (
+                  <View key={item.id} style={styles.reviewRow}>
+                    <View style={styles.reviewRowTop}>
+                      <View style={styles.flex}>
+                        <View style={styles.reviewLabelRow}>
+                          {conflicted ? (
+                            <Warning
+                              color={colors.coralStrong}
+                              size={13}
+                              weight="fill"
+                            />
+                          ) : null}
+                          <AppText style={styles.reviewLabel} variant="caption">
+                            {described.title}
+                          </AppText>
+                        </View>
+                        <AppText
+                          style={[
+                            styles.reviewText,
+                            decision.removed && styles.reviewTextDropped,
+                          ]}
+                        >
+                          {described.detail}
+                        </AppText>
+                      </View>
+
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          decision.removed
+                            ? `Put ${described.title} back`
+                            : `Leave out ${described.title}`
+                        }
+                        hitSlop={8}
+                        onPress={() =>
+                          setReviewDecisions((current) => ({
+                            ...current,
+                            [item.id]: {
+                              ...current[item.id],
+                              removed: !decision.removed,
+                            },
+                          }))
+                        }
+                        style={styles.reviewDrop}
+                      >
+                        {decision.removed ? (
+                          <ArrowUUpLeft color={colors.inkMuted} size={16} />
+                        ) : (
+                          <Trash color={colors.inkMuted} size={16} />
+                        )}
+                      </Pressable>
+                    </View>
+
+                    {conflicted && !decision.removed ? (
+                      <View style={styles.reviewChoice}>
+                        <AppText style={styles.reviewHint} variant="caption">
+                          {proposalFieldLabels[item.field]} is already saved.
+                          Which one is right?
+                        </AppText>
+                        <View style={styles.reviewChips}>
+                          {[
+                            { keep: true, label: `Keep ${item.current}` },
+                            { keep: false, label: `Use ${item.display}` },
+                          ].map((choice) => {
+                            const selected =
+                              Boolean(decision.keepExisting) === choice.keep;
+                            return (
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                                key={choice.label}
+                                onPress={() =>
+                                  setReviewDecisions((current) => ({
+                                    ...current,
+                                    [item.id]: {
+                                      ...current[item.id],
+                                      keepExisting: choice.keep,
+                                    },
+                                  }))
+                                }
+                                style={[
+                                  styles.reviewChip,
+                                  selected && styles.reviewChipOn,
+                                ]}
+                              >
+                                <AppText
+                                  style={[
+                                    styles.reviewChipLabel,
+                                    selected && styles.reviewChipLabelOn,
+                                  ]}
+                                  variant="caption"
+                                >
+                                  {choice.label}
+                                </AppText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+
+            {sourceLabel(reviewSource) ? (
+              <AppText style={styles.reviewSource} variant="caption">
+                {sourceLabel(reviewSource)}
+              </AppText>
+            ) : null}
+          </AppBottomSheetScrollView>
         ) : (
           <AppBottomSheetScrollView>
             <View style={styles.sheetHeader}>
@@ -1270,7 +1567,7 @@ export function QuickCaptureProvider({
                       ? "Change what you wrote, or take it off the timeline."
                       : phase === "interaction"
                         ? "Tap a face. Everything after that is optional."
-                        : "Something you learned, saved to their profile."}
+                        : "Anything you found out. We sort it into their profile."}
                 </AppText>
               </View>
               <Pressable
@@ -1631,6 +1928,81 @@ export function useQuickCapture() {
 }
 
 const styles = StyleSheet.create({
+  sheetSubtitle: {
+    color: colors.inkMuted,
+    marginTop: 4,
+  },
+  reviewList: {
+    gap: 8,
+    marginTop: 4,
+  },
+  reviewRow: {
+    backgroundColor: colors.porcelain,
+    borderRadius: radii.large,
+    gap: 10,
+    padding: 14,
+  },
+  reviewRowTop: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+  },
+  reviewLabelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 5,
+  },
+  reviewLabel: {
+    color: colors.inkMuted,
+  },
+  reviewText: {
+    marginTop: 2,
+  },
+  reviewTextDropped: {
+    opacity: 0.45,
+    textDecorationLine: "line-through",
+  },
+  reviewDrop: {
+    alignItems: "center",
+    height: 30,
+    justifyContent: "center",
+    width: 30,
+  },
+  reviewChoice: {
+    gap: 8,
+  },
+  reviewHint: {
+    color: colors.inkMuted,
+  },
+  reviewChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  reviewChip: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.round,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  reviewChipOn: {
+    backgroundColor: colors.ink,
+  },
+  reviewChipLabel: {
+    color: colors.inkMuted,
+  },
+  reviewChipLabelOn: {
+    color: colors.paper,
+  },
+  reviewSource: {
+    color: colors.inkMuted,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  reviewActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
   sheetContent: {
     gap: 22,
     paddingHorizontal: 20,
