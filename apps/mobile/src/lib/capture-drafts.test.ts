@@ -40,7 +40,7 @@ describe("logging who you saw", () => {
     );
 
     expect(row.note).toBeNull();
-    expect(row.type).toBe("met");
+    expect(row.type).toBe("talked");
     expect(row.customLabel).toBeNull();
   });
 
