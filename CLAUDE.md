@@ -33,3 +33,11 @@ identifiers alone unless you have checked every side of them.
 `scripts/build-college-dataset.mjs`, `place-table.ts` and `world-outline.ts`
 likewise. Never hand-edit them, and never hand-write entries into the generator
 — if the data is wrong, fix it from the source.
+
+**A sheet's primary action lives in its footer.** `AppBottomSheet` takes a
+`footer`, which the library pins above the keyboard. A save button placed inside
+the scrolling content instead can sit below the fold with nothing to say it is
+there, and padding cannot lift it — that bug was fixed four times before the
+mechanism was the thing that changed. For the same reason every text input
+inside a sheet goes through `FormField … bottomSheet`: a plain `TextInput` never
+registers with the sheet, so the sheet never knows to move.
