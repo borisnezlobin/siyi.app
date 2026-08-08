@@ -53,6 +53,16 @@ type Flight = {
  */
 const flightExpiresMs = 1_200;
 
+/**
+ * Whether a flight begun at `startedAt` should still be honoured. Kept as a
+ * plain function so the rule can be tested without a renderer: the failure it
+ * guards against — an avatar sliding in from a rectangle measured on another
+ * screen minutes ago — is a timing rule, not a rendering one.
+ */
+export function flightIsStillValid(startedAt: number, now: number) {
+  return now - startedAt < flightExpiresMs;
+}
+
 type SharedElementContextValue = {
   /** Called by the source as it is pressed, before navigation. */
   begin: (flight: Omit<Flight, "to" | "startedAt">) => void;
@@ -138,7 +148,7 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
   const isFlying = useCallback(
     (id: string) =>
       flyingId.current === id &&
-      Date.now() - startedAt.current < flightExpiresMs,
+      flightIsStillValid(startedAt.current, Date.now()),
     [],
   );
 

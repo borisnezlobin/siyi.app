@@ -66,6 +66,7 @@ import {
 } from "@/lib/update-entries";
 import type { InteractionType } from "@/lib/types";
 import { useCachedData } from "@/hooks/use-cached-data";
+import { personCacheKey } from "@/lib/query-cache";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
 import { PersonClasses } from "@/components/person-classes";
@@ -106,7 +107,7 @@ export default function PersonDetailScreen() {
   // from memory, and opening them for the first time draws from the snapshot
   // while the fresh copy loads behind it.
   const personData = useCachedData(
-    `person:${id}`,
+    personCacheKey(id),
     () => getPersonDetails(id),
     { cached: () => getPersonDetailsCached(id) },
   );
