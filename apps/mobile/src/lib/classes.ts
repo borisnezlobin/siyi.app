@@ -66,11 +66,25 @@ export function formatDays(days: WeekdayKey[]): string {
 }
 
 export function normalizeCourseCode(value: string): string {
+  const collapsed = value.trim().replace(/\s+/g, " ");
+
   // "cs 61a", "CS61A" and "cs-61a" are one course. A code is a department and
   // then a number, so the two are separated wherever the letters stop.
-  const bare = value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  const bare = collapsed.toUpperCase().replace(/[^A-Z0-9]+/g, "");
   const match = /^([A-Z]+)([0-9].*)$/.exec(bare);
-  return match ? `${match[1]} ${match[2]}` : bare;
+  if (match) return `${match[1]} ${match[2]}`;
+
+  // No number in it, so this is not a code but a name someone typed because it
+  // is easier to remember than the number. It keeps its spaces and its case.
+  return collapsed;
+}
+
+/**
+ * What decides whether two entries are the same course. Codes already come out
+ * identical; names have to survive someone typing one in lowercase.
+ */
+export function courseCodeKey(value: string): string {
+  return normalizeText(normalizeCourseCode(value));
 }
 
 function normalizeText(value: string) {
@@ -112,13 +126,17 @@ export function courseOptions(classes: PersonClass[]) {
   const byCode = new Map<string, { code: string; title: string | null; count: number }>();
 
   for (const entry of classes) {
-    const code = normalizeCourseCode(entry.courseCode);
-    const existing = byCode.get(code);
+    const key = courseCodeKey(entry.courseCode);
+    const existing = byCode.get(key);
     if (existing) {
       existing.count += 1;
       existing.title = existing.title ?? entry.courseTitle;
     } else {
-      byCode.set(code, { code, title: entry.courseTitle, count: 1 });
+      byCode.set(key, {
+        code: normalizeCourseCode(entry.courseCode),
+        title: entry.courseTitle,
+        count: 1,
+      });
     }
   }
 
@@ -169,9 +187,9 @@ export function peopleByCourse<T extends { id: string; classes: PersonClass[] }>
 
   for (const person of people) {
     for (const entry of person.classes) {
-      const code = normalizeCourseCode(entry.courseCode);
-      const group = groups.get(code) ?? {
-        code,
+      const key = courseCodeKey(entry.courseCode);
+      const group = groups.get(key) ?? {
+        code: normalizeCourseCode(entry.courseCode),
         title: entry.courseTitle,
         professors: [],
         people: [],
@@ -183,7 +201,7 @@ export function peopleByCourse<T extends { id: string; classes: PersonClass[] }>
         group.people.push(person);
       }
       group.title = group.title ?? entry.courseTitle;
-      groups.set(code, group);
+      groups.set(key, group);
     }
   }
 

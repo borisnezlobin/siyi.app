@@ -2,6 +2,7 @@ import {
   classMatchesQuery,
   courseOptions,
   formatDays,
+  courseCodeKey,
   normalizeCourseCode,
   parseDays,
   peopleByCourse,
@@ -50,6 +51,23 @@ describe("normalizeCourseCode", () => {
     expect(normalizeCourseCode("cs 61a")).toBe("CS 61A");
     expect(normalizeCourseCode("CS61A")).toBe("CS 61A");
     expect(normalizeCourseCode(" cs-61a ")).toBe("CS 61A");
+  });
+
+  it("leaves a course written out by name alone", () => {
+    // Someone who cannot remember the number writes the name instead, and it
+    // used to come back with every space taken out of it.
+    expect(normalizeCourseCode("MIDDLE EASTERN STUDIES")).toBe(
+      "MIDDLE EASTERN STUDIES"
+    );
+    expect(normalizeCourseCode("  Organic   Chemistry ")).toBe(
+      "Organic Chemistry"
+    );
+  });
+
+  it("still counts a name as one course whoever typed it", () => {
+    expect(courseCodeKey("Middle Eastern Studies")).toBe(
+      courseCodeKey("middle eastern studies")
+    );
   });
 });
 
