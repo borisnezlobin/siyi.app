@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ReminderBoard } from "@/components/reminder-board";
+import { RemindersView } from "@/components/reminders-view";
 import { PageHeader } from "@/components/page-header";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { getReminders, getPeople } from "@/lib/data";
@@ -34,8 +34,9 @@ export default async function RemindersPage({
           <QuickCaptureTrigger mode="reminder" label="Add a reminder" />
         }
       />
-      <ReminderBoard
-        initialReminders={reminders}
+      <RemindersView
+        reminders={reminders}
+        people={people}
         initialQuery={
           requestedPerson
             ? requestedPerson.preferredName || requestedPerson.fullName
