@@ -54,3 +54,6 @@ next-env.d.ts
 
 # agent worktrees
 /.claude/worktrees/
+
+# Personal notes for coding agents, per machine
+CLAUDE.local.md

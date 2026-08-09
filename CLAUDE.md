@@ -41,11 +41,3 @@ there, and padding cannot lift it — that bug was fixed four times before the
 mechanism was the thing that changed. For the same reason every text input
 inside a sheet goes through `FormField … bottomSheet`: a plain `TextInput` never
 registers with the sheet, so the sheet never knows to move.
-
-**Never use the iOS simulator.** Do not run `expo run:ios`, `npm run mobile:ios`,
-or anything else that boots, installs to, or downloads a simulator — the runtimes
-are gigabytes and the visual check is not yours to make. Verification on the
-phone side is `tsc`, `jest`, `eslint` and `expo export`, which proves the bundle
-builds; anything about how it looks or feels is reported by whoever is holding
-the device. When native code changes, say that a rebuild is needed and let them
-run it.
