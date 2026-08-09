@@ -184,7 +184,10 @@ export default async function PersonDetailPage({
     <div className="relative mx-auto max-w-[760px] px-4 py-5 sm:px-7 sm:py-9 lg:px-10 lg:py-12">
       <AmbientHeader name={person.fullName} imageUrl={person.profilePhotoUrl} />
 
-      <div className="relative flex items-center justify-between">
+      {/* Held at the top of the page: on a long profile, going back or reaching
+          for edit should not mean scrolling up first. The blur and the negative
+          margins let it sit over the glow rather than cutting a band out of it. */}
+      <div className="sticky top-0 z-20 -mx-4 -mt-5 flex items-center justify-between bg-porcelain/70 px-4 py-3 backdrop-blur sm:-mx-7 sm:-mt-9 sm:px-7 lg:-mx-10 lg:-mt-12 lg:px-10">
         <Link
           href="/people"
           className="inline-flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
@@ -192,16 +195,18 @@ export default async function PersonDetailPage({
           <ArrowLeft size={17} aria-hidden="true" />
           People
         </Link>
+        {/* Editing is what people come up here to do, so it is the one that
+            says what it is. Archiving is rare and permanent-feeling, so it
+            lives at the bottom rather than a thumb's width from Edit. */}
         <div className="flex items-center gap-2">
           <SharePersonButton person={person} />
           <Link
             href={`/people/${person.id}/edit`}
-            className="grid size-11 place-items-center rounded-full bg-white text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            aria-label="Edit person"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
           >
-            <PencilSimple size={18} aria-hidden="true" />
+            <PencilSimple size={17} aria-hidden="true" />
+            Edit
           </Link>
-          <ArchivePersonButton personId={person.id} personName={displayName} />
         </div>
       </div>
 
@@ -440,6 +445,10 @@ export default async function PersonDetailPage({
             </li>
           )}
         </ol>
+      </section>
+
+      <section className="mt-10 border-t border-ink/[0.08] pt-6">
+        <ArchivePersonButton personId={person.id} personName={displayName} />
       </section>
     </div>
   );

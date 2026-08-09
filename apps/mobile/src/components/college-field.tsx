@@ -1,3 +1,4 @@
+import { X } from "phosphor-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
@@ -36,6 +37,21 @@ export function CollegeField({
   return (
     <View>
       <FormField
+        // A default university arrives already filled in, and clearing a field
+        // you did not type in should not mean selecting it first.
+        accessory={
+          value ? (
+            <Pressable
+              accessibilityLabel="Clear university"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => onChangeText("")}
+              style={styles.clear}
+            >
+              <X color={colors.inkMuted} size={15} weight="bold" />
+            </Pressable>
+          ) : undefined
+        }
         autoCapitalize="words"
         autoCorrect={false}
         bottomSheet={bottomSheet}
@@ -73,6 +89,12 @@ export function CollegeField({
 }
 
 const styles = StyleSheet.create({
+  clear: {
+    alignItems: "center",
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
   suggestions: {
     backgroundColor: colors.paper,
     borderRadius: radii.medium,
