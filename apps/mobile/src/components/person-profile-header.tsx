@@ -101,8 +101,14 @@ export function PersonProfileHeader({ person }: { person: Person }) {
   const [avatarProgress] = useState(
     () => new Animated.Value(intro.animate && !arriving ? 0 : 1),
   );
+  // Starts at rest when something is flying here, exactly as the avatar does.
+  // Left at 0 it held the whole name block — second name and badge with it —
+  // 12pt low for the length of the flight, and revealing on landing snapped it
+  // up in one frame. That jump at the end of the animation read as the badge
+  // shifting the layout, because the badge is the part of the block you notice
+  // moving.
   const [nameProgress] = useState(
-    () => new Animated.Value(intro.animate ? 0 : 1),
+    () => new Animated.Value(intro.animate && !arriving ? 0 : 1),
   );
 
   // Hand this screen's rectangles to the flight, so the copies know where to
@@ -283,11 +289,6 @@ const styles = StyleSheet.create({
     gap: 7,
     justifyContent: "center",
     marginTop: 5,
-    // Held at one chip's height whether or not the chips have arrived yet.
-    // They render once the person resolves, which is after the shared element
-    // has landed — so without this the header grew under the avatar the
-    // instant the transition finished, and the whole thing appeared to jump.
-    minHeight: 27,
   },
   strengthChip: {
     backgroundColor: colors.coralSoft,
