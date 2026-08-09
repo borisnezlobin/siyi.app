@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react-native";
-import { AccessibilityInfo, StyleSheet } from "react-native";
+import { Animated, AccessibilityInfo, StyleSheet } from "react-native";
 import { PersonProfileHeader } from "@/components/person-profile-header";
 import type { Person } from "@/lib/types";
 
@@ -72,8 +72,26 @@ function styleOf(testID: string) {
 }
 
 describe("the person profile header", () => {
+  /**
+   * These assert the values the entrance *starts* from, so the entrance is
+   * held rather than left running: under load it had already moved on by the
+   * time the style was read, which failed a handful of times in every few
+   * full runs and taught nobody anything.
+   */
+  beforeEach(() => {
+    jest.spyOn(Animated, "timing").mockImplementation(
+      () =>
+        ({
+          start: () => undefined,
+          stop: () => undefined,
+          reset: () => undefined,
+        }) as never,
+    );
+  });
+
   afterEach(() => {
     isReduceMotionEnabled.mockClear();
+    jest.restoreAllMocks();
   });
 
   it("holds still for someone who asked the system for less movement", async () => {
