@@ -79,6 +79,7 @@ import {
   getRecentCustomLabels,
   noteSectionsOf,
   classifyUpdateViaWeb,
+  catchUpStartersViaWeb,
   type PersonDetails,
 } from "@/lib/data";
 import {
@@ -626,11 +627,22 @@ export function QuickCaptureProvider({
         void getPreferredContactMethod(person.id).then(
           setPreferredContactMethodState,
         );
-        void onDeviceConversationStarters(details.person).then((starters) => {
-          if (contextRequestRef.current === requestId && starters.length > 0) {
-            setModelConversationStarters(starters);
-          }
-        });
+        // The phone's own model first, then the server for anything older.
+        // Both fall through to the written-out openings, which are already on
+        // screen by the time either answers.
+        void onDeviceConversationStarters(details.person)
+          .then(async (starters) => {
+            if (starters.length > 0) return starters;
+            if (!session || !brand.webUrl) return [];
+            return catchUpStartersViaWeb(session, brand.webUrl, person.id).catch(
+              () => [],
+            );
+          })
+          .then((starters) => {
+            if (contextRequestRef.current === requestId && starters.length > 0) {
+              setModelConversationStarters(starters);
+            }
+          });
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -641,7 +653,7 @@ export function QuickCaptureProvider({
         setLoadingCatchUp(false);
       }
     },
-    [resetForm],
+    [resetForm, session],
   );
 
   const addPerson = useCallback(() => {

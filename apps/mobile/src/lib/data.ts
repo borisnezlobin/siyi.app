@@ -3019,3 +3019,25 @@ export type ClassifiedUpdate = {
   sections?: ProposalSection[];
   contact?: Partial<Record<ProposalFieldName, string | null>>;
 };
+
+/** Openings for a catch-up, for phones with no model of their own. */
+export async function catchUpStartersViaWeb(
+  session: Session,
+  webUrl: string,
+  personId: string,
+): Promise<string[]> {
+  const response = await authenticatedWebRequest(
+    session,
+    webUrl,
+    "/api/catch-up/starters",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId }),
+    },
+  );
+  const payload = (await response.json()) as { starters?: unknown };
+  return Array.isArray(payload.starters)
+    ? payload.starters.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}

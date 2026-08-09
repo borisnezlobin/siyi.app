@@ -64,12 +64,38 @@ export function CatchUpDialog({ people }: { people: Person[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [phase, setPhase] = useState<Phase>("context");
   const [personId, setPersonId] = useState<string | null>(null);
+  const [modelStarters, setModelStarters] = useState<string[]>([]);
 
   const activePeople = people.filter((person) => person.status === "active");
   const person =
     activePeople.find((candidate) => candidate.id === personId) ?? null;
 
   const close = useCallback(() => dialogRef.current?.close(), []);
+
+  // Asked for once per person the dialog lands on. Anything going wrong leaves
+  // the written-out openings in place, so the panel is never empty or waiting.
+  useEffect(() => {
+    if (!person) return;
+    let current = true;
+    setModelStarters([]);
+
+    fetch("/api/catch-up/starters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId: person.id }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (current && Array.isArray(payload?.starters)) {
+          setModelStarters(payload.starters);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      current = false;
+    };
+  }, [person]);
 
   useEffect(() => {
     function open() {
@@ -83,7 +109,10 @@ export function CatchUpDialog({ people }: { people: Person[] }) {
     return () => window.removeEventListener(catchUpEvent, open);
   }, [activePeople]);
 
-  const starters = person ? fallbackConversationStarters(person) : [];
+  // Written out from the fields until the model answers, so there is never a
+  // blank space where the suggestions go.
+  const writtenStarters = person ? fallbackConversationStarters(person) : [];
+  const starters = modelStarters.length ? modelStarters : writtenStarters;
   const choices = person ? contactChoicesForPerson(person) : [];
 
   function pickSomeoneElse() {

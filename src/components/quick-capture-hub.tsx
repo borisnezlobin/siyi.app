@@ -110,7 +110,7 @@ export function QuickCaptureTrigger({
         )
       }
       className={clsx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2",
         surface === "sidebar"
           ? "w-full bg-white/10 text-white hover:bg-white/16 focus-visible:ring-sun"
           : surface === "quiet"
