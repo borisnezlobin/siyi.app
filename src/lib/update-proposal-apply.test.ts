@@ -11,6 +11,8 @@ function recordingClient(overrides: Partial<UpdateProposalClient> = {}) {
   const client: UpdateProposalClient = {
     createUpdate: async () => void calls.push("update"),
     saveFields: async () => void calls.push("fields"),
+    addContacts: async () => void calls.push("contacts"),
+    addClass: async () => void calls.push("class"),
     appendToNote: async () => void calls.push("append"),
     createNote: async () => void calls.push("create-note"),
     createReminder: async () => void calls.push("reminder"),
@@ -23,6 +25,8 @@ const plan: ProposalPlan = {
   noteAppends: [{ noteId: "note-1", heading: "Interests", text: "snowboarding" }],
   noteCreates: [{ heading: "Food", text: "hates cilantro" }],
   fields: [{ field: "hometown", value: "Boulder" }],
+  contacts: [{ kind: "email", value: "a@example.com" }],
+  classes: ["MATH 53"],
   reminders: [{ text: "robotics comp", dueAt: "2026-08-16T09:00:00.000Z" }],
 };
 
@@ -33,7 +37,15 @@ describe("applyUpdateProposal", () => {
     await applyUpdateProposal(client, { text: "is from boulder", plan });
 
     expect(calls[0]).toBe("update");
-    expect(calls).toEqual(["update", "fields", "append", "create-note", "reminder"]);
+    expect(calls).toEqual([
+      "update",
+      "fields",
+      "contacts",
+      "class",
+      "append",
+      "create-note",
+      "reminder",
+    ]);
   });
 
   it("carries on when one part is refused, and names it", async () => {
@@ -46,7 +58,7 @@ describe("applyUpdateProposal", () => {
     const result = await applyUpdateProposal(client, { text: "x", plan });
 
     expect(result.failed).toEqual(["the profile details"]);
-    expect(result.applied).toBe(3);
+    expect(result.applied).toBe(5);
     // The reminder was approved too; a bad field must not take it down.
     expect(calls).toContain("reminder");
   });

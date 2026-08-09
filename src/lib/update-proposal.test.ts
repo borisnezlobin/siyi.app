@@ -25,6 +25,7 @@ const emptyProposal: UpdateProposal = {
   notes: [],
   fields: [],
   reminders: [],
+  classes: [],
   leftover: "",
 };
 
@@ -36,6 +37,7 @@ describe("normalizeProposal", () => {
       notes: [{ heading: "Interests", text: "likes snowboarding" }],
       fields: [{ field: "hometown", value: "Boulder" }],
       reminders: [{ text: "robotics comp", dueInDays: 8 }],
+      classes: [],
       leftover: "",
     });
 
@@ -43,6 +45,7 @@ describe("normalizeProposal", () => {
       notes: [{ heading: "Interests", text: "likes snowboarding" }],
       fields: [{ field: "hometown", value: "Boulder" }],
       reminders: [{ text: "robotics comp", dueInDays: 8 }],
+      classes: [],
       leftover: "",
     });
   });
@@ -181,16 +184,18 @@ describe("buildProposalItems", () => {
     expect(items).toEqual([]);
   });
 
-  it("compares a contact detail against what is stored, not against the profile", () => {
+  it("adds a second email rather than replacing the first", () => {
     const items = buildProposalItems({
       proposal: { ...emptyProposal, fields: [{ field: "email", value: "new@example.com" }] },
       person,
       sections: [],
-      contact: { email: "old@example.com" },
+      contact: { email: ["old@example.com"] },
       now,
     });
 
-    expect(items[0]).toMatchObject({ conflict: true, current: "old@example.com" });
+    // A second email is kept beside the first, not instead of it, so there is
+    // nothing to choose between.
+    expect(items[0]).toMatchObject({ conflict: false, adds: true });
   });
 
   it("does not say the same thing as both a note and a reminder", () => {
@@ -216,6 +221,7 @@ describe("planFromItems", () => {
       notes: [{ heading: "Interests", text: "snowboarding" }],
       fields: [{ field: "university", value: "Stanford" }],
       reminders: [{ text: "robotics comp", dueInDays: 8 }],
+      classes: [],
       leftover: "",
     },
     person,
@@ -357,5 +363,100 @@ describe("how far away a reminder is", () => {
     const detail = describeItem(reminder).detail;
     expect(detail).toContain("August");
     expect(detail).toContain("23");
+  });
+});
+
+describe("more than one of the same kind of contact", () => {
+  it("keeps every address the note gave", () => {
+    const result = normalizeProposal({
+      fields: [
+        { field: "email", value: "mcmilk855@gmail.com" },
+        { field: "email", value: "ohasramupadhyay@gmail.com" },
+      ],
+    });
+
+    expect(result?.fields).toHaveLength(2);
+  });
+
+  it("still allows a person only one hometown", () => {
+    const result = normalizeProposal({
+      fields: [
+        { field: "hometown", value: "Boulder" },
+        { field: "hometown", value: "Denver" },
+      ],
+    });
+
+    expect(result?.fields).toEqual([{ field: "hometown", value: "Boulder" }]);
+  });
+
+  it("offers both as additions, and says nothing about one already held", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        fields: [
+          { field: "email", value: "mcmilk855@gmail.com" },
+          { field: "email", value: "ohasramupadhyay@gmail.com" },
+        ],
+      },
+      person,
+      sections: [],
+      contact: { email: ["mcmilk855@gmail.com"] },
+      now,
+    });
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ display: "ohasramupadhyay@gmail.com", adds: true });
+  });
+
+  it("puts contacts on the plan as additions, apart from the fields it sets", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        fields: [
+          { field: "email", value: "a@example.com" },
+          { field: "hometown", value: "Boulder" },
+        ],
+      },
+      person,
+      sections: [],
+      now,
+    });
+    const plan = planFromItems(items, {});
+
+    expect(plan.contacts).toEqual([{ kind: "email", value: "a@example.com" }]);
+    expect(plan.fields).toEqual([{ field: "hometown", value: "Boulder" }]);
+  });
+});
+
+describe("classes", () => {
+  it("offers each course the note named", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        classes: ["math 53", "middle eastern studies", "chem 4a"],
+      },
+      person,
+      sections: [],
+      now,
+    });
+
+    expect(items.map((item) => item.kind === "class" && item.course)).toEqual([
+      "MATH 53",
+      "middle eastern studies",
+      "CHEM 4A",
+    ]);
+  });
+
+  it("says nothing about a course they are already down for", () => {
+    const items = buildProposalItems({
+      proposal: { ...emptyProposal, classes: ["MATH53", "chem 4a"] },
+      person,
+      sections: [],
+      classes: ["math 53"],
+      now,
+    });
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: "class", course: "CHEM 4A" });
   });
 });

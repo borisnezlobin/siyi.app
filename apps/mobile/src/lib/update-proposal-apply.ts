@@ -11,6 +11,9 @@ export type UpdateProposalClient = {
   /** The sentence as it was typed. */
   createUpdate(text: string): Promise<void>;
   saveFields(fields: { field: ProposalFieldName; value: string | number }[]): Promise<void>;
+  /** Added to whatever they already have, never in place of it. */
+  addContacts(contacts: { kind: ProposalFieldName; value: string }[]): Promise<void>;
+  addClass(course: string): Promise<void>;
   appendToNote(input: { noteId: string; heading: string; text: string }): Promise<void>;
   createNote(input: { heading: string; text: string }): Promise<void>;
   createReminder(input: { text: string; dueAt: string }): Promise<void>;
@@ -60,6 +63,14 @@ export async function applyUpdateProposal(
 
   if (plan.fields.length > 0) {
     await attempt("the profile details", () => client.saveFields(plan.fields));
+  }
+
+  if (plan.contacts.length > 0) {
+    await attempt("the contact details", () => client.addContacts(plan.contacts));
+  }
+
+  for (const course of plan.classes) {
+    await attempt(course, () => client.addClass(course));
   }
 
   for (const note of plan.noteAppends) {

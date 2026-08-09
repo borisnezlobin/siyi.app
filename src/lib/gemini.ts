@@ -62,9 +62,14 @@ const responseSchema = {
         required: ["text", "dueInDays", "dueOn"],
       },
     },
+    classes: {
+      type: "ARRAY",
+      maxItems: 8,
+      items: { type: "STRING" },
+    },
     leftover: { type: "STRING" },
   },
-  required: ["notes", "fields", "reminders", "leftover"],
+  required: ["notes", "fields", "reminders", "classes", "leftover"],
 };
 
 export type GeminiResult =

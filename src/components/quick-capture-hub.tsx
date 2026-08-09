@@ -313,7 +313,8 @@ export function QuickCaptureHub({
           proposal: UpdateProposal | null;
           person?: ProposalPerson;
           sections?: ProposalSection[];
-          contact?: Partial<Record<ProposalFieldName, string | null>>;
+          contact?: Partial<Record<ProposalFieldName, string[]>>;
+          classes?: string[];
         };
         if (payload.proposal && payload.person) {
           const sections = payload.sections ?? [];
@@ -322,6 +323,7 @@ export function QuickCaptureHub({
             person: payload.person,
             sections,
             contact: payload.contact ?? {},
+            classes: payload.classes ?? [],
             now: new Date(),
           });
           if (items.length > 0) {

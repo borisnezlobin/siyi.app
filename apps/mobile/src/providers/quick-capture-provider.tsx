@@ -84,6 +84,8 @@ import {
   sourceLabel,
   type ClassifierSource,
 } from "@/lib/update-classifier";
+import { getClasses } from "@/lib/classes-data";
+import { contactDraftsOf, type ContactMethodDraft } from "@/lib/contact-methods";
 import { onDeviceSortUpdate } from "@/lib/on-device-intelligence";
 import { mobileProposalClient } from "@/lib/update-proposal-client";
 import {
@@ -430,6 +432,16 @@ function ContactChoiceButton({
       <ArrowRight color={colors.inkMuted} size={18} />
     </Pressable>
   );
+}
+
+/** Every value they hold of each kind, which is what a proposal is compared to. */
+function contactsByKind(drafts: ContactMethodDraft[]) {
+  const byKind: Partial<Record<ContactMethodDraft["kind"], string[]>> = {};
+  for (const draft of drafts) {
+    if (!draft.value.trim()) continue;
+    byKind[draft.kind] = [...(byKind[draft.kind] ?? []), draft.value];
+  }
+  return byKind;
 }
 
 export function QuickCaptureProvider({
@@ -889,6 +901,16 @@ export function QuickCaptureProvider({
     const details = await getPersonDetails(personId).catch(() => null);
     if (!details) return false;
 
+    const heldClasses = session
+      ? await getClasses(session.user.id)
+          .then((all) =>
+            all
+              .filter((entry) => entry.personId === personId)
+              .map((entry) => entry.courseCode),
+          )
+          .catch(() => [] as string[])
+      : [];
+
     const sections = noteSectionsOf(details).sections.map((note) => ({
       id: note.id,
       heading: note.heading,
@@ -921,11 +943,8 @@ export function QuickCaptureProvider({
       proposal,
       person: details.person,
       sections,
-      contact: {
-        phone: details.person.phoneNumber,
-        email: details.person.email,
-        instagram: details.person.instagramUsername,
-      },
+      contact: contactsByKind(contactDraftsOf(details.person)),
+      classes: heldClasses,
       now: new Date(),
     });
     if (items.length === 0) return false;

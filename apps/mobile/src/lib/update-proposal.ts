@@ -1,5 +1,6 @@
 import { contactMethodKinds } from "@/lib/contact-methods";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import { courseCodeKey, normalizeCourseCode } from "@/lib/classes";
 import { maxNoteBodyLength, maxNoteSectionsPerPerson, normalizeNoteHeading } from "@/lib/note-sections";
 import { formatPhoneNumberInput } from "@/lib/phone-format";
 
@@ -86,6 +87,8 @@ export type UpdateProposal = {
    * reminder lands on the wrong date.
    */
   reminders: { text: string; dueInDays: number; dueOn?: string }[];
+  /** Course codes or names, as written: "math 53", "middle eastern studies". */
+  classes: string[];
   leftover: string;
 };
 
@@ -121,17 +124,22 @@ export function normalizeProposal(raw: unknown): UpdateProposal | null {
   }
 
   const fields: UpdateProposal["fields"] = [];
-  const seenFields = new Set<ProposalFieldName>();
+  const seenFields = new Set<string>();
   if (Array.isArray(source.fields)) {
     for (const entry of source.fields.slice(0, maxFields)) {
       if (!entry || typeof entry !== "object") continue;
       const row = entry as Record<string, unknown>;
       const field = proposalFieldNames.find((name) => name === row.field);
       const value = cleanText(row.value, 200);
-      // One value per field: a model that says two different hometowns has not
-      // understood the sentence, and picking one of them would be a guess.
-      if (!field || !value || seenFields.has(field)) continue;
-      seenFields.add(field);
+      if (!field || !value) continue;
+
+      // A person has one hometown, so a model offering two has misread the
+      // sentence and choosing between them would be a guess. But they may well
+      // have two email addresses, and the app already holds as many as they
+      // like — so a contact is kept per value rather than per field.
+      const key = isContactField(field) ? `${field}:${value.toLowerCase()}` : field;
+      if (seenFields.has(key)) continue;
+      seenFields.add(key);
       fields.push({ field, value });
     }
   }
@@ -149,9 +157,19 @@ export function normalizeProposal(raw: unknown): UpdateProposal | null {
     }
   }
 
+  const classes: string[] = [];
+  if (Array.isArray(source.classes)) {
+    for (const entry of source.classes.slice(0, 8)) {
+      const course = cleanText(entry, 40);
+      if (course && !classes.some((held) => held.toLowerCase() === course.toLowerCase())) {
+        classes.push(course);
+      }
+    }
+  }
+
   const leftover = cleanText(source.leftover, 2000) ?? "";
 
-  return { notes, fields, reminders, leftover };
+  return { notes, fields, reminders, classes, leftover };
 }
 
 const yearPattern = /(?:^|\D)('?\d{2}|\d{4})(?:\D|$)/;
@@ -379,6 +397,10 @@ export function proposalInstructions(): string {
     // option, and files "doing a chemistry major" as a note about them.
     "A profile field always beats a note. These are the fields, and what belongs in each:",
     ...proposalFieldNames.map((field) => `  ${field}: ${proposalFieldHints[field]}`),
+    // Without this the model has no way to say "two emails" and gives up on
+    // the fields entirely, putting both addresses in a note.
+    "A person can have several phones, emails, Instagram handles or Discord names. Give each one its own entry rather than describing them together.",
+    "Courses they are taking go in classes, one entry each, written the way the note wrote them.",
     "Only when a fact fits none of those does it become a note.",
     "Put a note under one of the person's existing headings when it fits; only use a new heading when none of them do.",
     "Do not repeat something as a note if you already made it a field or a reminder.",
@@ -403,8 +425,11 @@ export type ProposalItem =
       display: string;
       current: string | null;
       conflict: boolean;
+      /** A further phone or email, kept alongside the ones already there. */
+      adds: boolean;
     }
-  | { id: string; kind: "reminder"; text: string; dueAt: string; dueInDays: number };
+  | { id: string; kind: "reminder"; text: string; dueAt: string; dueInDays: number }
+  | { id: string; kind: "class"; course: string };
 
 export type ItemDecision = { removed?: boolean; keepExisting?: boolean };
 export type Decisions = Record<string, ItemDecision>;
@@ -412,9 +437,7 @@ export type Decisions = Record<string, ItemDecision>;
 function currentFieldValue(
   person: ProposalPerson,
   field: ProposalFieldName,
-  contact: Partial<Record<ProposalFieldName, string | null>>,
 ): string | null {
-  if (isContactField(field)) return contact[field] ?? null;
   const value = person[field as keyof ProposalPerson];
   if (value === null || value === undefined || value === "") return null;
   return String(value);
@@ -432,12 +455,16 @@ export function buildProposalItems({
   person,
   sections,
   contact = {},
+  classes = [],
   now,
 }: {
   proposal: UpdateProposal;
   person: ProposalPerson;
   sections: ProposalSection[];
-  contact?: Partial<Record<ProposalFieldName, string | null>>;
+  /** Every phone, email and handle they already have, by kind. */
+  contact?: Partial<Record<ProposalFieldName, string[]>>;
+  /** The course codes already on their list, so none is offered twice. */
+  classes?: string[];
   now: Date;
 }): ProposalItem[] {
   const items: ProposalItem[] = [];
@@ -466,13 +493,34 @@ export function buildProposalItems({
     });
   });
 
-  for (const entry of proposal.fields) {
+  proposal.fields.forEach((entry, index) => {
     const coerced = coerceFieldValue(entry.field, entry.value);
-    if (!coerced.ok) continue;
+    if (!coerced.ok) return;
 
-    const current = currentFieldValue(person, entry.field, contact);
     const display = String(coerced.value);
-    if (current !== null && current.toLowerCase() === display.toLowerCase()) continue;
+
+    // A contact is added to the ones they already have, so the only reason to
+    // say nothing is that they already have this exact one. Nothing is being
+    // replaced, so there is nothing to warn about either.
+    if (isContactField(entry.field)) {
+      const held = contact[entry.field] ?? [];
+      if (held.some((value) => value.toLowerCase() === display.toLowerCase())) return;
+
+      items.push({
+        id: `field:${entry.field}:${index}`,
+        kind: "field",
+        field: entry.field,
+        value: coerced.value,
+        display,
+        current: null,
+        conflict: false,
+        adds: held.length > 0,
+      });
+      return;
+    }
+
+    const current = currentFieldValue(person, entry.field);
+    if (current !== null && current.toLowerCase() === display.toLowerCase()) return;
 
     items.push({
       id: `field:${entry.field}`,
@@ -482,8 +530,16 @@ export function buildProposalItems({
       display,
       current,
       conflict: current !== null,
+      adds: false,
     });
-  }
+  });
+
+  proposal.classes.forEach((course, index) => {
+    const code = normalizeCourseCode(course);
+    // Already on their list: "math 53" and "MATH53" are the same course.
+    if (classes.some((held) => courseCodeKey(held) === courseCodeKey(code))) return;
+    items.push({ id: `class:${index}`, kind: "class", course: code });
+  });
 
   proposal.reminders.forEach((entry, index) => {
     const dueAt = reminderDueAt(entry, now);
@@ -506,12 +562,23 @@ export function buildProposalItems({
 export type ProposalPlan = {
   noteAppends: { noteId: string; heading: string; text: string }[];
   noteCreates: { heading: string; text: string }[];
+  /** Set on the person, replacing whatever was there. */
   fields: { field: ProposalFieldName; value: string | number }[];
+  /** Kept alongside what is already there, never instead of it. */
+  contacts: { kind: ProposalFieldName; value: string }[];
+  classes: string[];
   reminders: { text: string; dueAt: string }[];
 };
 
 export function planFromItems(items: ProposalItem[], decisions: Decisions): ProposalPlan {
-  const plan: ProposalPlan = { noteAppends: [], noteCreates: [], fields: [], reminders: [] };
+  const plan: ProposalPlan = {
+    noteAppends: [],
+    noteCreates: [],
+    fields: [],
+    contacts: [],
+    classes: [],
+    reminders: [],
+  };
 
   for (const item of items) {
     const decision = decisions[item.id] ?? {};
@@ -530,7 +597,16 @@ export function planFromItems(items: ProposalItem[], decisions: Decisions): Prop
       // Keeping what is already there is a decision, not a removal: the row
       // stays on screen showing which of the two won.
       if (decision.keepExisting) continue;
+      if (isContactField(item.field)) {
+        plan.contacts.push({ kind: item.field, value: String(item.value) });
+        continue;
+      }
       plan.fields.push({ field: item.field, value: item.value });
+      continue;
+    }
+
+    if (item.kind === "class") {
+      plan.classes.push(item.course);
       continue;
     }
 
@@ -542,7 +618,12 @@ export function planFromItems(items: ProposalItem[], decisions: Decisions): Prop
 
 export function planSize(plan: ProposalPlan): number {
   return (
-    plan.noteAppends.length + plan.noteCreates.length + plan.fields.length + plan.reminders.length
+    plan.noteAppends.length +
+    plan.noteCreates.length +
+    plan.fields.length +
+    plan.contacts.length +
+    plan.classes.length +
+    plan.reminders.length
   );
 }
 
@@ -556,6 +637,9 @@ export function describeItem(item: ProposalItem): { title: string; detail: strin
   }
   if (item.kind === "field") {
     return { title: proposalFieldLabels[item.field], detail: item.display };
+  }
+  if (item.kind === "class") {
+    return { title: "Class", detail: item.course };
   }
   // Anything more than a week out is named by its date. "In 14 days" is not
   // something a person can check, and this is the screen for checking.
