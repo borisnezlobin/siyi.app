@@ -174,7 +174,7 @@ export function SharePersonButton({ person }: { person: Person }) {
           setError(null);
           setOpen(true);
         }}
-        className="inline-flex h-10 items-center gap-2 rounded-full bg-porcelain px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-porcelain px-4 text-sm font-semibold text-ink transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <Share size={17} weight="bold" aria-hidden="true" />
         Share
