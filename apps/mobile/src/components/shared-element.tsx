@@ -61,6 +61,27 @@ type Flight = {
  */
 const flightExpiresMs = 1_200;
 
+/**
+ * Where a copy sits at each end of its flight, and how much it is scaled.
+ *
+ * Pulled out of the view so the path can be checked without a device: the
+ * claim worth testing is that the copy actually starts where the row's element
+ * was and ends where the destination's is, rather than fading in somewhere
+ * near it. The copy is laid out at the destination's size and scaled down to
+ * the source's, so what lands is rendered at its natural resolution.
+ */
+export function flightGeometry(from: SharedRect, to: SharedRect) {
+  return {
+    // Centres are what line up; the size difference is the scale.
+    startX: from.x + from.width / 2 - to.width / 2,
+    startY: from.y + from.height / 2 - to.height / 2,
+    endX: to.x,
+    endY: to.y,
+    startScale: to.width === 0 ? 1 : from.width / to.width,
+    endScale: 1,
+  };
+}
+
 /** The size the avatar lands at, so the copy is drawn at its final size. */
 export const profileAvatarSize = 126;
 
@@ -206,8 +227,7 @@ function FlyingCopies({
 
         const interpolate = (start: number, end: number) =>
           progress.interpolate({ inputRange: [0, 1], outputRange: [start, end] });
-        const scaleFrom =
-          target.width === 0 ? 1 : part.from.width / target.width;
+        const path = flightGeometry(part.from, target);
 
         return (
           <Animated.View
@@ -219,20 +239,9 @@ function FlyingCopies({
               top: 0,
               width: target.width,
               transform: [
-                // Centres line up; the size difference is the scale below.
-                {
-                  translateX: interpolate(
-                    part.from.x + part.from.width / 2 - target.width / 2,
-                    target.x,
-                  ),
-                },
-                {
-                  translateY: interpolate(
-                    part.from.y + part.from.height / 2 - target.height / 2,
-                    target.y,
-                  ),
-                },
-                { scale: interpolate(scaleFrom, 1) },
+                { translateX: interpolate(path.startX, path.endX) },
+                { translateY: interpolate(path.startY, path.endY) },
+                { scale: interpolate(path.startScale, path.endScale) },
               ],
             }}
           >
