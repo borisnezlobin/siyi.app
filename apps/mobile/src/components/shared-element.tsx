@@ -46,6 +46,12 @@ export type FlightPart = {
 
 type Flight = {
   id: string;
+  /**
+   * Which end is expecting it. Both ends are on screen during a flight, so
+   * without this the row would claim the outbound one the instant it started
+   * and the profile would never get it.
+   */
+  landsOn: "profile" | "row";
   parts: FlightPart[];
   /** Where each part lands, keyed as the parts are. Null until it is known. */
   to: Record<string, SharedRect> | null;
@@ -108,6 +114,12 @@ type SharedElementContextValue = {
   isFlying: (id: string) => boolean;
   /** Abandons a flight that never reached a destination. */
   cancel: (id: string) => void;
+  /**
+   * The id waiting for somewhere to land, or null. Going forward the profile
+   * mounts and can measure itself; coming back, the list was never unmounted,
+   * so its rows have to be told to look.
+   */
+  awaitingArrival: { id: string; landsOn: "profile" | "row" } | null;
 };
 
 const SharedElementContext = createContext<SharedElementContextValue | null>(null);
@@ -125,6 +137,10 @@ export function useSharedElement() {
 
 export function SharedElementProvider({ children }: { children: ReactNode }) {
   const [flight, setFlight] = useState<Flight | null>(null);
+  const [awaitingArrival, setAwaitingArrival] = useState<{
+    id: string;
+    landsOn: "profile" | "row";
+  } | null>(null);
   // useState so the value is created once, rather than allocating a throwaway
   // on every render of the provider.
   const [progress] = useState(() => new Animated.Value(0));
@@ -134,6 +150,7 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => {
     flyingId.current = null;
+    setAwaitingArrival(null);
     setFlight(null);
     progress.setValue(0);
   }, [progress]);
@@ -144,6 +161,7 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
       startedAt.current = Date.now();
       progress.setValue(0);
       setFlight({ ...next, to: null, startedAt: startedAt.current });
+      setAwaitingArrival({ id: next.id, landsOn: next.landsOn });
     },
     [progress],
   );
@@ -163,6 +181,7 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
           onLanded();
           return current;
         }
+        setAwaitingArrival(null);
         Animated.timing(progress, {
           duration: durationMs,
           easing: Easing.out(Easing.cubic),
@@ -189,8 +208,8 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ begin, arriveAt, isFlying, cancel }),
-    [arriveAt, begin, cancel, isFlying],
+    () => ({ begin, arriveAt, isFlying, cancel, awaitingArrival }),
+    [arriveAt, awaitingArrival, begin, cancel, isFlying],
   );
 
   return (

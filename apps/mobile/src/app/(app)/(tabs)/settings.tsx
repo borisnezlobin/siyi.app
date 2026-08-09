@@ -421,7 +421,9 @@ export default function SettingsScreen() {
         <AppText style={styles.sectionNote} variant="caption">
           Occasional notes about what is new. Nothing else.
         </AppText>
-        <Row style={styles.columnRow}>
+        {/* Beside its text, like every other switch in Settings, rather than
+            stacked under a paragraph where it reads as a separate control. */}
+        <Row style={styles.stackedRow}>
           <View style={styles.grow}>
             <AppText variant="label">Send me product updates</AppText>
             <AppText variant="caption">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
@@ -16,6 +16,9 @@ import type { Person } from "@/lib/types";
 
 const avatarSize = profileAvatarSize;
 
+/** What the copies shrink to on the way back: the size a people row draws. */
+const rowAvatarSize = 48;
+
 /**
  * The avatar and name at the top of a person's screen.
  *
@@ -26,6 +29,62 @@ const avatarSize = profileAvatarSize;
  * so it plays the small entrance instead. That fallback matters: a movement
  * aimed at a row which is not on screen looks wrong.
  */
+/**
+ * Sends the avatar and name back the way they came. Called as the screen is
+ * leaving, so the copies are already in the air by the time it slides away.
+ */
+export function useReturnFlight(person: Person | null | undefined) {
+  const shared = useSharedElement();
+  const refs = returnRefs;
+
+  return useCallback(async () => {
+    if (!shared || !person) return;
+    const [avatarFrom, nameFrom] = await Promise.all([
+      measureSharedRect(refs.avatar),
+      measureSharedRect(refs.name),
+    ]);
+
+    const parts = [];
+    if (avatarFrom) {
+      parts.push({
+        key: "avatar",
+        from: avatarFrom,
+        render: () => (
+          <Avatar
+            name={person.fullName}
+            size={rowAvatarSize}
+            uri={person.profilePhotoUrl}
+          />
+        ),
+      });
+    }
+    if (nameFrom) {
+      parts.push({
+        key: "name",
+        // Drawn as the row draws it, since that is where it is going.
+        from: nameFrom,
+        render: () => (
+          <AppText numberOfLines={1} variant="heading">
+            {person.preferredName || person.fullName}
+          </AppText>
+        ),
+      });
+    }
+    if (parts.length > 0) {
+      shared.begin({ id: personAvatarSharedId(person.id), landsOn: "row", parts });
+    }
+  }, [person, refs, shared]);
+}
+
+/**
+ * The header's own nodes, kept outside the component so the screen can start
+ * the return flight after the header has begun unmounting.
+ */
+const returnRefs: { avatar: View | null; name: View | null } = {
+  avatar: null,
+  name: null,
+};
+
 export function PersonProfileHeader({ person }: { person: Person }) {
   const shared = useSharedElement();
   const sharedId = personAvatarSharedId(person.id);
@@ -130,7 +189,10 @@ export function PersonProfileHeader({ person }: { person: Person }) {
     <View style={styles.profileHeader}>
       <Animated.View
         collapsable={false}
-        ref={avatarRef}
+        ref={(node: View | null) => {
+          avatarRef.current = node;
+          returnRefs.avatar = node;
+        }}
         style={{
           // Held invisible while the copy is in the air, so there is never two
           // of the same avatar on screen at once.
@@ -169,7 +231,13 @@ export function PersonProfileHeader({ person }: { person: Person }) {
       >
         {/* Measured on its own: the block around it carries the second name
             and the tag chips, which are not travelling. */}
-        <View collapsable={false} ref={nameRef}>
+        <View
+          collapsable={false}
+          ref={(node: View | null) => {
+            nameRef.current = node;
+            returnRefs.name = node;
+          }}
+        >
           <AppText style={styles.name} variant="display">
             {person.preferredName || person.fullName}
           </AppText>
