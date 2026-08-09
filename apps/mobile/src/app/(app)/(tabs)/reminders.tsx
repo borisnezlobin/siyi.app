@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Bell, Check, MagnifyingGlass } from "phosphor-react-native";
+import { Bell, Check, MagnifyingGlass, NotePencil } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
@@ -235,6 +235,7 @@ export default function RemindersScreen() {
                   reminder={reminder}
                   key={reminder.id}
                   onOpen={() => router.push(`/people/${reminder.personId}`)}
+                  onEdit={() => quickCapture.editReminder(reminder)}
                   onToggle={() => void toggleComplete(reminder)}
                   overdue={bucket === "overdue"}
                 />
@@ -262,6 +263,7 @@ export default function RemindersScreen() {
                 reminder={reminder}
                 key={reminder.id}
                 onOpen={() => router.push(`/people/${reminder.personId}`)}
+                onEdit={() => quickCapture.editReminder(reminder)}
                 onToggle={() => void toggleComplete(reminder)}
               />
             ))
@@ -281,11 +283,13 @@ export default function RemindersScreen() {
 function ReminderRow({
   reminder,
   onOpen,
+  onEdit,
   onToggle,
   overdue = false,
 }: {
   reminder: Reminder;
   onOpen: () => void;
+  onEdit: () => void;
   onToggle: () => void;
   overdue?: boolean;
 }) {
@@ -317,6 +321,18 @@ function ReminderRow({
           {done ? "" : ` · ${dueDateLabel(reminder.dueAt)}`}
         </AppText>
       </View>
+      <Pressable
+        accessibilityLabel={`Edit “${reminder.text}”`}
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={(event) => {
+          event.stopPropagation();
+          onEdit();
+        }}
+        style={styles.rowAction}
+      >
+        <NotePencil color={colors.inkMuted} size={18} />
+      </Pressable>
       <Pressable
         accessibilityLabel={
           done
@@ -432,6 +448,12 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     opacity: 0.6,
+  },
+  rowAction: {
+    alignItems: "center",
+    height: 32,
+    justifyContent: "center",
+    width: 32,
   },
   rowCopy: {
     flex: 1,

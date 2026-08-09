@@ -173,6 +173,22 @@ export type OfflineMutation =
     }
   | {
       id: string;
+      kind: "update-reminder";
+      userId: string;
+      createdAt: string;
+      reminderId: string;
+      text: string;
+      dueAt: string;
+    }
+  | {
+      id: string;
+      kind: "delete-reminder";
+      userId: string;
+      createdAt: string;
+      reminderId: string;
+    }
+  | {
+      id: string;
       kind: "archive-person";
       userId: string;
       createdAt: string;
