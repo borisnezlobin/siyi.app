@@ -65,8 +65,10 @@ import {
   removeQueuedPhoto,
   updateOfflineSnapshot,
   type OfflineMutation,
+  type OfflineSnapshot,
 } from "@/lib/offline-store";
 import {
+  reminderEditSchema,
   reminderInputSchema,
   importPreviewSchema,
   interactionEditSchema,
@@ -1575,6 +1577,34 @@ export async function deleteInteraction(
   void flushOfflineMutations(userId);
 }
 
+/**
+ * One reminder changed, or dropped, everywhere the snapshot holds it: the flat
+ * list and every person's own copy. Returning null from `change` removes it.
+ */
+function withReminderChanged(
+  snapshot: OfflineSnapshot,
+  reminderId: string,
+  change: (reminder: Reminder) => Reminder | null,
+): OfflineSnapshot {
+  const apply = (reminders: Reminder[]) =>
+    reminders.flatMap((reminder) => {
+      if (reminder.id !== reminderId) return [reminder];
+      const next = change(reminder);
+      return next ? [next] : [];
+    });
+
+  return {
+    ...snapshot,
+    reminders: apply(snapshot.reminders),
+    personDetails: Object.fromEntries(
+      Object.entries(snapshot.personDetails).map(([personId, details]) => [
+        personId,
+        { ...details, reminders: apply(details.reminders) },
+      ]),
+    ),
+  };
+}
+
 export async function setReminderComplete(
   reminderId: string,
   complete: boolean,
@@ -1615,6 +1645,53 @@ export async function setReminderComplete(
       ]),
     ),
   }));
+  void flushOfflineMutations(userId);
+}
+
+/** Reword a reminder, or move it to another day. */
+export async function editReminder(
+  reminderId: string,
+  input: { text: string; dueAt: string },
+) {
+  const userId = await currentUserId();
+  if (!userId) throw new Error("Sign in to update this reminder.");
+  const parsed = reminderEditSchema.parse(input);
+  const updatedAt = new Date().toISOString();
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "update-reminder",
+    userId,
+    createdAt: updatedAt,
+    reminderId,
+    text: parsed.text,
+    dueAt: parsed.dueAt,
+  });
+  await updateOfflineSnapshot(userId, (snapshot) =>
+    withReminderChanged(snapshot, reminderId, (reminder) => ({
+      ...reminder,
+      text: parsed.text,
+      dueAt: parsed.dueAt,
+      updatedAt,
+    })),
+  );
+  void flushOfflineMutations(userId);
+}
+
+export async function deleteReminder(reminderId: string) {
+  const userId = await currentUserId();
+  if (!userId) throw new Error("Sign in to delete this reminder.");
+
+  await enqueueOfflineMutation({
+    id: Crypto.randomUUID(),
+    kind: "delete-reminder",
+    userId,
+    createdAt: new Date().toISOString(),
+    reminderId,
+  });
+  await updateOfflineSnapshot(userId, (snapshot) =>
+    withReminderChanged(snapshot, reminderId, () => null),
+  );
   void flushOfflineMutations(userId);
 }
 
@@ -2655,6 +2732,24 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
     const { error } = await supabase
       .from("reminders")
       .update({ completed_at: mutation.completedAt })
+      .eq("id", mutation.reminderId);
+    if (error) throw error;
+    return;
+  }
+
+  if (mutation.kind === "update-reminder") {
+    const { error } = await supabase
+      .from("reminders")
+      .update({ text: mutation.text, due_at: mutation.dueAt })
+      .eq("id", mutation.reminderId);
+    if (error) throw error;
+    return;
+  }
+
+  if (mutation.kind === "delete-reminder") {
+    const { error } = await supabase
+      .from("reminders")
+      .delete()
       .eq("id", mutation.reminderId);
     if (error) throw error;
     return;

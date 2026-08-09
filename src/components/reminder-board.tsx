@@ -1,8 +1,9 @@
 "use client";
 
-import { Bell, Check, MagnifyingGlass } from "@phosphor-icons/react";
+import { Bell, Check, MagnifyingGlass, NotePencil, Trash } from "@phosphor-icons/react";
 import clsx from "clsx";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import {
@@ -42,6 +43,8 @@ export function ReminderBoard({
   );
   const [showCompleted, setShowCompleted] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const router = useRouter();
 
   // A reminder completed in this session keeps its place in the list so the
   // page never jumps out from under the tap that completed it.
@@ -83,6 +86,60 @@ export function ReminderBoard({
       }),
     };
   }, [query, reminders]);
+
+  async function saveEdit(reminder: Reminder, text: string, dueOn: string) {
+    const trimmed = text.trim();
+    if (!trimmed || !dueOn) return;
+
+    setWorkingId(reminder.id);
+    // Kept at the hour it already had, so rescheduling to another day does not
+    // quietly move a morning reminder to midnight.
+    const dueAt = new Date(reminder.dueAt);
+    const [year, month, day] = dueOn.split("-").map(Number);
+    dueAt.setFullYear(year, month - 1, day);
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const response = await fetch(`/api/reminders/${reminder.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: trimmed, dueAt: dueAt.toISOString() }),
+      });
+      if (!response.ok) {
+        setWorkingId(null);
+        return;
+      }
+    }
+
+    setReminders((current) =>
+      current.map((entry) =>
+        entry.id === reminder.id
+          ? { ...entry, text: trimmed, dueAt: dueAt.toISOString() }
+          : entry,
+      ),
+    );
+    setEditingId(null);
+    setWorkingId(null);
+    router.refresh();
+  }
+
+  async function removeReminder(reminder: Reminder) {
+    setWorkingId(reminder.id);
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const response = await fetch(`/api/reminders/${reminder.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        setWorkingId(null);
+        return;
+      }
+    }
+
+    setReminders((current) => current.filter((entry) => entry.id !== reminder.id));
+    setEditingId(null);
+    setWorkingId(null);
+    router.refresh();
+  }
 
   async function toggleComplete(reminder: Reminder) {
     setWorkingId(reminder.id);
@@ -229,6 +286,11 @@ export function ReminderBoard({
                     reminder={reminder}
                     busy={workingId === reminder.id}
                     onToggle={() => toggleComplete(reminder)}
+                    editing={editingId === reminder.id}
+                    onEdit={() => setEditingId(reminder.id)}
+                    onCancelEdit={() => setEditingId(null)}
+                    onSave={(text, dueOn) => void saveEdit(reminder, text, dueOn)}
+                    onDelete={() => void removeReminder(reminder)}
                     overdue={bucket === "overdue"}
                   />
                 ))}
@@ -260,6 +322,11 @@ export function ReminderBoard({
                   reminder={reminder}
                   busy={workingId === reminder.id}
                   onToggle={() => toggleComplete(reminder)}
+                  editing={editingId === reminder.id}
+                  onEdit={() => setEditingId(reminder.id)}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSave={(text, dueOn) => void saveEdit(reminder, text, dueOn)}
+                  onDelete={() => void removeReminder(reminder)}
                 />
               ))}
             </ul>
@@ -278,11 +345,21 @@ function ReminderRow({
   reminder,
   busy,
   onToggle,
+  editing,
+  onEdit,
+  onCancelEdit,
+  onSave,
+  onDelete,
   overdue = false,
 }: {
   reminder: Reminder;
   busy: boolean;
   onToggle: () => void;
+  editing: boolean;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: (text: string, dueOn: string) => void;
+  onDelete: () => void;
   overdue?: boolean;
 }) {
   const person = reminder.person;
@@ -306,6 +383,62 @@ function ReminderRow({
     </>
   );
 
+  if (editing) {
+    return (
+      <li className="border-b border-ink/[0.055] py-3">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            onSave(String(form.get("text") ?? ""), String(form.get("dueOn") ?? ""));
+          }}
+          className="flex flex-col gap-2"
+        >
+          <input
+            name="text"
+            defaultValue={reminder.text}
+            aria-label="What to remember"
+            maxLength={500}
+            autoFocus
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              name="dueOn"
+              type="date"
+              defaultValue={reminder.dueAt.slice(0, 10)}
+              aria-label="Due date"
+              className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-10 rounded-full bg-coral px-4 text-sm font-semibold text-white transition-colors hover:bg-coral-strong disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="h-10 rounded-full px-3 text-sm font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={busy}
+              aria-label={`Delete “${reminder.text}”`}
+              className="ml-auto grid size-10 place-items-center rounded-full text-ink-muted transition-colors hover:bg-mist hover:text-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            >
+              <Trash size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </form>
+      </li>
+    );
+  }
+
   return (
     <li className="flex min-h-[4.25rem] items-center gap-3 border-b border-ink/[0.055] py-3">
       <Avatar
@@ -326,6 +459,15 @@ function ReminderRow({
           copy
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Edit “${reminder.text}”`}
+        className="grid size-9 shrink-0 place-items-center rounded-full text-ink-muted transition-colors hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+      >
+        <NotePencil size={16} aria-hidden="true" />
+      </button>
 
       <button
         type="button"

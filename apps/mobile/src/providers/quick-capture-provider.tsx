@@ -66,6 +66,8 @@ import {
 } from "@/constants/theme";
 import {
   createReminder,
+  editReminder,
+  deleteReminder,
   createInteraction,
   createPersonUpdate,
   deleteInteraction,
@@ -148,6 +150,7 @@ import {
 import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
 import {
   type InteractionType,
+  type Reminder,
   type Person,
 } from "@/lib/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -167,6 +170,7 @@ type QuickCaptureContextValue = {
   open: () => void;
   addPerson: () => void;
   addReminder: (personId?: string) => void;
+  editReminder: (reminder: Reminder) => void;
   logInteraction: (personId?: string) => void;
   addUpdate: (personId?: string) => void;
   editEntry: (entry: EditableEntry) => void;
@@ -464,6 +468,8 @@ export function QuickCaptureProvider({
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
   const [reminderText, setReminderText] = useState("");
+  // Set while an existing reminder is open rather than a new one being written.
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   // Held as text, so the date can be typed as readily as tapped. The chips and
   // everything downstream read the day back out of it.
   const [dueDateText, setDueDateText] = useState(() =>
@@ -521,6 +527,7 @@ export function QuickCaptureProvider({
     setUpdateDate(todayDateInputValue());
     setChoosingUpdateDate(false);
     setEditingEntry(null);
+    setEditingReminderId(null);
     setConfirmingDelete(false);
     setError(null);
   }, []);
@@ -541,6 +548,23 @@ export function QuickCaptureProvider({
           .then(setRecentCustomLabels)
           .catch(() => setRecentCustomLabels([]));
       }
+    },
+    [loadPeople, resetForm],
+  );
+
+  /** The same sheet as writing one, opened on a reminder that already exists. */
+  const openReminder = useCallback(
+    (reminder: Reminder) => {
+      resetForm();
+      setPhase("reminder");
+      setSelectedPersonIds([reminder.personId]);
+      setPersonSelectionLocked(true);
+      setReminderText(reminder.text);
+      setDueDateText(toDateInputValue(reminder.dueAt));
+      setEditingReminderId(reminder.id);
+      modalRef.current?.present();
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      void loadPeople();
     },
     [loadPeople, resetForm],
   );
@@ -626,6 +650,27 @@ export function QuickCaptureProvider({
     router.push("/people/new");
   }, [router]);
 
+  /** Two taps, like every other delete in the sheet: the first one asks. */
+  async function removeReminder() {
+    if (!editingReminderId) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await deleteReminder(editingReminderId);
+      await finishSaving();
+    } catch (deleteError) {
+      reportFailure(deleteError, "That reminder could not be deleted.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveReminder() {
     const personId = selectedPersonIds[0];
     if (!session || !personId || !reminderText.trim()) {
@@ -639,11 +684,18 @@ export function QuickCaptureProvider({
     setSaving(true);
     setError(null);
     try {
-      await createReminder(session.user.id, {
-        personId,
-        text: reminderText,
-        dueAt: reminderDueAt(dueDay),
-      });
+      if (editingReminderId) {
+        await editReminder(editingReminderId, {
+          text: reminderText,
+          dueAt: reminderDueAt(dueDay),
+        });
+      } else {
+        await createReminder(session.user.id, {
+          personId,
+          text: reminderText,
+          dueAt: reminderDueAt(dueDay),
+        });
+      }
       setRevision((value) => value + 1);
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
@@ -1020,6 +1072,7 @@ export function QuickCaptureProvider({
       open: () => present("menu"),
       addPerson,
       addReminder: (personId) => present("reminder", personId),
+      editReminder: openReminder,
       logInteraction: (personId) => present("interaction", personId),
       addUpdate: (personId) => present("update", personId),
       editEntry,
@@ -1030,7 +1083,7 @@ export function QuickCaptureProvider({
         void presentPersonContext("contact", personId);
       },
     }),
-    [addPerson, editEntry, present, presentPersonContext, revision],
+    [addPerson, editEntry, openReminder, present, presentPersonContext, revision],
   );
   const contextPerson = catchUpDetails?.person || null;
   const conversationStarters =
@@ -1114,12 +1167,21 @@ export function QuickCaptureProvider({
           />
         </View>
       ) : phase === "reminder" ? (
-        <Button
-          disabled={!selectedPersonIds[0] || !reminderText.trim()}
-          label="Save reminder"
-          loading={saving}
-          onPress={() => void saveReminder()}
-        />
+        <>
+          <Button
+            disabled={!selectedPersonIds[0] || !reminderText.trim()}
+            label={editingReminderId ? "Save changes" : "Save reminder"}
+            loading={saving}
+            onPress={() => void saveReminder()}
+          />
+          {editingReminderId ? (
+            <Button
+              label={confirmingDelete ? "Tap again to delete" : "Delete reminder"}
+              onPress={() => void removeReminder()}
+              variant="secondary"
+            />
+          ) : null}
+        </>
       ) : phase === "interaction" ? (
         <Button
           disabled={selectedPersonIds.length === 0}

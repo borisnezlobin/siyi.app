@@ -135,6 +135,9 @@ export const reminderInputSchema = z.object({
   dueAt: z.string().datetime(),
 });
 
+/** Editing one cannot move it to a different person, only reword or reschedule. */
+export const reminderEditSchema = reminderInputSchema.omit({ personId: true });
+
 const customLabel = z
   .string()
   .trim()
