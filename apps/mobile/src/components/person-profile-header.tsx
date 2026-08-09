@@ -215,6 +215,11 @@ const styles = StyleSheet.create({
     gap: 7,
     justifyContent: "center",
     marginTop: 5,
+    // Held at one chip's height whether or not the chips have arrived yet.
+    // They render once the person resolves, which is after the shared element
+    // has landed — so without this the header grew under the avatar the
+    // instant the transition finished, and the whole thing appeared to jump.
+    minHeight: 27,
   },
   strengthChip: {
     backgroundColor: colors.coralSoft,
