@@ -8,9 +8,10 @@ import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { RevealingTextInput } from "@/components/focus-scroll";
 import { ErrorState, LoadingState } from "@/components/load-state";
+import { ReminderCalendar } from "@/components/reminder-calendar";
 import { Screen } from "@/components/screen";
 import { colors, fontFamilies, radii } from "@/constants/theme";
-import { getReminders, setReminderComplete } from "@/lib/data";
+import { getPeople, getReminders, setReminderComplete } from "@/lib/data";
 import {
   countsByBucket,
   reminderBucketEmptyLabels,
@@ -27,7 +28,11 @@ import { useQuickCapture } from "@/providers/quick-capture-provider";
 export default function RemindersScreen() {
   const router = useRouter();
   const quickCapture = useQuickCapture();
-  const screenData = useRefreshableData(getReminders);
+  const screenData = useRefreshableData(async () => {
+    const [reminders, people] = await Promise.all([getReminders(), getPeople()]);
+    return { reminders, people };
+  });
+  const [view, setView] = useState<"list" | "calendar">("list");
   // A person page links here for one person, which arrives as a filled-in
   // search rather than a second, phone-only filter control.
   const { q } = useLocalSearchParams<{ q?: string }>();
@@ -52,7 +57,7 @@ export default function RemindersScreen() {
 
   const { groups, completed, counts } = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const visible = (screenData.data || []).filter((reminder) =>
+    const visible = (screenData.data?.reminders || []).filter((reminder) =>
       [
         reminder.text,
         reminder.person?.fullName,
@@ -127,7 +132,67 @@ export default function RemindersScreen() {
       subtitle="What is coming up, and when it lands."
       title="Reminders"
     >
-      <View style={styles.distribution}>
+      <View style={styles.viewToggle}>
+        {(
+          [
+            ["list", "List"],
+            ["calendar", "Calendar"],
+          ] as const
+        ).map(([option, label]) => {
+          const selected = view === option;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              key={option}
+              onPress={() => {
+                setView(option);
+                void Haptics.selectionAsync();
+              }}
+              style={[styles.viewChip, selected && styles.viewChipSelected]}
+            >
+              <AppText
+                style={[
+                  styles.viewChipLabel,
+                  selected && styles.viewChipLabelSelected,
+                ]}
+                variant="caption"
+              >
+                {label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {view === "calendar" ? (
+        <ReminderCalendar
+          onEditReminder={(reminderId) => {
+            const found = (screenData.data?.reminders || []).find(
+              (entry) => entry.id === reminderId,
+            );
+            if (found) quickCapture.editReminder(found);
+          }}
+          onOpenPerson={(personId) => router.push(`/people/${personId}`)}
+          people={screenData.data?.people || []}
+          reminders={(screenData.data?.reminders || []).map((reminder) => ({
+            id: reminder.id,
+            text: reminder.text,
+            dueAt: reminder.dueAt,
+            completedAt: reminder.completedAt,
+            person: reminder.person
+              ? {
+                  id: reminder.person.id,
+                  name:
+                    reminder.person.preferredName || reminder.person.fullName,
+                  photoUrl: reminder.person.profilePhotoUrl,
+                }
+              : null,
+          }))}
+        />
+      ) : (
+        <>
+          <View style={styles.distribution}>
         {reminderBucketOrder.map((bucket, index) => {
           const focused = focusedBucket === bucket;
           return (
@@ -197,12 +262,12 @@ export default function RemindersScreen() {
         <View style={styles.empty}>
           <Bell color={colors.inkMuted} size={28} />
           <AppText variant="heading">
-            {(screenData.data || []).length === 0
+            {(screenData.data?.reminders || []).length === 0
               ? "No reminders yet"
               : "Nothing is waiting"}
           </AppText>
           <AppText style={styles.emptyBody}>
-            {(screenData.data || []).length === 0
+            {(screenData.data?.reminders || []).length === 0
               ? "Add a reminder and it will show up here."
               : "Everything here is either done or filtered out."}
           </AppText>
@@ -270,6 +335,9 @@ export default function RemindersScreen() {
           )}
         </View>
       ) : null}
+
+      </>
+      )}
 
       <Button
         icon={Bell}
@@ -359,6 +427,15 @@ function ReminderRow({
 }
 
 const styles = StyleSheet.create({
+  viewToggle: { flexDirection: "row", gap: 6 },
+  viewChip: {
+    borderRadius: radii.round,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  viewChipSelected: { backgroundColor: colors.ink },
+  viewChipLabel: { color: colors.inkMuted },
+  viewChipLabelSelected: { color: colors.paper },
   distribution: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.mist,
