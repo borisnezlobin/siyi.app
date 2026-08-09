@@ -1,5 +1,5 @@
 import { CaretRight, Clock } from "phosphor-react-native";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import {
@@ -7,6 +7,7 @@ import {
   personAvatarSharedId,
   profileAvatarSize,
   useSharedElement,
+  type SharedRect,
 } from "@/components/shared-element";
 import { AppText } from "@/components/app-text";
 import { colors, radii } from "@/constants/theme";
@@ -83,10 +84,44 @@ export function PersonRow({
     }
 
     if (parts.length > 0) {
-      shared.begin({ id: personAvatarSharedId(person.id), parts });
+      shared.begin({ id: personAvatarSharedId(person.id), landsOn: "profile", parts });
     }
     onPress();
   }
+
+  // Catching the journey back. The list was never unmounted, so this row
+  // cannot measure itself on arrival the way the profile does on mount — it
+  // has to be told that something is coming.
+  const returning =
+    shared?.awaitingArrival?.landsOn === "row" &&
+    shared.awaitingArrival.id === personAvatarSharedId(person.id);
+
+  useEffect(() => {
+    if (!returning || !shared) return;
+    let cancelled = false;
+
+    const handle = requestAnimationFrame(() => {
+      void Promise.all([
+        measureSharedRect(avatarRef.current),
+        measureSharedRect(nameRef.current),
+      ]).then(([avatarTo, nameTo]) => {
+        if (cancelled) return;
+        const to: Record<string, SharedRect> = {};
+        if (avatarTo) to.avatar = avatarTo;
+        if (nameTo) to.name = nameTo;
+        if (Object.keys(to).length > 0) {
+          shared.arriveAt(personAvatarSharedId(person.id), to, () => undefined);
+        } else {
+          shared.cancel(personAvatarSharedId(person.id));
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(handle);
+    };
+  }, [person.id, returning, shared]);
 
   return (
     <Pressable
@@ -103,7 +138,11 @@ export function PersonRow({
         <Avatar name={person.fullName} size={48} uri={person.profilePhotoUrl} />
       </View>
       <View style={styles.copy}>
-        <View collapsable={false} ref={nameRef}>
+        {/* Hugs the text rather than stretching across the column: measured
+            at full width, the copy started at almost the size it was going to
+            end at, so the name appeared to slide without growing — and it
+            flew from the column's centre rather than the name's. */}
+        <View collapsable={false} ref={nameRef} style={styles.nameMeasure}>
           <AppText numberOfLines={1} variant="heading">
             {person.preferredName || person.fullName}
           </AppText>
@@ -148,6 +187,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
     minWidth: 0,
+  },
+  nameMeasure: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
   },
   metaRow: {
     alignItems: "center",

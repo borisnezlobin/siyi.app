@@ -33,7 +33,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AmbientHeader } from "@/components/ambient-header";
 import { AppText } from "@/components/app-text";
-import { PersonProfileHeader } from "@/components/person-profile-header";
+import {
+  PersonProfileHeader,
+  useReturnFlight,
+} from "@/components/person-profile-header";
 import { Button } from "@/components/button";
 import { SharePersonSheet } from "@/components/share-person-sheet";
 import { ErrorState, LoadingState } from "@/components/load-state";
@@ -115,6 +118,15 @@ export default function PersonDetailScreen() {
   const classData = useRefreshableData(() =>
     session ? getClasses(session.user.id) : Promise.resolve([]),
   );
+
+  // Sends the avatar and name back to the row they came from. Started before
+  // the screen leaves, so the copies are already travelling as it slides away.
+  const returnFlight = useReturnFlight(personData.data?.person);
+
+  async function goBackWithTransition() {
+    await returnFlight();
+    router.back();
+  }
 
   useEffect(() => {
     if (quickCapture.revision > 0) void personData.reload();
@@ -270,7 +282,7 @@ export default function PersonDetailScreen() {
           <GlassIconButton
             accessibilityLabel="Go back"
             fallbackStyle={styles.headerButtonFallback}
-            onPress={() => router.back()}
+            onPress={() => void goBackWithTransition()}
             style={styles.headerButton}
           >
             <ArrowLeft color={colors.ink} size={21} />

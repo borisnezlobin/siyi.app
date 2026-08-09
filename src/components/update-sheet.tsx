@@ -336,7 +336,7 @@ export function UpdateSheet({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-black/5 bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
+        <div className="shrink-0 border-t border-black/5 bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 sm:rounded-b-[2rem] sm:px-6">
           {error ? (
             <p
               role="alert"

@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/**
+ * Tailwind v4 stopped giving buttons a pointer cursor, so every button on the
+ * site had the arrow. Restored here rather than by adding a class to each one:
+ * there are well over a hundred, and the next one written would have missed it.
+ * Anything that behaves like a button, including links styled as buttons and
+ * summary elements, is covered — and a disabled control keeps the default,
+ * because a pointer on something that cannot be pressed is a small lie.
+ */
+@layer base {
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    cursor: pointer;
+  }
+}
+
 :root {
   --background: #f4f7f4;
   --foreground: #17201c;
