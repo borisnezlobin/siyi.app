@@ -61,7 +61,7 @@ export function AppShell({
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-ink px-5 py-6 text-white lg:flex">
         <Link
           href="/today"
-          className="flex items-center gap-3 rounded-xl px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
+          className="flex items-center gap-3 rounded-full px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun"
         >
           <span className="grid size-10 place-items-center rounded-full bg-coral text-white shadow-float">
             <UsersThree size={21} weight="fill" aria-hidden="true" />
@@ -84,7 +84,7 @@ export function AppShell({
                 key={href}
                 href={href}
                 className={clsx(
-                  "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun",
+                  "flex items-center gap-3 rounded-full px-3.5 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun",
                   active
                     ? "bg-white text-ink"
                     : "text-white/68 hover:bg-white/8 hover:text-white",
@@ -135,7 +135,7 @@ export function AppShell({
                 key={href}
                 href={href}
                 className={clsx(
-                  "flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun",
+                  "flex items-center gap-3 rounded-full px-3.5 py-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sun",
                   active
                     ? "bg-white text-ink"
                     : "text-white/68 hover:bg-white/8 hover:text-white",
@@ -178,7 +178,7 @@ export function AppShell({
                 key={href}
                 href={href}
                 className={clsx(
-                  "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                  "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
                   active ? "text-ink" : "text-ink-muted",
                 )}
                 aria-current={active ? "page" : undefined}
@@ -223,7 +223,7 @@ export function AppShell({
               key={href}
               href={href}
               className={clsx(
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
                 active ? "text-ink" : "text-ink-muted",
               )}
               aria-current={active ? "page" : undefined}

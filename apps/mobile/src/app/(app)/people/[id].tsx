@@ -262,7 +262,11 @@ export default function PersonDetailScreen() {
     <View style={styles.fill}>
       <Screen
         bottomInset={112 + insets.bottom}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          // Clear of the bar floating above, which is out of the flow.
+          { paddingTop: insets.top + 62 },
+        ]}
       >
         <View
           pointerEvents="none"
@@ -276,43 +280,6 @@ export default function PersonDetailScreen() {
             name={person.fullName}
             uri={person.profilePhotoUrl}
           />
-        </View>
-
-        <View style={styles.topBar}>
-          <GlassIconButton
-            accessibilityLabel="Go back"
-            fallbackStyle={styles.headerButtonFallback}
-            onPress={() => void goBackWithTransition()}
-            style={styles.headerButton}
-          >
-            <ArrowLeft color={colors.ink} size={21} />
-          </GlassIconButton>
-          <View style={styles.topActions}>
-            <GlassIconButton
-              accessibilityLabel="Share person"
-              fallbackStyle={styles.headerButtonFallback}
-              onPress={() => setSharing(true)}
-              style={styles.headerButton}
-            >
-              <Share color={colors.ink} size={20} />
-            </GlassIconButton>
-            <Pressable
-              accessibilityLabel="Edit person"
-              accessibilityRole="button"
-              onPress={() => router.push(`/people/${person.id}/edit`)}
-              style={styles.headerButton}
-            >
-              <PencilSimple color={colors.ink} size={20} />
-            </Pressable>
-            <GlassIconButton
-              accessibilityLabel="Archive person"
-              fallbackStyle={styles.headerButtonFallback}
-              onPress={archive}
-              style={styles.headerButton}
-            >
-              <Archive color={colors.coralStrong} size={20} />
-            </GlassIconButton>
-          </View>
         </View>
 
         <PersonProfileHeader person={person} />
@@ -596,8 +563,60 @@ export default function PersonDetailScreen() {
               </AppText>
             </Card>
           )}
+
+          <View style={styles.archiveRow}>
+            <Button
+              icon={Archive}
+              label="Archive person"
+              onPress={archive}
+              variant="quiet"
+            />
+          </View>
         </View>
       </Screen>
+
+      {/* Above the scroll rather than inside it: on a long profile, going back
+          or reaching for edit should not mean scrolling to the top first. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.floatingTopBar, { top: insets.top + 6 }]}
+      >
+          <View style={styles.topBar}>
+            <GlassIconButton
+              accessibilityLabel="Go back"
+              fallbackStyle={styles.headerButtonFallback}
+              onPress={() => void goBackWithTransition()}
+              style={styles.headerButton}
+            >
+              <ArrowLeft color={colors.ink} size={21} />
+            </GlassIconButton>
+            <View style={styles.topActions}>
+              <GlassIconButton
+                accessibilityLabel="Share person"
+                fallbackStyle={styles.headerButtonFallback}
+                onPress={() => setSharing(true)}
+                style={styles.headerButton}
+              >
+                <Share color={colors.ink} size={20} />
+              </GlassIconButton>
+              {/* Editing is what people come up here to do, so it is the one
+                  that says what it is. Archiving is rare and reads as final,
+                  so it sits at the end of the page instead of a thumb's width
+                  from Edit. */}
+              <Pressable
+                accessibilityLabel="Edit person"
+                accessibilityRole="button"
+                onPress={() => router.push(`/people/${person.id}/edit`)}
+                style={styles.editButton}
+              >
+                <PencilSimple color={colors.porcelain} size={18} />
+                <AppText style={styles.editLabel} variant="label">
+                  Edit
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+      </View>
 
       <View
         style={[
@@ -701,6 +720,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: -20,
   },
+  floatingTopBar: {
+    left: 20,
+    position: "absolute",
+    right: 20,
+  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -718,6 +742,23 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     width: 44,
+  },
+  editButton: {
+    alignItems: "center",
+    backgroundColor: colors.ink,
+    borderRadius: radii.round,
+    flexDirection: "row",
+    gap: 7,
+    height: 44,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  editLabel: {
+    color: colors.porcelain,
+  },
+  archiveRow: {
+    alignItems: "center",
+    marginTop: 24,
   },
   muted: {
     color: colors.inkMuted,

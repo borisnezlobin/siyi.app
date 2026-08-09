@@ -1,6 +1,8 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { X } from "@phosphor-icons/react";
+import clsx from "clsx";
+import { useId, useMemo, useRef, useState } from "react";
 import { normalizeCollegeText, searchColleges } from "@/lib/colleges";
 
 /**
@@ -24,6 +26,7 @@ export function CollegeInput({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
     if (!open) return [];
@@ -51,6 +54,7 @@ export function CollegeInput({
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         name={name}
         value={value}
         maxLength={120}
@@ -59,7 +63,9 @@ export function CollegeInput({
         aria-expanded={suggestions.length > 0}
         aria-controls={listId}
         aria-autocomplete="list"
-        className={className}
+        // Room on the right for the clear button, so a long university name
+        // does not run underneath it.
+        className={clsx(className, value && "pr-10")}
         placeholder="Start typing, or an acronym like CMU"
         onChange={(event) => {
           update(event.target.value);
@@ -85,6 +91,22 @@ export function CollegeInput({
           }
         }}
       />
+      {/* A default university arrives already filled in, and clearing a field
+          you did not type in should not mean selecting it first. */}
+      {value ? (
+        <button
+          type="button"
+          onClick={() => {
+            update("");
+            setOpen(false);
+            inputRef.current?.focus();
+          }}
+          aria-label="Clear university"
+          className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-ink-muted transition-colors hover:bg-mist hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+        >
+          <X size={14} aria-hidden="true" />
+        </button>
+      ) : null}
       {suggestions.length > 0 ? (
         <ul
           id={listId}
