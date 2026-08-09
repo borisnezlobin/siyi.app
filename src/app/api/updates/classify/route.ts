@@ -95,16 +95,42 @@ export async function POST(request: NextRequest) {
       text,
     });
 
+    // Every value of each kind, not just the primary: a second email is only
+    // worth offering if they do not already have it.
+    const { data: contactRows } = await supabase
+      .from("person_contact_methods")
+      .select("kind, value")
+      .eq("person_id", personId);
+
+    const contact: Record<string, string[]> = {};
+    for (const row of contactRows ?? []) {
+      const kind = row.kind as string;
+      contact[kind] = [...(contact[kind] ?? []), row.value as string];
+    }
+    // The single columns still hold the primary of each kind on accounts that
+    // have not written a contact row yet.
+    for (const [kind, legacy] of [
+      ["phone", person.phone_number],
+      ["email", person.email],
+      ["instagram", person.instagram_username],
+    ] as const) {
+      const value = legacy as string | null;
+      if (value && !(contact[kind] ?? []).includes(value)) {
+        contact[kind] = [...(contact[kind] ?? []), value];
+      }
+    }
+
+    const { data: classRows } = await supabase
+      .from("person_classes")
+      .select("course_code")
+      .eq("person_id", personId);
+
     return NextResponse.json({
       ...result,
       person: snapshot,
       sections,
-      contact: {
-        phone: (person.phone_number as string | null) ?? null,
-        email: (person.email as string | null) ?? null,
-        instagram: (person.instagram_username as string | null) ?? null,
-        discord: null,
-      },
+      contact,
+      classes: (classRows ?? []).map((row) => row.course_code as string),
     });
   } catch (error) {
     return apiError(errorMessage(error), 401);

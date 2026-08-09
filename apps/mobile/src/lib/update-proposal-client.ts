@@ -7,9 +7,11 @@ import {
   savePersonNote,
   updatePerson,
 } from "@/lib/data";
+import { addClass } from "@/lib/classes-data";
 import { learnedUpdateFor } from "@/lib/capture-drafts";
+import { contactDraftsOf, type ContactMethodDraft } from "@/lib/contact-methods";
 import { storedPersonInput } from "@/lib/person-input";
-import { appendToNoteBody, type ProposalFieldName } from "@/lib/update-proposal";
+import { appendToNoteBody } from "@/lib/update-proposal";
 import type { UpdateProposalClient } from "@/lib/update-proposal-apply";
 
 /**
@@ -19,12 +21,6 @@ import type { UpdateProposalClient } from "@/lib/update-proposal-apply";
  * by the phone's own model can be applied with no signal at all and will reach
  * the server whenever there is one.
  */
-
-const columnFor: Partial<Record<ProposalFieldName, string>> = {
-  phone: "phoneNumber",
-  email: "email",
-  instagram: "instagramUsername",
-};
 
 export function mobileProposalClient({
   userId,
@@ -50,14 +46,62 @@ export function mobileProposalClient({
       const details = await getPersonDetails(personId);
       if (!details) throw new Error("That person could not be found.");
 
+      // Contacts are added rather than set, and go through addContacts.
       const input = storedPersonInput(details.person);
       for (const { field, value } of fields) {
-        // Discord is only ever a contact method, never a column here.
-        if (field === "discord") continue;
-        (input as unknown as Record<string, unknown>)[columnFor[field] ?? field] = value;
+        (input as unknown as Record<string, unknown>)[field] = value;
       }
 
       await updatePerson(userId, personId, input);
+    },
+
+    async addContacts(contacts) {
+      const details = await getPersonDetails(personId);
+      if (!details) throw new Error("That person could not be found.");
+
+      // Read fresh and merged here, so a second email joins the first instead
+      // of replacing the set.
+      const held = contactDraftsOf(details.person);
+      const drafts = [...held];
+      for (const contact of contacts) {
+        const kind = contact.kind as ContactMethodDraft["kind"];
+        const sameKind = drafts.filter((draft) => draft.kind === kind);
+        if (sameKind.some((draft) => draft.value.toLowerCase() === contact.value.toLowerCase())) {
+          continue;
+        }
+        drafts.push({
+          kind,
+          value: contact.value,
+          label: null,
+          isPrimary: sameKind.length === 0,
+        });
+      }
+
+      await updatePerson(
+        userId,
+        personId,
+        storedPersonInput(details.person),
+        undefined,
+        undefined,
+        drafts,
+        held,
+      );
+    },
+
+    async addClass(course) {
+      await addClass(userId, {
+        personId,
+        courseCode: course,
+        // Everything else is left for them to fill in on the profile; a note
+        // saying "taking math 53" does not say who teaches it or when.
+        courseTitle: null,
+        professor: null,
+        term: null,
+        days: null,
+        startsAt: null,
+        endsAt: null,
+        location: null,
+      });
     },
 
     async appendToNote({ noteId, heading, text }) {

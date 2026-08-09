@@ -1,7 +1,7 @@
 import { saveUpdate } from "@/lib/capture-client";
 import { getApiResponseError } from "@/lib/http";
 import { todayDateInputValue } from "@/lib/date-input";
-import { appendToNoteBody, type ProposalFieldName } from "@/lib/update-proposal";
+import { appendToNoteBody } from "@/lib/update-proposal";
 import type { UpdateProposalClient } from "@/lib/update-proposal-apply";
 
 /**
@@ -11,12 +11,6 @@ import type { UpdateProposalClient } from "@/lib/update-proposal-apply";
  * nothing here is a new way into the database, it is the same doors the forms
  * use.
  */
-
-const columnFor: Partial<Record<ProposalFieldName, string>> = {
-  phone: "phoneNumber",
-  email: "email",
-  instagram: "instagramUsername",
-};
 
 async function must(response: Response, fallback: string) {
   if (!response.ok) throw new Error(await getApiResponseError(response, fallback));
@@ -41,13 +35,10 @@ export function webProposalClient({
     },
 
     async saveFields(fields) {
+      // Contacts do not come through here: they are added rather than set,
+      // and go to their own route.
       const patch: Record<string, string | number> = {};
-      for (const { field, value } of fields) {
-        // Discord lives only in contact methods, so it is not a column here and
-        // is left to the contact editor rather than guessed at.
-        if (field === "discord") continue;
-        patch[columnFor[field] ?? field] = value;
-      }
+      for (const { field, value } of fields) patch[field] = value;
       if (Object.keys(patch).length === 0) return;
 
       await must(
@@ -57,6 +48,30 @@ export function webProposalClient({
           body: JSON.stringify(patch),
         }),
         "Those details could not be saved.",
+      );
+    },
+
+    async addContacts(contacts) {
+      // The server reads what is already there and writes the union, so a
+      // second email never replaces the first.
+      await must(
+        await fetch("/api/person-contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ personId, contacts }),
+        }),
+        "Those contact details could not be saved.",
+      );
+    },
+
+    async addClass(course) {
+      await must(
+        await fetch("/api/person-classes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ personId, courseCode: course }),
+        }),
+        `${course} could not be saved.`,
       );
     },
 

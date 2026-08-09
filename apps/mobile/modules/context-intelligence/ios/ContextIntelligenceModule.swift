@@ -22,6 +22,8 @@ struct SortedUpdate {
   var fields: [SortedField]
   @Guide(description: "Things to be reminded about on a future date")
   var reminders: [SortedReminder]
+  @Guide(description: "Courses they are taking, one per entry, written the way the note wrote them")
+  var classes: [String]
   @Guide(description: "Anything that fits nowhere else, copied word for word. Empty when everything was sorted.")
   var leftover: String
 }
@@ -81,6 +83,7 @@ private func sortedUpdateJSON(_ sorted: SortedUpdate) -> String {
     "reminders": sorted.reminders.map {
       ["text": $0.text, "dueInDays": $0.dueInDays, "dueOn": $0.dueOn]
     },
+    "classes": sorted.classes,
     "leftover": sorted.leftover,
   ]
   guard

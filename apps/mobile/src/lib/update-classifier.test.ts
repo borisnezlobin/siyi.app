@@ -5,6 +5,7 @@ const proposal: UpdateProposal = {
   notes: [{ heading: "Interests", text: "snowboarding" }],
   fields: [],
   reminders: [],
+  classes: [],
   leftover: "",
 };
 
