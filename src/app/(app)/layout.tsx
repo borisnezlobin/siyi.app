@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { PageCacheSync } from "@/components/page-cache-sync";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -11,11 +12,13 @@ export default async function AuthenticatedLayout({
 }) {
   let displayName = "Alex Vale";
   let email = "alex@example.edu";
+  let cacheOwner = "demo";
 
   if (isSupabaseConfigured()) {
     const user = await getAuthenticatedUser();
     if (!user) redirect("/auth");
 
+    cacheOwner = user.id;
     email = user.email ?? "";
     const supabase = await createClient();
     // This is the only query on the critical path of every page load, so
@@ -40,6 +43,7 @@ export default async function AuthenticatedLayout({
       displayName={displayName}
       email={email}
     >
+      <PageCacheSync owner={cacheOwner} />
       {children}
     </AppShell>
   );
