@@ -36,10 +36,10 @@ export const metadata: Metadata = {
     description: brand.description,
   },
   // No `icon` entries here on purpose. Listing the 192 and 512 PNGs as rel=icon
-  // let a search engine pick one and shrink it to 16px itself, which is how the
-  // three-person glyph ended up as an unreadable speck in search results. The
-  // only rel=icon is now favicon.ico, drawn for that size; the PWA icons are
-  // declared in the manifest, which is where an installer looks anyway.
+  // leaves a crawler to choose between three icons and shrink whichever it
+  // picks. favicon.ico is the one drawn at 16, 32 and 48, so it is the only
+  // rel=icon; the PWA icons stay in the manifest, which is where an installer
+  // looks anyway.
   icons: {
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
