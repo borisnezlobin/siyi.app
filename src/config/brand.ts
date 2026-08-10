@@ -10,5 +10,5 @@ export const brand = {
     process.env.NEXT_PUBLIC_LEGAL_ENTITY_NAME?.trim() || "Siyi.app",
   legalEffectiveDate: "August 4, 2026",
   postalAddress:
-    "110 Sproul Hall, Berkeley, CA 94720, care of Boris Nezlobin",
+    "Clark Kerr Campus Building 7, 2601 Warring Street, Berkeley, CA 94720, care of Tarun Yadgirkar",
 } as const;

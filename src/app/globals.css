@@ -118,3 +118,18 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Safari on iOS zooms into any field whose text is under 16px when it takes
+ * focus, and never zooms back out — so a 14px input left the whole page
+ * magnified until the reader pinched it back themselves. Sixteen pixels on
+ * touch-sized screens is what stops the zoom; the alternative, pinning
+ * maximum-scale in the viewport, would take pinch zoom away from everyone.
+ */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

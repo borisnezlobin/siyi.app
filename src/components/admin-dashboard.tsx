@@ -16,6 +16,7 @@ export type AdminSegmentSummary = {
   label: string;
   description: string;
   users: number;
+  subscribers: number;
 };
 
 type ComposeStep = "writing" | "confirming";
@@ -108,6 +109,10 @@ export function AdminDashboard({
   const audience = selectedSegment?.users ?? 0;
   const canReview = title.trim().length > 0 && body.trim().length > 0;
   const busiestWeek = Math.max(1, ...stats.signupsByWeek.map((week) => week.users));
+  const subscriberShare =
+    stats.totalUsers === 0
+      ? 0
+      : Math.round((stats.marketingSubscribers / stats.totalUsers) * 100);
 
   async function publish() {
     setPublishing(true);
@@ -232,9 +237,65 @@ export function AdminDashboard({
           <StatCard label="Push turned on" value={stats.pushEnabledUsers} />
           <StatCard label="Contacts saved" value={stats.totalContacts} />
           <StatCard
-            label="Quiet 30 days"
-            value={Math.max(0, stats.totalUsers - stats.activeLast30)}
+            label="Subscribed to email"
+            value={stats.marketingSubscribers}
+            hint={`${subscriberShare}% of everyone`}
           />
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="idle-heading"
+        className="rounded-2xl bg-paper p-5 shadow-card"
+      >
+        <h2 id="idle-heading" className="font-display text-xl text-ink">
+          Where people get stuck
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          One account can be counted in more than one of these, so they do not
+          add up to a total.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <StatCard
+            label="Quiet 30 days"
+            value={stats.idle.quiet}
+            hint="Nothing saved or logged"
+          />
+          <StatCard
+            label="No contacts yet"
+            value={stats.idle.withoutContacts}
+            hint="Signed up, never added anyone"
+          />
+          <StatCard
+            label="Email not verified"
+            value={stats.idle.emailUnverified}
+            hint="Confirmation link never opened"
+          />
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="subscribers-heading"
+        className="rounded-2xl bg-paper p-5 shadow-card"
+      >
+        <h2 id="subscribers-heading" className="font-display text-xl text-ink">
+          Who we can email
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Subscribers within each group, and how much of that group they are.
+        </p>
+        <div className="mt-4 space-y-3">
+          {segments.map((segment) => (
+            <div key={segment.id} className="flex items-baseline gap-3">
+              <span className="flex-1 text-sm text-ink">{segment.label}</span>
+              <span className="text-sm tabular-nums text-ink">
+                {segment.subscribers}
+              </span>
+              <span className="w-24 shrink-0 text-right text-xs tabular-nums text-ink-muted">
+                of {peopleLabel(segment.users)}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 

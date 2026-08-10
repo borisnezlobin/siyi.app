@@ -1,13 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type AdminUserFacts,
+  type IdleCounts,
   bucketContactCounts,
   contactCountBuckets,
+  countIdleUsers,
 } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Announcement } from "@/lib/types";
 
 const pageSize = 1000;
+const authPageSize = 200;
 const maxPages = 100;
 const dayInMs = 24 * 60 * 60 * 1000;
 
@@ -55,6 +58,37 @@ function latestTimestamp(current: string | null, candidate: string | null) {
   return new Date(candidate) > new Date(current) ? candidate : current;
 }
 
+type ProfileRow = {
+  auth_user_id: string;
+  created_at: string;
+  marketing_opt_in?: boolean | null;
+};
+
+/**
+ * Whether an address was ever confirmed lives in auth.users, which PostgREST
+ * does not expose, so it comes from the admin API instead. Only the id and the
+ * confirmation timestamp are kept — the address itself is dropped here.
+ */
+async function fetchEmailConfirmations(admin: SupabaseClient) {
+  const confirmedAt = new Map<string, string | null>();
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: authPageSize,
+    });
+    if (error) throw new Error(error.message);
+
+    for (const user of data.users) {
+      confirmedAt.set(user.id, user.email_confirmed_at ?? null);
+    }
+
+    if (data.users.length < authPageSize) break;
+  }
+
+  return confirmedAt;
+}
+
 /**
  * Only ever reads identifiers and timestamps. No names, emails, or contact
  * details of anyone's people leave the database on this path.
@@ -62,11 +96,12 @@ function latestTimestamp(current: string | null, candidate: string | null) {
 export async function getAdminUserFacts(): Promise<AdminUserFacts[]> {
   const admin = createAdminClient();
 
-  const [profiles, people, webPush, nativePush, interactions] = await Promise.all([
-    fetchAllRows<{ auth_user_id: string; created_at: string }>(
+  const [profiles, people, webPush, nativePush, interactions, confirmations] =
+    await Promise.all([
+    fetchAllRows<ProfileRow>(
       admin,
       "user_profiles",
-      "auth_user_id,created_at",
+      "auth_user_id,created_at,marketing_opt_in",
     ),
     fetchAllRows<{ user_id: string; created_at: string }>(
       admin,
@@ -94,6 +129,7 @@ export async function getAdminUserFacts(): Promise<AdminUserFacts[]> {
         since: new Date(Date.now() - 31 * dayInMs).toISOString(),
       },
     ),
+    fetchEmailConfirmations(admin),
   ]);
 
   const facts = new Map<string, AdminUserFacts>();
@@ -106,6 +142,8 @@ export async function getAdminUserFacts(): Promise<AdminUserFacts[]> {
       // Signing up counts as activity, otherwise a brand-new account reads as
       // dormant on its first day.
       lastActiveAt: profile.created_at,
+      marketingOptIn: profile.marketing_opt_in ?? false,
+      emailConfirmedAt: confirmations.get(profile.auth_user_id) ?? null,
     });
   }
 
@@ -144,6 +182,8 @@ export type AdminStats = {
   pushEnabledUsers: number;
   activeLast7: number;
   activeLast30: number;
+  idle: IdleCounts;
+  marketingSubscribers: number;
 };
 
 function withinDays(iso: string | null, days: number, now: Date) {
@@ -201,6 +241,8 @@ export function summariseUsers(
       .length,
     activeLast30: users.filter((facts) => withinDays(facts.lastActiveAt, 30, now))
       .length,
+    idle: countIdleUsers(users, now),
+    marketingSubscribers: users.filter((facts) => facts.marketingOptIn).length,
   };
 }
 
@@ -218,6 +260,8 @@ export const emptyStats: AdminStats = {
   pushEnabledUsers: 0,
   activeLast7: 0,
   activeLast30: 0,
+  idle: { quiet: 0, withoutContacts: 0, emailUnverified: 0 },
+  marketingSubscribers: 0,
 };
 
 type AnnouncementRow = {

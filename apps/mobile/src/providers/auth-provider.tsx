@@ -41,6 +41,7 @@ type AuthContextValue = {
     email: string,
     password: string,
     displayName: string,
+    marketingOptIn: boolean,
   ) => Promise<"signed-in" | "confirmation-sent">;
   sendMagicLink: (email: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -313,6 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     displayName: string,
+    marketingOptIn: boolean,
   ) {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -322,6 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: displayName.trim(),
           app_name: brand.name,
+          marketing_opt_in: marketingOptIn,
         },
       },
     });

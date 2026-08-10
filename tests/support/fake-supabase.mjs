@@ -37,14 +37,39 @@ const day = 24 * 60 * 60 * 1000;
 const iso = (msAgo) => new Date(Date.now() - msAgo).toISOString();
 
 /**
+ * u-3 never opened its confirmation link, so exactly one account is unverified
+ * and a rule that ignores verification shows up as the wrong count.
+ */
+export const authUsers = [
+  { id: "u-1", email: "u-1@siyi.test", email_confirmed_at: iso(10 * day) },
+  { id: "u-2", email: "u-2@siyi.test", email_confirmed_at: iso(40 * day) },
+  { id: "u-3", email: "u-3@siyi.test", email_confirmed_at: null },
+];
+
+/**
  * Three accounts, chosen so every segment lands on a different number and a
  * wrong join shows up as a wrong count rather than a coincidence.
  */
 export const tables = {
   user_profiles: [
-    { auth_user_id: "u-1", created_at: iso(10 * day) },
-    { auth_user_id: "u-2", created_at: iso(40 * day) },
-    { auth_user_id: "u-3", created_at: iso(200 * day) },
+    {
+      auth_user_id: "u-1",
+      created_at: iso(10 * day),
+      email: "u-1@siyi.test",
+      marketing_opt_in: true,
+    },
+    {
+      auth_user_id: "u-2",
+      created_at: iso(40 * day),
+      email: "u-2@siyi.test",
+      marketing_opt_in: true,
+    },
+    {
+      auth_user_id: "u-3",
+      created_at: iso(200 * day),
+      email: "u-3@siyi.test",
+      marketing_opt_in: false,
+    },
   ],
   push_subscriptions: [{ user_id: "u-1", revoked_at: null }],
   native_push_subscriptions: [{ user_id: "u-3", revoked_at: iso(day) }],
@@ -196,6 +221,19 @@ export function startFakeSupabase({ port, user = adminUser, rows = tables }) {
       return currentUser
         ? send(200, currentUser)
         : send(401, { message: "invalid claim" });
+    }
+
+    // Whether an address was ever confirmed lives in auth.users, which
+    // PostgREST does not expose, so the admin aggregates ask for it here.
+    if (url.pathname === "/auth/v1/admin/users") {
+      const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
+      const perPage =
+        Number.parseInt(url.searchParams.get("per_page") ?? "50", 10) || 50;
+      const from = (page - 1) * perPage;
+      return send(200, {
+        users: authUsers.slice(from, from + perPage),
+        aud: "authenticated",
+      });
     }
 
     if (url.pathname.startsWith("/rest/v1/")) {

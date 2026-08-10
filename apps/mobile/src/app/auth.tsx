@@ -1,4 +1,11 @@
-import { AppleLogo, Eye, EyeSlash, GoogleLogo } from "phosphor-react-native";
+import {
+  AppleLogo,
+  CheckSquare,
+  Eye,
+  EyeSlash,
+  GoogleLogo,
+  Square,
+} from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -10,6 +17,7 @@ import {
   useFieldChain,
 } from "@/components/keyboard-aware-form";
 import { LoadingState } from "@/components/load-state";
+import { brand } from "@/config/brand";
 import { colors, fontFamilies } from "@/constants/theme";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -32,6 +40,7 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +122,12 @@ export default function AuthScreen() {
         await auth.signInWithPassword(email, password);
         return;
       }
-      const result = await auth.signUpWithPassword(email, password, displayName);
+      const result = await auth.signUpWithPassword(
+        email,
+        password,
+        displayName,
+        marketingOptIn,
+      );
       if (result === "confirmation-sent") {
         setMessage(
           "Check your email to confirm your account, then come back here.",
@@ -248,6 +262,25 @@ export default function AuthScreen() {
           />
         ) : null}
 
+        {usingPassword && mode === "sign-up" ? (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: marketingOptIn }}
+            onPress={() => setMarketingOptIn((consented) => !consented)}
+            style={styles.consentRow}
+          >
+            {marketingOptIn ? (
+              <CheckSquare color={colors.coral} size={22} weight="fill" />
+            ) : (
+              <Square color={colors.inkMuted} size={22} />
+            )}
+            <AppText style={styles.consentText} variant="caption">
+              Email me occasional news about {brand.shortName}. We only send
+              things worth reading, and very rarely.
+            </AppText>
+          </Pressable>
+        ) : null}
+
         {usingPassword && mode === "sign-in" ? (
           <Pressable
             accessibilityRole="button"
@@ -297,13 +330,18 @@ export default function AuthScreen() {
           variant="secondary"
         />
         <Button
-          disabled
           icon={GoogleLogo}
           label="Continue with Google"
+          loading={loadingAction === "google"}
+          onPress={() =>
+            void runAction("google", async () => {
+              await auth.signInWithGoogle();
+            })
+          }
           variant="secondary"
         />
         <AppText style={styles.providerNote} variant="caption">
-          Apple and Google sign-in are coming soon.
+          Apple sign-in is coming soon.
         </AppText>
       </View>
 
@@ -387,6 +425,15 @@ const styles = StyleSheet.create({
   },
   successText: {
     color: colors.sageStrong,
+  },
+  consentRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+  },
+  consentText: {
+    color: colors.inkMuted,
+    flex: 1,
   },
   providers: {
     gap: 10,

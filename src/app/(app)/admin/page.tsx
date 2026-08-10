@@ -4,7 +4,7 @@ import {
   type AdminSegmentSummary,
 } from "@/components/admin-dashboard";
 import { PageHeader } from "@/components/page-header";
-import { adminSegments, segmentCounts } from "@/lib/admin";
+import { adminSegments, segmentCounts, subscriberCounts } from "@/lib/admin";
 import { requireAdminPageUser } from "@/lib/admin-access";
 import {
   type AdminStats,
@@ -29,18 +29,26 @@ export default async function AdminPage() {
   let stats: AdminStats = emptyStats;
   let statsError: string | null = null;
   let segments: AdminSegmentSummary[] = adminSegments.map(
-    ({ id, label, description }) => ({ id, label, description, users: 0 }),
+    ({ id, label, description }) => ({
+      id,
+      label,
+      description,
+      users: 0,
+      subscribers: 0,
+    }),
   );
 
   try {
     const facts = await getAdminUserFacts();
     const counts = segmentCounts(facts);
+    const subscribers = subscriberCounts(facts);
     stats = summariseUsers(facts);
     segments = adminSegments.map(({ id, label, description }) => ({
       id,
       label,
       description,
       users: counts[id] ?? 0,
+      subscribers: subscribers[id] ?? 0,
     }));
   } catch (error) {
     statsError = errorMessage(error);

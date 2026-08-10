@@ -10,6 +10,8 @@ function user(overrides: Partial<AdminUserFacts> & { userId: string }): AdminUse
     contactCount: 0,
     pushEnabled: false,
     lastActiveAt: null,
+    marketingOptIn: false,
+    emailConfirmedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
