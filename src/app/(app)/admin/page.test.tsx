@@ -41,6 +41,8 @@ function user(overrides: Partial<AdminUserFacts> = {}): AdminUserFacts {
     contactCount: 5,
     pushEnabled: false,
     lastActiveAt: new Date(now - dayInMs).toISOString(),
+    marketingOptIn: false,
+    emailConfirmedAt: new Date(now - dayInMs).toISOString(),
     ...overrides,
   };
 }

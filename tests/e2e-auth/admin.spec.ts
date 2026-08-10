@@ -56,6 +56,28 @@ test.describe("/admin over a real signed-in request", () => {
     await expect(page.getByText("125", { exact: true })).toBeVisible();
   });
 
+  test("idle accounts are counted separately, and subscribers are counted at all", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const { adminUser } = await fixtures();
+    await signIn(context, adminUser, baseURL as string);
+    await page.goto("/admin");
+
+    const idle = page.getByRole("region", { name: "Where people get stuck" });
+    // u-3 alone never confirmed its address, and u-3 alone has saved nobody —
+    // two different accounts would make a single "idle" total read as 1.
+    await expect(
+      idle.getByText("Email not verified").locator("xpath=following-sibling::p[1]"),
+    ).toHaveText("1");
+
+    await expect(page.getByText("Subscribed to email").first()).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Who we can email" }).getByText("Everyone"),
+    ).toBeVisible();
+  });
+
   test("the segment counts are the ones the data really supports", async ({
     context,
     page,

@@ -16,6 +16,8 @@ const stats: AdminStats = {
   pushEnabledUsers: 7,
   activeLast7: 6,
   activeLast30: 9,
+  idle: { quiet: 3, withoutContacts: 2, emailUnverified: 1 },
+  marketingSubscribers: 5,
 };
 
 const segments = [
@@ -24,12 +26,14 @@ const segments = [
     label: "Everyone",
     description: "Every account with a profile.",
     users: 12,
+    subscribers: 5,
   },
   {
     id: "push-enabled",
     label: "Push turned on",
     description: "Accounts with at least one live push subscription.",
     users: 7,
+    subscribers: 4,
   },
 ];
 

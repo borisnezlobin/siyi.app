@@ -10,6 +10,8 @@ export type AdminUserFacts = {
   contactCount: number;
   pushEnabled: boolean;
   lastActiveAt: string | null;
+  marketingOptIn: boolean;
+  emailConfirmedAt: string | null;
 };
 
 export type AdminSegment = {
@@ -127,7 +129,63 @@ export const adminSegments: AdminSegment[] = [
     description: `No recorded activity in the last ${inactivityDays} days.`,
     matches: (facts, now) => !activeWithinDays(facts, inactivityDays, now),
   },
+  {
+    id: "no-contacts",
+    label: "No contacts yet",
+    description: "Signed up but has not saved anyone.",
+    matches: (facts) => facts.contactCount === 0,
+  },
+  {
+    id: "email-unverified",
+    label: "Email not verified",
+    description: "Never followed the confirmation link.",
+    matches: (facts) => facts.emailConfirmedAt === null,
+  },
+  {
+    id: "marketing-subscribed",
+    label: "Subscribed to email",
+    description: "Agreed to hear from us, and has not unsubscribed.",
+    matches: (facts) => facts.marketingOptIn,
+  },
 ];
+
+/**
+ * The three ways an account can be idle. They overlap on purpose — someone can
+ * be quiet, contactless and unverified all at once — so these are never summed
+ * into a single "idle" figure.
+ */
+export type IdleCounts = {
+  quiet: number;
+  withoutContacts: number;
+  emailUnverified: number;
+};
+
+export function countIdleUsers(
+  users: AdminUserFacts[],
+  now: Date = new Date(),
+): IdleCounts {
+  return {
+    quiet: users.filter((facts) => !activeWithinDays(facts, inactivityDays, now))
+      .length,
+    withoutContacts: users.filter((facts) => facts.contactCount === 0).length,
+    emailUnverified: users.filter((facts) => facts.emailConfirmedAt === null)
+      .length,
+  };
+}
+
+/** How many of each segment agreed to hear from us. */
+export function subscriberCounts(
+  users: AdminUserFacts[],
+  now: Date = new Date(),
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const segment of adminSegments) {
+    counts[segment.id] = users.filter(
+      (facts) => facts.marketingOptIn && segment.matches(facts, now),
+    ).length;
+  }
+  return counts;
+}
 
 export function findSegment(segmentId: string): AdminSegment | null {
   return adminSegments.find((segment) => segment.id === segmentId) ?? null;

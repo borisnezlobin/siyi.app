@@ -174,6 +174,7 @@ export async function signUpWithPassword(formData: FormData) {
       data: {
         full_name: displayName,
         app_name: brand.name,
+        marketing_opt_in: formData.get("marketingOptIn") === "on",
       },
     },
   });

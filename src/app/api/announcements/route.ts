@@ -44,6 +44,7 @@ async function hasLivePush(supabase: SupabaseClient, userId: string) {
 async function currentUserFacts(
   supabase: SupabaseClient,
   userId: string,
+  emailConfirmedAt: string | null,
 ): Promise<AdminUserFacts> {
   const [{ count }, lastPerson, lastInteraction, pushEnabled, profile] =
     await Promise.all([
@@ -56,7 +57,7 @@ async function currentUserFacts(
       hasLivePush(supabase, userId),
       supabase
         .from("user_profiles")
-        .select("created_at")
+        .select("created_at,marketing_opt_in")
         .eq("auth_user_id", userId)
         .maybeSingle(),
     ]);
@@ -75,6 +76,8 @@ async function currentUserFacts(
     lastActiveAt:
       stamps.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ??
       null,
+    marketingOptIn: Boolean(profile.data?.marketing_opt_in),
+    emailConfirmedAt,
   };
 }
 
@@ -114,7 +117,11 @@ export async function GET(request: NextRequest) {
     const undismissed = live.filter((row) => !dismissed.has(row.id));
     if (undismissed.length === 0) return NextResponse.json({ announcements: [] });
 
-    const facts = await currentUserFacts(supabase, user.id);
+    const facts = await currentUserFacts(
+      supabase,
+      user.id,
+      user.email_confirmed_at ?? null,
+    );
     const visible = undismissed.filter((row) => {
       const segment = findSegment(row.segment);
       return segment ? segment.matches(facts, new Date()) : false;

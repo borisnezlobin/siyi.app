@@ -4,9 +4,11 @@ import {
   type AdminUserFacts,
   bucketContactCounts,
   bucketForContactCount,
+  countIdleUsers,
   isAdminEmail,
   parseAdminEmails,
   segmentCounts,
+  subscriberCounts,
   usersInSegment,
 } from "@/lib/admin";
 
@@ -60,6 +62,8 @@ function user(overrides: Partial<AdminUserFacts> & { userId: string }): AdminUse
     contactCount: 0,
     pushEnabled: false,
     lastActiveAt: now.toISOString(),
+    marketingOptIn: false,
+    emailConfirmedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -71,6 +75,37 @@ const population: AdminUserFacts[] = [
   user({ userId: "ninety-nine", contactCount: 99, pushEnabled: true }),
   user({ userId: "never-active", lastActiveAt: null }),
 ];
+
+describe("idle and subscriber counts", () => {
+  it("counts each kind of idleness on its own, never as one total", () => {
+    const counts = countIdleUsers(
+      [
+        user({ userId: "stuck", contactCount: 0, emailConfirmedAt: null,
+          lastActiveAt: "2026-01-02T00:00:00.000Z" }),
+        user({ userId: "fine", contactCount: 4 }),
+      ],
+      now,
+    );
+    // One account, idle in all three ways: summing them would report three
+    // people who need a nudge when there is only one.
+    expect(counts).toEqual({ quiet: 1, withoutContacts: 1, emailUnverified: 1 });
+  });
+
+  it("counts subscribers within each segment, not the whole population", () => {
+    const counts = subscriberCounts(
+      [
+        user({ userId: "keen", contactCount: 0, marketingOptIn: true }),
+        user({ userId: "quiet-keen", contactCount: 200, marketingOptIn: true }),
+        user({ userId: "opted-out", contactCount: 0 }),
+      ],
+      now,
+    );
+    expect(counts.all).toBe(2);
+    expect(counts["no-contacts"]).toBe(1);
+    expect(counts["many-contacts"]).toBe(1);
+    expect(counts["marketing-subscribed"]).toBe(2);
+  });
+});
 
 describe("segment membership", () => {
   it("includes everyone in the all-users segment", () => {
@@ -115,12 +150,31 @@ describe("segment membership", () => {
     expect(usersInSegment(population, "not-a-segment", now)).toEqual([]);
   });
 
+  it("finds accounts that never verified their address", () => {
+    const members = usersInSegment(
+      [...population, user({ userId: "unverified", emailConfirmedAt: null })],
+      "email-unverified",
+      now,
+    ).map((facts) => facts.userId);
+    expect(members).toEqual(["unverified"]);
+  });
+
+  it("finds accounts that have not saved anyone", () => {
+    const members = usersInSegment(population, "no-contacts", now).map(
+      (facts) => facts.userId,
+    );
+    expect(members).toEqual(["quiet", "never-active"]);
+  });
+
   it("counts every segment in one pass", () => {
     expect(segmentCounts(population, now)).toEqual({
       all: 5,
       "many-contacts": 2,
       "push-enabled": 2,
       "inactive-30-days": 2,
+      "no-contacts": 2,
+      "email-unverified": 0,
+      "marketing-subscribed": 0,
     });
   });
 });

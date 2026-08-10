@@ -1,12 +1,19 @@
-import { AppleLogo, GoogleLogo } from "@phosphor-icons/react/dist/ssr";
+import { AppleLogo } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
   sendMagicLink,
   sendPasswordReset,
+  signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
 } from "@/app/auth/actions";
+import {
+  AuthProviderButton,
+  AuthSecondaryButton,
+  AuthSubmitButton,
+} from "@/components/auth-submit-button";
+import { brand } from "@/config/brand";
 import { publicPageMetadata } from "@/lib/public-pages";
 
 export const metadata: Metadata = publicPageMetadata("auth");
@@ -141,28 +148,44 @@ export default async function AuthPage({
             </label>
           ) : null}
 
-          <button
-            type="submit"
-            className="flex h-12 w-full items-center justify-center rounded-2xl bg-coral px-5 text-sm font-semibold text-white transition-colors hover:bg-coral-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-          >
-            {usingPassword
-              ? signupMode
-                ? "Create account"
-                : "Sign in"
-              : "Email me a sign-in link"}
-          </button>
+          {signupMode ? (
+            <label className="flex items-start gap-2.5 text-xs leading-5 text-ink-muted">
+              <input
+                name="marketingOptIn"
+                type="checkbox"
+                className="mt-0.5 size-4 shrink-0 accent-coral"
+              />
+              <span>
+                Email me occasional news about {brand.shortName}. We only send
+                things worth reading, and very rarely.
+              </span>
+            </label>
+          ) : null}
+
+          <AuthSubmitButton
+            label={
+              usingPassword
+                ? signupMode
+                  ? "Create account"
+                  : "Sign in"
+                : "Email me a sign-in link"
+            }
+            pendingLabel={
+              usingPassword
+                ? signupMode
+                  ? "Creating your account…"
+                  : "Signing you in…"
+                : "Sending your link…"
+            }
+          />
 
           {usingPassword && !signupMode ? (
             // Same form, same email: forgetting a password should not mean
             // typing the address again on a separate screen.
-            <button
-              type="submit"
+            <AuthSecondaryButton
               formAction={sendPasswordReset}
-              formNoValidate
-              className="text-xs font-semibold text-sage-strong underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-            >
-              Forgot your password?
-            </button>
+              label="Forgot your password?"
+            />
           ) : null}
         </form>
 
@@ -186,16 +209,15 @@ export default async function AuthPage({
             <AppleLogo size={19} weight="fill" aria-hidden="true" />
             Continue with Apple
           </button>
-          <button
-            type="button"
-            disabled
-            className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-mist px-5 text-sm font-semibold text-ink opacity-50"
-          >
-            <GoogleLogo size={19} weight="bold" aria-hidden="true" />
-            Continue with Google
-          </button>
+          <form action={signInWithGoogle}>
+            <AuthProviderButton
+              provider="google"
+              label="Continue with Google"
+              pendingLabel="Opening Google…"
+            />
+          </form>
           <p className="text-center text-xs text-ink-muted">
-            Apple and Google sign-in are coming soon.
+            Apple sign-in is coming soon.
           </p>
         </div>
 

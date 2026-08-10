@@ -36,9 +36,25 @@ Vault:
   `https://www.siyi.app/api/cron/notifications`
 - `siyi_notification_cron_secret`: the same strong value used for
   `CRON_SECRET` by the web deployment
+- `siyi_lifecycle_email_cron_url`:
+  `https://www.siyi.app/api/cron/lifecycle-email`
 
 The job and request history are available in Supabase Dashboard under
 Integrations → Cron.
+
+### Lifecycle email
+
+Migration `0025` schedules a daily job that mails the nudges defined in
+`src/lib/lifecycle-email.ts` — someone who has not saved a contact three days
+in, someone quiet for a month. Three things have to be true before an account
+is mailed: it opted in, its address is verified, and it has not had that
+campaign before. `lifecycle_email_sends` records the last part, and the row is
+written before the send so a retry cannot mail twice.
+
+Unlike the auth email, these go through the Resend API directly, so the web
+deployment needs `RESEND_API_KEY` and `MARKETING_FROM_EMAIL` of its own. Every
+message carries `List-Unsubscribe` pointing at `/api/unsubscribe`, alongside the
+visible link and the postal address the law asks for.
 
 ### Auth configuration
 
@@ -49,6 +65,17 @@ and allow these redirect URLs:
 https://www.siyi.app/auth/callback
 https://www.siyi.app/auth/confirm
 siyi://auth/callback
+```
+
+Confirm email must stay on under Authentication → Sign In / Providers → Email.
+Supabase only links a Google identity to an account that already exists when
+that account's address is verified; with confirmations off, signing in with
+Google creates a second account for the same person. Any accounts left
+unverified from before can be mailed a fresh confirmation with:
+
+```
+node scripts/send-pending-confirmations.mjs --dry-run   # who would be mailed
+node scripts/send-pending-confirmations.mjs
 ```
 
 Sign in with Google and Sign in with Apple are configured under Authentication →

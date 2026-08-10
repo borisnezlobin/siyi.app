@@ -100,16 +100,20 @@ describe("the sign-in screen", () => {
     );
   });
 
-  it("keeps Apple and Google visibly out of service", async () => {
+  it("keeps Apple visibly out of service while Google works", async () => {
     await renderAuth();
 
-    expect(
-      screen.getByText("Apple and Google sign-in are coming soon."),
-    ).toBeTruthy();
+    expect(screen.getByText("Apple sign-in is coming soon.")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Continue with Apple" }).props
         .accessibilityState.disabled,
     ).toBe(true);
+    // Google is wired up now, so the note above must not be read as covering
+    // it and the button must not be sitting there dead.
+    expect(
+      screen.getByRole("button", { name: "Continue with Google" }).props
+        .accessibilityState.disabled,
+    ).toBeFalsy();
   });
 
   it("pins the way in, so the keyboard never sits on top of it", async () => {
