@@ -27,6 +27,11 @@ export const publicPages = {
     title: "Support",
     description: `Get help with ${brand.name}.`,
   },
+  team: {
+    path: "/team",
+    title: "The team",
+    description: `${brand.name} is built by a small group of college students in Berkeley.`,
+  },
   auth: {
     path: "/auth",
     title: "Sign in",

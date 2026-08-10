@@ -9,8 +9,8 @@ export default function OfflinePage() {
         <UsersThree size={26} className="mx-auto text-ink-muted" aria-hidden="true" />
         <h1 className="mt-5 font-display text-4xl">You’re offline</h1>
         <p className="mt-3 text-sm leading-6 text-ink-muted">
-          {brand.name} needs a connection to load private people and notes. Your
-          account data is never cached in the shared app shell.
+          {brand.name} needs a connection to load your people. Nothing is lost —
+          open it again once you are back online.
         </p>
         <Link
           href="/today"

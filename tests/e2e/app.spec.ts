@@ -6,12 +6,34 @@ test("the public homepage explains the product and offers clear entry points", a
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Remember more than a name." }),
+    page.getByRole("heading", {
+      name: "You met them once. Siyi makes sure it wasn’t the last time.",
+    }),
   ).toBeVisible();
   await expect(page.getByText("Siyi.app", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start your circle" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Start with one person" }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "I already have an account" }),
+  ).toBeVisible();
+  // What the hero demo argues has to survive without the animation, so the
+  // point it makes is asserted as text rather than as a frame of the loop.
+  await expect(
+    page.getByText("You did not open the app again", { exact: false }),
+  ).toBeVisible();
+});
+
+test("the footer credits the team and the team page invites contributions", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await page.getByRole("link", { name: "team Siyi" }).click();
+  await expect(page).toHaveURL(/\/team$/);
+  await expect(page.getByRole("heading", { name: "Team Siyi" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /See the code/ }),
   ).toBeVisible();
 });
 
@@ -291,8 +313,8 @@ test("the sign-in screen leads with the tagline and nothing above it", async ({
   ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Continue with Google" }),
-  ).toBeDisabled();
-  await expect(page.getByText("Apple and Google sign-in are coming soon.")).toBeVisible();
+  ).toBeEnabled();
+  await expect(page.getByText("Apple sign-in is coming soon.")).toBeVisible();
 });
 
 test("authentication offers magic links without forcing a password", async ({
