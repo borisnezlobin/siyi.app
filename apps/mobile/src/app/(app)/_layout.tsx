@@ -1,14 +1,29 @@
 import { Redirect, Stack } from "expo-router";
+import { useEffect } from "react";
 import { LoadingState } from "@/components/load-state";
 import { colors } from "@/constants/theme";
+import { prefetchScreenData } from "@/lib/screen-queries";
 import { useAuth } from "@/providers/auth-provider";
 import { QuickCaptureProvider } from "@/providers/quick-capture-provider";
 
 export default function AuthenticatedLayout() {
   const { session, profile, loading } = useAuth();
+  const userId = session?.user.id;
+
+  // Above the redirects on purpose: hooks cannot sit behind an early return,
+  // and this is the earliest moment the app knows whose data to ask for.
+  useEffect(() => {
+    if (!userId) return;
+    prefetchScreenData(userId);
+  }, [userId]);
 
   if (loading) return <LoadingState />;
   if (!session) return <Redirect href="/auth" />;
+  // Asked before onboarding, the same order the website asks in: the question
+  // belongs to signing up, not to the app.
+  if (profile && !profile.marketingPromptedAt) {
+    return <Redirect href="/marketing-consent" />;
+  }
   if (!profile?.onboardingCompletedAt) {
     return <Redirect href="/onboarding" />;
   }

@@ -66,36 +66,26 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## P2 — features requested
 
-- [ ] **Admin at /admin** for Boris and Jerry only. Anonymised: user count,
-      contacts-per-user distribution, retention. Plus targeted announcements
-      and push to segments ("all users", "users with 100+ contacts").
-- [ ] **Multiple emails / phones / Instagram handles per person.** Schema
-      change: child tables or JSONB. Touches import/export, vCard, contact
-      sync, and search.
-- [ ] **Named note sections** (supersedes the "bigger textarea" idea, which
-      the owner correctly rejected). The real need: the same headings reused
-      across many people — "Interests", "Things we've done together",
-      "Things mentioned".
-      Schema: `person_notes` (id, user_id, person_id, heading, body, position).
-      No separate templates table — instead suggest headings this user has
-      already used, which gives reuse for free. Keep `people.general_notes`
-      as an untitled first section; do not migrate or drop it.
-      Markdown and per-person custom *fields* both rejected.
-
-- [ ] **Edit Person page is far too long.** Group it, do not just reorder:
-      - "Who they are" — photo, name, preferred name
-      - "How to reach them" — phone, email, Instagram
-      - "About them" — hometown, major, graduation year, dorm
-      - "How you met" — first met date and location
-      - "Notes" — the named sections above
-      - "Reminders" — relationship label and the reminder switch
-      Collapsed by default except the section being edited. Avoid the phrase
-      "basic info" — the owner dislikes it.
-- [ ] **Map of hometowns / locations.** Needs geocoding. Possible paid tier.
-- [ ] **Cleaner person URLs** — `/people/boris-nezlobin` instead of a uuid.
-      ALWAYS append the suffix, never only on collision: a conditional suffix
-      leaks whether another user already has a person by that name. Keep the
-      uuid resolving forever.
+- [ ] **Several people on one reminder.** "Feed her cat" is often about two
+      people, and today a reminder belongs to exactly one.
+      Schema: `reminders.person_id` is `uuid not null references people(id)`.
+      Add `reminder_people (reminder_id, person_id, primary key (reminder_id,
+      person_id))`, backfill it from `person_id`, then drop `person_id`. Do not
+      keep both — a nullable `person_id` alongside a join table is the
+      compatibility layer this project has said no to.
+      Blast radius, ~37 call sites: `src/lib/reminders.ts` and its mobile twin,
+      `src/app/api/reminders/*`, `src/app/api/cron/notifications/route.ts`
+      (groups by `reminder.person_id` to name the person in the push),
+      `reminder-board.tsx`, the person profile timeline on both apps, the
+      quick-capture reminder phase on both, `src/app/api/import|export`, and
+      the mobile offline queue (`enqueueOfflineMutation` payloads are
+      persisted, so a shape change there needs a queue drain or a version tag).
+      Decisions to make first: does a push name every person or just the count;
+      does completing a reminder complete it for everyone (yes, it is one
+      reminder); does a person's deletion delete the reminder or only their row
+      (only their row, and delete the reminder when the last one goes).
+      Time-of-day is already done — `due_at` is `timestamptz` and both apps
+      have a Time field; only the multi-person half is outstanding.
 
 ## Mobile parity — the rule going forward
 
@@ -203,7 +193,7 @@ because the offline queue is awkward is how it fell behind in the first place.
       token_hash).
 - [ ] Raise the OTP expiry in Supabase Auth.
 - [ ] Make `www.siyi.app` canonical; point the Vault cron URL at it.
-- [ ] Enable Apple and Google providers.
+- [ ] Enable the Apple provider. Google is live on web and phone.
 - [ ] Set `APPLE_TEAM_ID` so universal links resolve.
 - [ ] Resend: verify a sending subdomain for marketing mail.
 - [ ] iOS build needs an Apple Developer account (18+). Blocked.
@@ -276,69 +266,6 @@ against production; both are additive and touch no existing data:
       NOT verified against a real database: the backfill's idempotence is
       asserted structurally, not by running it twice. Run 0013 on a copy first.
 
-## Ops / not code
-
-- [ ] Re-paste the five email templates into Supabase (they changed to
-      token_hash).
-- [ ] Raise the OTP expiry in Supabase Auth.
-- [ ] Make `www.siyi.app` canonical; point the Vault cron URL at it.
-- [ ] Enable Apple and Google providers.
-- [ ] Set `APPLE_TEAM_ID` so universal links resolve.
-- [ ] Resend: verify a sending subdomain for marketing mail.
-- [ ] iOS build needs an Apple Developer account (18+). Blocked.
-
-## Applied migrations
-
-Nothing in this repo applies migrations automatically. Run these in order
-against production; both are additive and touch no existing data:
-
-- `0004_native_push_subscriptions.sql` — NOT APPLIED. This was the cause of
-  the push and export failures. No longer urgent (the code copes), but the
-  phone app cannot register for notifications until it runs.
-- `0007_marketing_consent.sql` — NOT YET APPLIED. The marketing toggle in
-  settings does nothing until it is.
-- `0009_custom_interaction_labels.sql` — NOT YET APPLIED. Adds custom_label
-  and custom_icon to interactions. Until it runs, naming an "Other" update
-  silently does nothing.
-- `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
-  and reminders_enabled, and replaces the create-person RPC. Until it runs,
-  relationship labels silently do not persist and every person gets reminders.
-
-## Merged, awaiting migrations
-
-- [x] **/admin** — allowlisted, anonymised stats, segment announcements + push.
-      Hardened after review: signup is open, so an email allowlist only held
-      while Supabase was confirming addresses. `ADMIN_USER_IDS` now wins when
-      set; the email path additionally requires a confirmed address.
-      Known caveat, judged acceptable: the `announcements` select policy lets
-      any signed-in user read any live announcement. Segment targeting is
-      enforced in the API, not in SQL. Broadcast copy, no personal data.
-- [x] **Named note sections** + Edit Person grouped into six collapsibles.
-      Mobile deliberately untouched — its form is offline-first with a sync
-      queue, so sections there need new sync entities. Separate task.
-      Rough edge: a section left dirty is lost on Cancel without a warning.
-- [x] **Cleaner person URLs** — always-suffixed slugs, uuid resolves forever.
-      A rename does NOT regenerate the slug; the suffix carries the
-      disambiguation and a stale name portion costs nothing.
-      Not done: push notification URLs still carry the uuid, because the cron
-      selects an explicit column list and adding `slug` would fail the whole
-      nightly run until 0012 is applied. The uuid redirects, so the result is
-      already correct for users.
-      UNVERIFIED: the SQL in 0012 has never run. `normalize(…, nfkd)`, the
-      `U&'[\0300-\036F]'` escape and `person_slug_suffix` are worth an eyeball
-      before applying.
-
-- [x] **Map of hometowns.** Offline gazetteer, no dependency, no request at
-      render — hometowns never leave the server. GeoNames cities15000 (1.4 MB,
-      ~34k cities, CC BY 4.0) plus Natural Earth outlines (108 KB, public
-      domain), both server-only, so /map ships 0 B of page JavaScript.
-      Ambiguous names resolve to NOTHING and are listed as unplaced:
-      Cambridge, San Jose, Springfield, Georgia, Washington. Add a state and
-      they resolve. Region matches are drawn hollow and labelled approximate.
-      No migration: the resolver is a pure hash lookup, so there is no 0014.
-      Not tested: the unplaced and no-hometown sections never rendered with
-      real data, and it has never run against a real Supabase dataset.
-
 ## In flight
 
 Migration numbers are reserved per agent so they cannot collide:
@@ -354,11 +281,3 @@ Migration numbers are reserved per agent so they cannot collide:
 
 Queued, NOT started — it rewrites the same contact fields agent 0010 is
 restructuring, so it must run after that lands:
-
-- [ ] **Multiple emails / phones / Instagram handles per person.** Child
-      tables. Touches import/export, vCard, contact sync, and search.
-
-Rules every agent was given, worth keeping for the next one:
-no `npm install` (worktrees resolve node_modules from the repo root, and a
-concurrent install corrupts the shared npm cache); additive migrations only;
-graceful degradation so a deploy can precede its migration; no emoji anywhere.

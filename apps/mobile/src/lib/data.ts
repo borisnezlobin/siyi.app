@@ -751,6 +751,13 @@ export async function getRemindersCached(): Promise<Reminder[] | null> {
   return snapshot.reminders.length > 0 ? snapshot.reminders : null;
 }
 
+export async function getAccountSettingsCached(
+  userId: string,
+): Promise<AccountSettings | null> {
+  const snapshot = await getOfflineSnapshot(userId);
+  return snapshot.accountSettings;
+}
+
 export async function getPeople() {
   const userId = await currentUserId();
   if (!userId) throw new Error("Sign in to see your people.");

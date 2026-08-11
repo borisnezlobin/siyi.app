@@ -28,12 +28,7 @@ import { brand } from "@/config/brand";
 import { colors, radii } from "@/constants/theme";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
 import { lastSeenLabel } from "@/lib/relative-time";
-import {
-  getAccountSettings,
-  getReminders,
-  getPeople,
-  setReminderComplete,
-} from "@/lib/data";
+import { setReminderComplete } from "@/lib/data";
 import { refreshHomeWidgets } from "@/lib/home-widgets";
 import { daysBetween, daysUntilBirthday, overdueDays } from "@/lib/reminders";
 import {
@@ -45,25 +40,20 @@ import {
   type AgendaItem,
 } from "@/lib/today-agenda";
 import { useCachedData } from "@/hooks/use-cached-data";
+import {
+  loadToday,
+  loadTodayCached,
+  todayQueryKey,
+  type TodayData,
+} from "@/lib/screen-queries";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
-
-type TodayData = Awaited<ReturnType<typeof loadToday>>;
 
 const agendaIcons = {
   reminder: Bell,
   "check-in": UsersThree,
   birthday: Cake,
 };
-
-async function loadToday(userId: string) {
-  const [people, reminders, settings] = await Promise.all([
-    getPeople(),
-    getReminders(),
-    getAccountSettings(userId),
-  ]);
-  return { people, reminders, settings };
-}
 
 function AgendaRow({
   item,
@@ -120,8 +110,10 @@ export default function TodayScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const quickCapture = useQuickCapture();
-  const screenData = useCachedData<TodayData>("today", () =>
-    loadToday(session!.user.id),
+  const screenData = useCachedData<TodayData>(
+    todayQueryKey,
+    () => loadToday(session!.user.id),
+    { cached: () => loadTodayCached(session!.user.id) },
   );
 
   useEffect(() => {
