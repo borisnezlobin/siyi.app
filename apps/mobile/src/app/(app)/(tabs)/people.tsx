@@ -19,9 +19,7 @@ import { PersonRow } from "@/components/person-row";
 import { Screen } from "@/components/screen";
 import { colors, fontFamilies, radii } from "@/constants/theme";
 import { personMatchesClassQuery, type PersonClass } from "@/lib/classes";
-import { getClasses } from "@/lib/classes-data";
 import { collegeSearchTerms } from "@/lib/colleges";
-import { getAccountSettings, getPeople } from "@/lib/data";
 import {
   type MissingDetail,
   isMissingDetail,
@@ -34,11 +32,15 @@ import { relationshipTierLabels } from "@/lib/relationship-labels";
 import { overdueDays } from "@/lib/reminders";
 import {
   relationshipStrengths,
-  type Person,
   type RelationshipStrength,
-  type ReminderDefaults,
 } from "@/lib/types";
 import { useCachedData } from "@/hooks/use-cached-data";
+import {
+  loadPeopleTab,
+  loadPeopleTabCached,
+  peopleTabQueryKey,
+  type PeopleData,
+} from "@/lib/screen-queries";
 import { useAuth } from "@/providers/auth-provider";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
@@ -49,12 +51,6 @@ type SortMode =
   | "least-recently-contacted";
 
 type OverdueFilter = "all" | "overdue" | "recent";
-
-type PeopleData = {
-  people: Person[];
-  reminderDefaults: ReminderDefaults;
-  classes: PersonClass[];
-};
 
 const sortLabels: Record<SortMode, string> = {
   name: "Name",
@@ -69,18 +65,11 @@ export default function PeopleScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const quickCapture = useQuickCapture();
-  const screenData = useCachedData<PeopleData>("peopleTab", async () => {
-    const [people, settings, classes] = await Promise.all([
-      getPeople(),
-      getAccountSettings(session!.user.id),
-      getClasses(session!.user.id),
-    ]);
-    return {
-      people,
-      reminderDefaults: settings.reminderDefaults,
-      classes,
-    };
-  });
+  const screenData = useCachedData<PeopleData>(
+    peopleTabQueryKey,
+    () => loadPeopleTab(session!.user.id),
+    { cached: () => loadPeopleTabCached(session!.user.id) },
+  );
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [strength, setStrength] =
