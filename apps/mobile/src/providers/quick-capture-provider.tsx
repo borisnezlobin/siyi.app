@@ -506,13 +506,17 @@ export function QuickCaptureProvider({
     useState<ContactMethod | null>(null);
 
   const loadPeople = useCallback(async () => {
-    setLoadingPeople(true);
+    // Only a first load is allowed to show a spinner. The sheet is opened over
+    // and over, and the list it needs was already fetched last time — blanking
+    // it out to fetch the same names again is why choosing a person appeared
+    // to load at all.
+    setLoadingPeople(peopleRef.current.length === 0);
     try {
-      setPeople(
-        (await getPeople()).filter(
-          (person) => person.status !== "archived",
-        ),
+      const fresh = (await getPeople()).filter(
+        (person) => person.status !== "archived",
       );
+      peopleRef.current = fresh;
+      setPeople(fresh);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -619,6 +623,7 @@ export function QuickCaptureProvider({
         const availablePeople = (
           await getPeople()
         ).filter((person) => person.status === "active");
+        peopleRef.current = availablePeople;
         setPeople(availablePeople);
         const person = personId
           ? availablePeople.find((item) => item.id === personId)
