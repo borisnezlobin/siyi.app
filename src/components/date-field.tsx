@@ -28,6 +28,7 @@ export function DateField({
   min,
   className,
   inputClassName,
+  defaultOpen = false,
 }: {
   name?: string;
   label: string;
@@ -40,9 +41,11 @@ export function DateField({
   min?: string;
   className?: string;
   inputClassName?: string;
+  /** Opens with the calendar already showing, for a field with no default. */
+  defaultOpen?: boolean;
 }) {
   const [ownValue, setOwnValue] = useState(defaultValue);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(defaultOpen);
   const pickerId = useId();
 
   const current = value ?? ownValue;
