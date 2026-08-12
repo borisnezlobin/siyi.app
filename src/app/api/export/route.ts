@@ -49,7 +49,10 @@ export async function GET(request: NextRequest) {
       supabase.from("interactions").select("*").eq("user_id", user.id),
       supabase.from("tags").select("*").eq("user_id", user.id),
       supabase.from("person_tags").select("*"),
-      supabase.from("reminders").select("*").eq("user_id", user.id),
+      supabase
+        .from("reminders")
+        .select("*, reminder_people(person_id)")
+        .eq("user_id", user.id),
       supabase
         .from("notification_deliveries")
         .select("*")
@@ -336,7 +339,9 @@ export async function GET(request: NextRequest) {
       })),
       reminders: (remindersResult.data ?? []).map((reminder) => ({
         id: reminder.id,
-        personId: reminder.person_id,
+        personIds: (
+          (reminder.reminder_people ?? []) as { person_id: string }[]
+        ).map((link) => link.person_id),
         text: reminder.text,
         dueAt: reminder.due_at,
         completedAt: reminder.completed_at,

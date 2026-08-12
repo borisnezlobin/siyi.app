@@ -122,7 +122,7 @@ export function mobileProposalClient({
     },
 
     async createReminder({ text, dueAt }) {
-      await createReminder(userId, { personId, text, dueAt });
+      await createReminder(userId, { personIds: [personId], text, dueAt });
     },
   };
 }

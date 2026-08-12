@@ -29,6 +29,7 @@ export type UserProfile = {
   timezone: string;
   locale: string;
   onboardingCompletedAt: string | null;
+  marketingPromptedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -130,21 +131,18 @@ export const unavailableNoteSections: PersonNoteSections = {
 
 export type Reminder = {
   id: string;
-  personId: string;
+  /** Everyone it is about, never empty: the last person leaving deletes it. */
+  personIds: string[];
   userId: string;
   text: string;
   dueAt: string;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  person?: Pick<
+  people: Pick<
     Person,
-    | "id"
-    | "fullName"
-    | "preferredName"
-    | "profilePhotoUrl"
-    | "profilePhotoPath"
-  >;
+    "id" | "fullName" | "preferredName" | "profilePhotoUrl" | "profilePhotoPath"
+  >[];
 };
 
 export type ReminderDefaults = Record<RelationshipStrength, number>;

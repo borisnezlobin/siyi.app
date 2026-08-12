@@ -7,6 +7,7 @@ import { ReminderBoard } from "@/components/reminder-board";
 import { ReminderCalendar } from "@/components/reminder-calendar";
 import type { BirthdayPerson, CalendarReminder } from "@/lib/reminder-calendar";
 import type { Person, Reminder } from "@/lib/types";
+import { reminderPeopleLabel } from "@/lib/reminder-people";
 
 /**
  * The same reminders, two ways round.
@@ -31,11 +32,13 @@ export function RemindersView({
     text: reminder.text,
     dueAt: reminder.dueAt,
     completedAt: reminder.completedAt,
-    person: reminder.person
+    person: reminder.people[0]
       ? {
-          id: reminder.person.id,
-          name: reminder.person.preferredName || reminder.person.fullName,
-          photoUrl: reminder.person.profilePhotoUrl,
+          id: reminder.people[0].id,
+          // The calendar draws one avatar per entry, so it gets the first
+          // person and the label carries the rest.
+          name: reminderPeopleLabel(reminder.people),
+          photoUrl: reminder.people[0].profilePhotoUrl,
         }
       : null,
   }));

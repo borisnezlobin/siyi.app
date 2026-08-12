@@ -28,7 +28,7 @@ describe("buildTodayAgenda", () => {
       reminders: [
         {
           id: "r1",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Send the photos",
           personName: "Amelia",
           daysAway: 2,
@@ -53,14 +53,14 @@ describe("buildTodayAgenda", () => {
       reminders: [
         {
           id: "r1",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Far off",
           personName: "Amelia",
           daysAway: 15,
         },
         {
           id: "r2",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Just inside",
           personName: "Amelia",
           daysAway: 14,
@@ -86,7 +86,7 @@ describe("buildTodayAgenda", () => {
       reminders: [
         {
           id: "r1",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Send the photos",
           personName: "Amelia",
           daysAway: 0,
@@ -105,7 +105,7 @@ describe("buildTodayAgenda", () => {
         reminders: [
           {
             id: "r1",
-            personId: "p1",
+            personIds: ["p1"],
             text: "Send the photos",
             personName: "Amelia",
             daysAway: 4,
@@ -140,14 +140,14 @@ describe("agendaCounts", () => {
       reminders: [
         {
           id: "r1",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Today",
           personName: "Amelia",
           daysAway: 0,
         },
         {
           id: "r2",
-          personId: "p1",
+          personIds: ["p1"],
           text: "Later",
           personName: "Amelia",
           daysAway: 4,

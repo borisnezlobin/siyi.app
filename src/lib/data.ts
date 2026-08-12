@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { looksLikeUuid } from "@/lib/slug";
 import { createClient } from "@/lib/supabase/server";
 import { orderedNoteSections } from "@/lib/note-sections";
+import { orderReminderPeople } from "@/lib/reminder-people";
 import {
   isContactMethodKind,
   resolveContactDrafts,
@@ -519,36 +520,57 @@ export async function getReminders(): Promise<Reminder[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("reminders")
-    .select("*, people(id,full_name,preferred_name,profile_photo_url)")
+    .select(
+      "*, reminder_people(people(id,full_name,preferred_name,profile_photo_url))",
+    )
     .order("due_at", { ascending: true });
 
   if (error) throw new Error(error.message);
+
+  type JoinedRow = { people: {
+    id: string;
+    full_name: string;
+    preferred_name: string | null;
+    profile_photo_url: string | null;
+  } | null };
+
   const avatarUrls = await resolveAvatarUrls(
     supabase,
-    data.map((row) => row.people?.profile_photo_url),
+    data.flatMap((row) =>
+      ((row.reminder_people ?? []) as JoinedRow[]).map(
+        (link) => link.people?.profile_photo_url,
+      ),
+    ),
   );
 
-  return data.map((row) => ({
-    id: row.id,
-    personId: row.person_id,
-    userId: row.user_id,
-    text: row.text,
-    dueAt: row.due_at,
-    completedAt: row.completed_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    person: row.people
-      ? {
-          id: row.people.id,
-          fullName: row.people.full_name,
-          preferredName: row.people.preferred_name,
+  return data.map((row) => {
+    const people = orderReminderPeople(
+      ((row.reminder_people ?? []) as JoinedRow[])
+        .map((link) => link.people)
+        .filter((person): person is NonNullable<typeof person> => Boolean(person))
+        .map((person) => ({
+          id: person.id,
+          fullName: person.full_name,
+          preferredName: person.preferred_name,
           profilePhotoUrl: resolvedAvatarUrl(
-            row.people.profile_photo_url,
+            person.profile_photo_url,
             avatarUrls,
           ),
-        }
-      : undefined,
-  }));
+        })),
+    );
+
+    return {
+      id: row.id,
+      personIds: people.map((person) => person.id),
+      userId: row.user_id,
+      text: row.text,
+      dueAt: row.due_at,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      people,
+    };
+  });
 }
 
 /**

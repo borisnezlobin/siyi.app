@@ -28,6 +28,7 @@ import {
   type AgendaItem,
 } from "@/lib/today-agenda";
 import type { Person } from "@/lib/types";
+import { reminderPeopleLabel } from "@/lib/reminder-people";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,11 @@ function AgendaRow({ item }: { item: AgendaItem }) {
   return (
     <div className="flex items-center gap-3 py-3.5">
       <Link
-        href={`/people/${item.personId}`}
+        href={
+          item.personIds.length === 1
+            ? `/people/${item.personIds[0]}`
+            : "/reminders"
+        }
         className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
       >
         <Icon
@@ -92,12 +97,9 @@ export default async function TodayPage() {
       .filter(({ completedAt }) => !completedAt)
       .map((reminder) => ({
         id: reminder.id,
-        personId: reminder.personId,
+        personIds: reminder.personIds,
         text: reminder.text,
-        personName:
-          reminder.person?.preferredName ??
-          reminder.person?.fullName ??
-          "Someone",
+        personName: reminderPeopleLabel(reminder.people) || "Someone",
         daysAway: differenceInCalendarDays(
           startOfDay(new Date(reminder.dueAt)),
           today,
@@ -136,7 +138,7 @@ export default async function TodayPage() {
     [
       ...agenda
         .filter((item) => item.kind === "check-in")
-        .map((item) => item.personId),
+        .flatMap((item) => item.personIds),
       ...recentlyMet.map((person) => person.id),
     ],
     now,

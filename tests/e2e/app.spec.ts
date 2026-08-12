@@ -169,17 +169,20 @@ test("the capture sheet does not shift while the picker is used", async ({
   page,
 }, testInfo) => {
   await page.goto("/today");
+  // The update sheet, because that is where the typeahead lives: a reminder can
+  // be about several people now and picks them from the same grid of faces an
+  // interaction does.
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open quick actions" }).click();
-    await page.getByRole("button", { name: /Add a reminder/ }).click();
+    await page.getByRole("button", { name: /Add an update/ }).click();
   } else {
-    await page.getByRole("button", { name: "Reminder", exact: true }).click();
+    await page.getByRole("button", { name: "Add update" }).click();
   }
 
   const sheet = page.locator("dialog[open]");
   const picker = sheet.getByTestId("person-picker");
-  const below = sheet.getByLabel("Reminder");
-  const search = sheet.getByLabel("Person");
+  const below = sheet.getByLabel("What did you learn?");
+  const search = sheet.getByLabel("Who is this about?");
 
   // The sheet scales as it opens, so measuring has to wait for it to settle.
   await sheet.evaluate((element) =>
@@ -215,6 +218,33 @@ test("the capture sheet does not shift while the picker is used", async ({
     sheet.getByRole("button", { name: /Choose someone other than/ }),
   ).toBeVisible();
   expect(await layout()).toEqual(closed);
+});
+
+test("a reminder can be about several people at once", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/today");
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "Open quick actions" }).click();
+    await page.getByRole("button", { name: /Add a reminder/ }).click();
+  } else {
+    await page.getByRole("button", { name: "Reminder", exact: true }).click();
+  }
+
+  const sheet = page.locator("dialog[open]");
+  const amelia = sheet.getByRole("button", { name: /Amelia/ });
+  const luis = sheet.getByRole("button", { name: /Luis/ });
+
+  await amelia.click();
+  await luis.click();
+  await expect(amelia).toHaveAttribute("aria-pressed", "true");
+  await expect(luis).toHaveAttribute("aria-pressed", "true");
+
+  await sheet.getByLabel("Reminder").fill("Feed her cat");
+  await sheet.getByLabel("When?", { exact: true }).fill("2026-09-01");
+  await sheet.getByRole("button", { name: "Save reminder" }).click();
+
+  await expect(sheet.getByRole("button", { name: "Saved" })).toBeVisible();
 });
 
 test("reminders are shaped by when they land, not one flat list", async ({
@@ -255,7 +285,13 @@ test("completing a reminder keeps the list from jumping", async ({ page }) => {
   const row = page.getByRole("listitem").filter({
     hasText: "Share the campus garden group chat",
   });
-  const before = await row.boundingBox();
+  // Measured against the document, not the viewport. Playwright scrolls an
+  // element into view before clicking it, so a viewport coordinate moves by
+  // however far the harness scrolled and says nothing about whether the list
+  // held still — which is the thing being asserted.
+  const topInDocument = async () =>
+    (await row.boundingBox())!.y + (await page.evaluate(() => window.scrollY));
+  const before = await topInDocument();
 
   await page
     .getByRole("button", { name: /Mark “Share the campus garden group chat” complete/ })
@@ -267,8 +303,7 @@ test("completing a reminder keeps the list from jumping", async ({ page }) => {
     }),
   ).toBeVisible();
 
-  const after = await row.boundingBox();
-  expect(after?.y).toBeCloseTo(before?.y ?? 0, 0);
+  expect(await topInDocument()).toBeCloseTo(before, 0);
 });
 
 test("completed reminders stay one tap away", async ({ page }) => {
@@ -550,14 +585,12 @@ test("the person picker finds someone by typing rather than scrolling", async ({
   await page.goto("/today");
   if (testInfo.project.name === "mobile-chromium") {
     await page.getByRole("button", { name: "Open quick actions" }).click();
-  }
-  if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: /Add a reminder/ }).click();
+    await page.getByRole("button", { name: /Add an update/ }).click();
   } else {
-    await page.getByRole("button", { name: "Reminder", exact: true }).click();
+    await page.getByRole("button", { name: "Add update" }).click();
   }
 
-  const search = page.getByLabel("Person");
+  const search = page.getByLabel("Who is this about?");
   await search.fill("luis");
   await expect(page.getByRole("option", { name: /Luis/ })).toBeVisible();
   await expect(page.getByRole("option", { name: /Amelia/ })).toHaveCount(0);

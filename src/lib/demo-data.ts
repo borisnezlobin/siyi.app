@@ -224,51 +224,53 @@ export function createDemoInteractions(now = new Date()): Interaction[] {
 
 export function createDemoReminders(now = new Date()): Reminder[] {
   const people = createDemoPeople(now);
+  const about = (...chosen: (typeof people)[number][]) => ({
+    personIds: chosen.map((person) => person.id),
+    people: chosen,
+  });
 
   return [
     {
       id: "40000000-0000-4000-8000-000000000001",
-      personId: people[4].id,
+      ...about(people[4]),
       userId: DEMO_USER_ID,
       text: "Send the lit journal printer contact",
       dueAt: subDays(now, 1).toISOString(),
       completedAt: null,
       createdAt: subDays(now, 5).toISOString(),
       updatedAt: subDays(now, 5).toISOString(),
-      person: people[4],
     },
     {
       id: "40000000-0000-4000-8000-000000000002",
-      personId: people[2].id,
+      // Two people on one reminder, because the demo data is the only place
+      // the shape is visible before anyone has made one.
+      ...about(people[2], people[0]),
       userId: DEMO_USER_ID,
       text: "Share the campus garden group chat",
       dueAt: now.toISOString(),
       completedAt: null,
       createdAt: subDays(now, 1).toISOString(),
       updatedAt: subDays(now, 1).toISOString(),
-      person: people[2],
     },
     {
       id: "40000000-0000-4000-8000-000000000003",
-      personId: people[1].id,
+      ...about(people[1]),
       userId: DEMO_USER_ID,
       text: "Ask about the spring radio lineup",
       dueAt: addDays(now, 4).toISOString(),
       completedAt: null,
       createdAt: subDays(now, 2).toISOString(),
       updatedAt: subDays(now, 2).toISOString(),
-      person: people[1],
     },
     {
       id: "40000000-0000-4000-8000-000000000004",
-      personId: people[0].id,
+      ...about(people[0]),
       userId: DEMO_USER_ID,
       text: "Send ceramics studio hours",
       dueAt: subDays(now, 8).toISOString(),
       completedAt: subDays(now, 7).toISOString(),
       createdAt: subDays(now, 12).toISOString(),
       updatedAt: subDays(now, 7).toISOString(),
-      person: people[0],
     },
   ];
 }

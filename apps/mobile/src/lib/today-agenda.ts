@@ -19,7 +19,8 @@ export type AgendaItem = {
   status: AgendaStatus;
   /** Negative when it is already past due. */
   daysAway: number;
-  personId: string;
+  /** Everyone the row is about; a reminder can name several. */
+  personIds: string[];
   reminderId: string | null;
   title: string;
   detail: string;
@@ -36,7 +37,7 @@ const dayInMilliseconds = 86_400_000;
 export type AgendaInput = {
   reminders: {
     id: string;
-    personId: string;
+    personIds: string[];
     text: string;
     personName: string;
     daysAway: number;
@@ -73,7 +74,7 @@ export function buildTodayAgenda(
       kind: "reminder",
       status: agendaStatusFor(reminder.daysAway),
       daysAway: reminder.daysAway,
-      personId: reminder.personId,
+      personIds: reminder.personIds,
       reminderId: reminder.id,
       title: reminder.text,
       detail: `${reminder.personName} · ${dueDateLabelFromDaysAway(reminder.daysAway, now)}`,
@@ -87,7 +88,7 @@ export function buildTodayAgenda(
       kind: "check-in",
       status: "overdue",
       daysAway: -checkIn.daysOverdue,
-      personId: checkIn.personId,
+      personIds: [checkIn.personId],
       reminderId: null,
       title: `Check in with ${checkIn.name}`,
       detail: dueDateLabelFromDaysAway(-checkIn.daysOverdue, now),
@@ -102,7 +103,7 @@ export function buildTodayAgenda(
       kind: "birthday",
       status: agendaStatusFor(birthday.daysAway),
       daysAway: birthday.daysAway,
-      personId: birthday.personId,
+      personIds: [birthday.personId],
       reminderId: null,
       title: `${birthday.name}’s birthday`,
       detail:

@@ -38,10 +38,12 @@ export type NotificationEvaluationInput = {
   }[];
   reminders: {
     id: string;
-    personId: string;
+    /** Everyone it is about, already ordered so the naming is stable. */
+    personIds: string[];
     text: string;
     dueAt: string;
-    personName: string;
+    /** "Amelia", "Amelia and Luis", "Amelia, Luis and 2 others". */
+    peopleLabel: string;
   }[];
 };
 
@@ -220,9 +222,14 @@ export function evaluateUserNotifications(
           relatedEntityId: reminder.id,
           scheduledFor: now.toISOString(),
           deduplicationKey: `reminder:${input.userId}:${reminder.id}:${dueDate.dateKey}`,
-          title: `A reminder with ${reminder.personName}`,
+          title: `A reminder with ${reminder.peopleLabel}`,
           body: reminder.text,
-          url: `/reminders?person=${reminder.personId}`,
+          // Filtered to one person only when it is about one. Several would
+          // have to pick a favourite, so the reminders list opens unfiltered.
+          url:
+            reminder.personIds.length === 1
+              ? `/reminders?person=${reminder.personIds[0]}`
+              : "/reminders",
           tag: `reminder-${reminder.id}`,
         });
       }
