@@ -1,11 +1,9 @@
 "use client";
 
-import { ArrowLeft, ArrowUUpLeft, Trash, Warning } from "@phosphor-icons/react";
+import { ArrowUUpLeft, Trash, Warning } from "@phosphor-icons/react";
 import clsx from "clsx";
 import {
   describeItem,
-  planFromItems,
-  planSize,
   proposalFieldLabels,
   type Decisions,
   type ProposalItem,
@@ -18,50 +16,27 @@ import {
  * saved says so and offers both values rather than choosing. Nothing here is
  * clever: the point is that a person can see the whole of it at a glance and
  * disagree with any part.
+ *
+ * The list and nothing else. Heading, the way back, and the button that saves
+ * all belong to the sheet around it — when this component carried its own, the
+ * screen showed two of each and the sheet's own save button quietly re-ran the
+ * classification instead of saving what was on screen.
  */
 export function UpdateProposalReview({
   items,
   decisions,
   onDecisionsChange,
-  onBack,
-  onConfirm,
-  saving,
-  sourceLabel,
 }: {
   items: ProposalItem[];
   decisions: Decisions;
   onDecisionsChange: (decisions: Decisions) => void;
-  onBack: () => void;
-  onConfirm: () => void;
-  saving: boolean;
-  sourceLabel?: string | null;
 }) {
-  const count = planSize(planFromItems(items, decisions));
-
   function set(id: string, decision: Partial<Decisions[string]>) {
     onDecisionsChange({ ...decisions, [id]: { ...decisions[id], ...decision } });
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl leading-tight">Here is what I found</h2>
-          <p className="mt-1 text-xs leading-5 text-ink-muted">
-            Everything below gets saved. Drop anything that is wrong.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-porcelain px-3 text-xs font-semibold text-ink-muted transition-colors hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-        >
-          <ArrowLeft size={14} weight="bold" aria-hidden="true" />
-          Back
-        </button>
-      </div>
-
-      <ul className="mt-4 space-y-1.5">
+    <ul className="space-y-1.5">
         {items.map((item) => {
           const decision = decisions[item.id] ?? {};
           const { title, detail } = describeItem(item);
@@ -129,25 +104,7 @@ export function UpdateProposalReview({
             </li>
           );
         })}
-      </ul>
-
-      <button
-        type="button"
-        onClick={onConfirm}
-        disabled={saving}
-        className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-coral px-5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-coral-strong disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-      >
-        {saving
-          ? "Saving…"
-          : count === 0
-            ? "Save the note on its own"
-            : `Save ${count} ${count === 1 ? "change" : "changes"}`}
-      </button>
-
-      {sourceLabel ? (
-        <p className="mt-3 text-center text-[11px] text-ink-muted">{sourceLabel}</p>
-      ) : null}
-    </div>
+    </ul>
   );
 }
 
