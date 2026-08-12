@@ -1198,7 +1198,7 @@ export function QuickCaptureProvider({
       ) : phase === "reminder" ? (
         <>
           <Button
-            disabled={!selectedPersonIds[0] || !reminderText.trim()}
+            disabled={!selectedPersonIds.length || !reminderText.trim()}
             label={editingReminderId ? "Save changes" : "Save reminder"}
             loading={saving}
             onPress={() => void saveReminder()}
@@ -1698,10 +1698,13 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
-                    autoFocus={!personSelectionLocked && !selectedPersonIds[0]}
+                    autoFocus={!personSelectionLocked && !selectedPersonIds.length}
                     label="Reminder for"
                     locked={personSelectionLocked}
-                    onToggle={(personId) => togglePerson(personId, false)}
+                    // Multiple, like logging an interaction: a reminder can be
+                    // about several people, and single-select silently replaced
+                    // the choice instead of adding to it.
+                    onToggle={(personId) => togglePerson(personId, true)}
                     people={people}
                     selectedIds={selectedPersonIds}
                   />
@@ -1720,7 +1723,7 @@ export function QuickCaptureProvider({
                   </View>
                 )}
                 <FormField
-                  autoFocus={Boolean(selectedPersonIds[0])}
+                  autoFocus={selectedPersonIds.length > 0}
                   bottomSheet
                   label="What do you want to remember?"
                   multiline

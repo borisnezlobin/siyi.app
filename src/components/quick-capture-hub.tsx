@@ -21,9 +21,12 @@ import {
   type InteractionDraft,
 } from "@/components/interaction-composer";
 import { DateField } from "@/components/date-field";
+import { defaultReminderTimeValue } from "@/lib/reminder-due";
 import { PersonMultiPicker } from "@/components/person-multi-picker";
 import { PersonPicker } from "@/components/person-picker";
 import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
+import { FoundPhotoDialog } from "@/components/found-photo-dialog";
+import { findInstagramPhoto, saveFoundPhoto } from "@/lib/found-photo-client";
 import { UpdateProposalReview } from "@/components/update-proposal-review";
 import { applyResultMessage, applyUpdateProposal } from "@/lib/update-proposal-apply";
 import { webProposalClient } from "@/lib/update-proposal-client";
@@ -266,7 +269,9 @@ export function QuickCaptureHub({
       body: JSON.stringify({
         personIds: reminderPersonIds,
         text: reminderText,
-        dueAt: new Date(`${dueDate}T${dueTime || "12:00"}:00`).toISOString(),
+        dueAt: new Date(
+          `${dueDate}T${dueTime || defaultReminderTimeValue}:00`,
+        ).toISOString(),
       }),
     });
 

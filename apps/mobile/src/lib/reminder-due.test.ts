@@ -5,6 +5,8 @@ import {
   reminderDayValue,
   reminderDaysAway,
   reminderDueAt,
+  reminderTimeValue,
+  parseTimeOfDay,
 } from "@/lib/reminder-due";
 
 const now = new Date("2026-03-11T14:30:00.000Z");
@@ -19,9 +21,12 @@ describe("quick relative choices", () => {
     expect(reminderDaysAway(reminderDayFromDaysAway(14, now), now)).toBe(14);
   });
 
-  it("gives today until the evening and other days the late afternoon", () => {
-    expect(new Date(reminderDueAt(reminderDayFromDaysAway(0, now), now)).getHours()).toBe(20);
-    expect(new Date(reminderDueAt(reminderDayFromDaysAway(3, now), now)).getHours()).toBe(17);
+  it("lands at nine in the morning whatever day it is for", () => {
+    // Whether it is for today or next week, an unspecified time means the same
+    // hour. The two apps disagreed about this before, so it is asserted here
+    // and mirrored by the web twin's constant.
+    expect(new Date(reminderDueAt(reminderDayFromDaysAway(0, now), now)).getHours()).toBe(9);
+    expect(new Date(reminderDueAt(reminderDayFromDaysAway(3, now), now)).getHours()).toBe(9);
   });
 });
 
@@ -65,5 +70,36 @@ describe("reminderDayLabel", () => {
       "Tomorrow",
     );
     expect(reminderDayLabel(new Date(2026, 4, 19), now)).toBe("Tue, May 19");
+  });
+});
+
+describe("a time the person chose", () => {
+  const day = new Date("2026-08-20T00:00:00");
+  const now = new Date("2026-08-10T09:00:00");
+
+  it("reads a time of day, and refuses one that is not", () => {
+    expect(parseTimeOfDay("14:30")).toEqual({ hours: 14, minutes: 30 });
+    expect(parseTimeOfDay("09:05")).toEqual({ hours: 9, minutes: 5 });
+    expect(parseTimeOfDay("25:00")).toBeNull();
+    expect(parseTimeOfDay("14:60")).toBeNull();
+    expect(parseTimeOfDay("half two")).toBeNull();
+    expect(parseTimeOfDay("")).toBeNull();
+  });
+
+  it("puts the reminder at that time rather than the default", () => {
+    const dueAt = new Date(reminderDueAt(day, now, "14:30"));
+    expect(dueAt.getHours()).toBe(14);
+    expect(dueAt.getMinutes()).toBe(30);
+  });
+
+  it("falls back to nine in the morning when no time was given", () => {
+    expect(new Date(reminderDueAt(day, now)).getHours()).toBe(9);
+    expect(new Date(reminderDueAt(day, now, "nonsense")).getHours()).toBe(9);
+  });
+
+  it("reads the time back out of a saved reminder", () => {
+    const dueAt = reminderDueAt(day, now, "07:05");
+    expect(reminderTimeValue(dueAt)).toBe("07:05");
+    expect(reminderTimeValue("not a date")).toBe("");
   });
 });
