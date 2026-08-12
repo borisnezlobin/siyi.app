@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { EmptyState } from "@/components/empty-state";
+import { matchesPeopleQuery } from "@/lib/people-filters";
 import {
   alreadyLoggedIds,
   checkInCandidates,
@@ -38,6 +39,19 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
   );
   const [pending, setPending] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+
+  /**
+   * Searching looks at everyone, not at the two dozen already on screen.
+   * Filtering the suggestions alone means the person you are hunting for is
+   * exactly the person a search cannot find — they are not suggested because
+   * you have not seen them lately, which is usually why you are looking.
+   */
+  const visible = useMemo(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return candidates;
+    return people.filter((person) => matchesPeopleQuery(person, trimmed));
+  }, [candidates, people, query]);
 
   async function toggle(personId: string) {
     const wasSelected = selected.includes(personId);
@@ -86,8 +100,23 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
 
   return (
     <div className="mt-8">
-      <ul className="space-y-2">
-        {candidates.map((person) => {
+      <label className="block">
+        <span className="sr-only">Search people</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search everyone"
+          className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+        />
+      </label>
+
+      {visible.length === 0 ? (
+        <p className="mt-6 text-sm text-ink-muted">Nobody by that name yet.</p>
+      ) : null}
+
+      <ul className="mt-4 space-y-2">
+        {visible.map((person) => {
           const chosen = selected.includes(person.id);
           const busy = pending.includes(person.id);
           return (
@@ -133,9 +162,22 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
 
       {error ? <p className="mt-4 text-sm text-coral-strong">{error}</p> : null}
 
-      <p className="mt-6 text-xs text-ink-muted">
-        Saved as you go. Tap again to undo.
-      </p>
+      {/* Every tap is already saved, so this only leaves. It is here because a
+          screen with no way out and no button reads as unfinished, and people
+          sit on it wondering what they have not pressed. */}
+      <div className="mt-7 flex items-center justify-between gap-4">
+        <p className="text-xs text-ink-muted">
+          Saved as you go. Tap again to undo.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/today")}
+          disabled={pending.length > 0}
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl bg-ink px-6 text-sm font-semibold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2 disabled:opacity-60"
+        >
+          {pending.length > 0 ? "Saving…" : "Done"}
+        </button>
+      </div>
     </div>
   );
 }
