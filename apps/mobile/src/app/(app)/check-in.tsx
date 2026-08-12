@@ -1,7 +1,7 @@
-import { Check, UsersThree } from "phosphor-react-native";
+import { Check, MagnifyingGlass, UsersThree, XCircle } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
@@ -15,6 +15,7 @@ import {
   keepCheckInOrder,
 } from "@/lib/daily-check-in";
 import { createInteraction, getPeople } from "@/lib/data";
+import { matchesPeopleQuery } from "@/lib/people-filters";
 import { lastSeenLabel } from "@/lib/relative-time";
 import { todayDateInputValue, timestampFromDateInput } from "@/lib/date-input";
 import type { Person } from "@/lib/types";
@@ -36,6 +37,7 @@ export default function CheckInScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const people = useMemo(() => screenData.data ?? [], [screenData.data]);
   // Fixed when the screen opens, so saving a tick cannot rearrange the list.
@@ -44,6 +46,18 @@ export default function CheckInScreen() {
     () => keepCheckInOrder(checkInCandidates(people, new Date(), 24), order),
     [people, order],
   );
+  // Filtered, never reordered: the same matcher the people tab uses, so
+  // searching means the same thing in both places.
+  //
+  // Searching looks at everyone rather than at the two dozen suggestions.
+  // Filtering the suggestions alone means the person you are hunting for is
+  // exactly the person a search cannot find — they are not suggested because
+  // you have not seen them lately, which is usually why you are looking.
+  const shown = useMemo(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return candidates;
+    return people.filter((person) => matchesPeopleQuery(person, trimmed));
+  }, [candidates, people, query]);
 
   useEffect(() => {
     if (order.length > 0 || people.length === 0) return;
@@ -97,8 +111,53 @@ export default function CheckInScreen() {
 
   return (
     <Screen
+      footer={
+        candidates.length === 0 ? undefined : (
+          <Button
+            disabled={toSave.length === 0 || saving}
+            label={
+              toSave.length === 0
+                ? "Pick anyone you saw"
+                : toSave.length === 1
+                  ? "Log 1 person"
+                  : `Log ${toSave.length} people`
+            }
+            loading={saving}
+            onPress={() => void save()}
+          />
+        )
+      }
       onRefresh={() => void screenData.refresh()}
       refreshing={screenData.refreshing}
+      showBack
+      stickyHeader={
+        candidates.length === 0 ? undefined : (
+          <View style={styles.searchRow}>
+            <MagnifyingGlass color={colors.inkMuted} size={20} />
+            <TextInput
+              accessibilityLabel="Search the people you saw"
+              autoCapitalize="none"
+              onChangeText={setQuery}
+              placeholder="Search…"
+              placeholderTextColor={colors.inkMuted}
+              returnKeyType="search"
+              selectionColor={colors.coral}
+              style={styles.searchInput}
+              value={query}
+            />
+            {query.length > 0 ? (
+              <Pressable
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={() => setQuery("")}
+              >
+                <XCircle color={colors.inkMuted} size={20} weight="fill" />
+              </Pressable>
+            ) : null}
+          </View>
+        )
+      }
       subtitle="Tap everyone you saw or spoke to. One tap each, nothing to type."
       title="Who did you talk to today?"
     >
@@ -111,7 +170,7 @@ export default function CheckInScreen() {
       ) : (
         <>
           <View style={styles.list}>
-            {candidates.map((person) => {
+            {shown.map((person) => {
               const chosen = selected.includes(person.id);
               const locked = loggedAlready.includes(person.id);
               return (
@@ -156,17 +215,6 @@ export default function CheckInScreen() {
             </AppText>
           ) : null}
 
-          <Button
-            disabled={toSave.length === 0 || saving}
-            label={
-              toSave.length === 0
-                ? "Pick anyone you saw"
-                : toSave.length === 1
-                  ? "Log 1 person"
-                  : `Log ${toSave.length} people`
-            }
-            onPress={() => void save()}
-          />
         </>
       )}
     </Screen>
@@ -174,6 +222,21 @@ export default function CheckInScreen() {
 }
 
 const styles = StyleSheet.create({
+  searchRow: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.medium,
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 16,
+  },
   list: {
     gap: 9,
   },
