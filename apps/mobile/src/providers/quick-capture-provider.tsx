@@ -146,7 +146,8 @@ import {
   reminderDayLabel,
   reminderDayValue,
   reminderDueAt,
-  reminderQuickChoices,
+  reminderTimeValue,
+  parseTimeOfDay,
 } from "@/lib/reminder-due";
 import { onDeviceConversationStarters } from "@/lib/on-device-intelligence";
 import {
@@ -466,6 +467,9 @@ export function QuickCaptureProvider({
   const [reviewSource, setReviewSource] = useState<ClassifierSource>("none");
   const [people, setPeople] = useState<Person[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(false);
+  // Read inside loadPeople, which must not be rebuilt every time the list
+  // changes or every caller of it would be rebuilt too.
+  const peopleRef = useRef<Person[]>([]);
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [personSelectionLocked, setPersonSelectionLocked] = useState(false);
   const [reminderText, setReminderText] = useState("");
@@ -473,13 +477,14 @@ export function QuickCaptureProvider({
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   // Held as text, so the date can be typed as readily as tapped. The chips and
   // everything downstream read the day back out of it.
-  const [dueDateText, setDueDateText] = useState(() =>
-    reminderDayValue(reminderDayFromDaysAway(1)),
-  );
+  // Empty until a day is chosen. A pre-filled tomorrow was accepted by anyone
+  // who did not notice it, which is how reminders landed on a day nobody meant.
+  const [dueDateText, setDueDateText] = useState("");
+  // Optional: empty means the afternoon default the reminder always had.
+  const [dueTimeText, setDueTimeText] = useState("");
   // Whatever was typed, read as a day. A half-typed date keeps the last one it
   // understood rather than leaving the reminder with no due date at all.
-  const dueDay =
-    dateFromDateInput(dueDateText) ?? reminderDayFromDaysAway(1);
+  const dueDay = dateFromDateInput(dueDateText);
   const [updateText, setUpdateText] = useState("");
   const [title, setTitle] = useState("");
   const [customIcon, setCustomIcon] = useState<CustomTypeIconKey | "">("");
@@ -558,10 +563,11 @@ export function QuickCaptureProvider({
     (reminder: Reminder) => {
       resetForm();
       setPhase("reminder");
-      setSelectedPersonIds([reminder.personId]);
+      setSelectedPersonIds(reminder.personIds);
       setPersonSelectionLocked(true);
       setReminderText(reminder.text);
       setDueDateText(toDateInputValue(reminder.dueAt));
+      setDueTimeText(reminderTimeValue(reminder.dueAt));
       setEditingReminderId(reminder.id);
       modalRef.current?.present();
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -684,12 +690,16 @@ export function QuickCaptureProvider({
   }
 
   async function saveReminder() {
-    const personId = selectedPersonIds[0];
-    if (!session || !personId || !reminderText.trim()) {
+    if (!session || !selectedPersonIds.length || !reminderText.trim()) {
       setError("Choose someone and add what you want to remember.");
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
+      return;
+    }
+    // No day is chosen for you any more, so there is a day to ask for.
+    if (!dueDay) {
+      warnAbout("Choose the day this is due.");
       return;
     }
 
@@ -699,13 +709,13 @@ export function QuickCaptureProvider({
       if (editingReminderId) {
         await editReminder(editingReminderId, {
           text: reminderText,
-          dueAt: reminderDueAt(dueDay),
+          dueAt: reminderDueAt(dueDay, new Date(), dueTimeText),
         });
       } else {
         await createReminder(session.user.id, {
-          personId,
+          personIds: selectedPersonIds,
           text: reminderText,
-          dueAt: reminderDueAt(dueDay),
+          dueAt: reminderDueAt(dueDay, new Date(), dueTimeText),
         });
       }
       setRevision((value) => value + 1);
@@ -1026,16 +1036,14 @@ export function QuickCaptureProvider({
     setSaving(true);
     setError(null);
     try {
+      const plan = planFromItems(reviewItems, reviewDecisions);
       const result = await applyUpdateProposal(
         mobileProposalClient({
           userId: session.user.id,
           personId: selectedPersonIds[0],
           recordedOn: updateDate,
         }),
-        {
-          text: updateText,
-          plan: planFromItems(reviewItems, reviewDecisions),
-        },
+        { text: updateText, plan },
       );
 
       const message = applyResultMessage(result);
@@ -1043,6 +1051,15 @@ export function QuickCaptureProvider({
         setError(message);
         return;
       }
+      // An update that just filled in their Instagram is the other moment
+      // worth looking for a picture.
+      const handle = plan.contacts.find(
+        (contact) => contact.kind === "instagram",
+      )?.value;
+      const subject = people.find(
+        (person) => person.id === selectedPersonIds[0],
+      );
+      if (subject) void offerFoundPhoto(subject, handle ?? null);
       await finishSaving();
     } catch (saveError) {
       reportFailure(saveError, "That update could not be saved.");
@@ -1681,6 +1698,7 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
+                    autoFocus={!personSelectionLocked && !selectedPersonIds[0]}
                     label="Reminder for"
                     locked={personSelectionLocked}
                     onToggle={(personId) => togglePerson(personId, false)}
@@ -1712,52 +1730,29 @@ export function QuickCaptureProvider({
                 />
                 <View style={styles.optionGroup}>
                   <AppText variant="label">When?</AppText>
-                  <View style={styles.optionRow}>
-                    {reminderQuickChoices.map((option) => {
-                      const optionDay = reminderDayFromDaysAway(
-                        option.daysAway,
-                      );
-                      const selected =
-                        reminderDayValue(dueDay) ===
-                        reminderDayValue(optionDay);
-                      return (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: selected }}
-                          key={option.label}
-                          onPress={() => {
-                            setDueDateText(reminderDayValue(optionDay));
-                            void Haptics.selectionAsync();
-                          }}
-                          style={[
-                            styles.optionChip,
-                            selected && styles.optionChipSelected,
-                          ]}
-                        >
-                          <Clock
-                            color={selected ? colors.paper : colors.inkMuted}
-                            size={15}
-                          />
-                          <AppText
-                            style={selected ? styles.lightText : undefined}
-                            variant="caption"
-                          >
-                            {option.label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
                   <DateField
                     bottomSheet
-                    label="Or choose a date"
+                    defaultOpen
+                    label="Date"
                     minimumDate={reminderDayFromDaysAway(0)}
                     onChangeText={setDueDateText}
                     value={dueDateText}
                   />
-                  <AppText style={styles.dueSummary} variant="caption">
-                    Due {reminderDayLabel(dueDay)}
-                  </AppText>
+                  <FormField
+                    bottomSheet
+                    hint="Optional — left empty it arrives in the afternoon."
+                    keyboardType="numbers-and-punctuation"
+                    label="Time"
+                    onChangeText={setDueTimeText}
+                    placeholder="14:30"
+                    value={dueTimeText}
+                  />
+                  {dueDay ? (
+                    <AppText style={styles.dueSummary} variant="caption">
+                      Due {reminderDayLabel(dueDay)}
+                      {parseTimeOfDay(dueTimeText) ? ` at ${dueTimeText}` : ""}
+                    </AppText>
+                  ) : null}
                 </View>
               </>
             ) : phase === "interaction" ? (
@@ -1769,6 +1764,7 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
+                    autoFocus={!personSelectionLocked && !selectedPersonIds[0]}
                     label="You saw"
                     locked={personSelectionLocked}
                     multiple
@@ -1858,6 +1854,7 @@ export function QuickCaptureProvider({
                   />
                 ) : people.length > 0 ? (
                   <PersonPicker
+                    autoFocus={!personSelectionLocked && !selectedPersonIds[0]}
                     label="This is about"
                     locked={personSelectionLocked}
                     onToggle={(personId) => togglePerson(personId, false)}

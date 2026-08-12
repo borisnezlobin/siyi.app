@@ -245,7 +245,13 @@ export const personNoteOrderSchema = z.object({
 });
 
 export const reminderInputSchema = z.object({
-  personId: z.string().uuid(),
+  // A reminder is about at least one person; the last one leaving deletes it,
+  // so an empty list is never a state the writer should be able to ask for.
+  personIds: z
+    .array(z.string().uuid())
+    .min(1, "Choose who this is about.")
+    .max(50, "That is more people than one reminder can hold.")
+    .transform((ids) => Array.from(new Set(ids))),
   text: z.string().trim().min(1).max(500),
   dueAt: z.string().datetime(),
 });

@@ -130,13 +130,17 @@ export const personInputSchema = z.object({
 });
 
 export const reminderInputSchema = z.object({
-  personId: z.string().uuid(),
+  personIds: z
+    .array(z.string().uuid())
+    .min(1, "Choose who this is about.")
+    .max(50, "That is more people than one reminder can hold.")
+    .transform((ids) => Array.from(new Set(ids))),
   text: z.string().trim().min(1, "Add what you want to remember.").max(500),
   dueAt: z.string().datetime(),
 });
 
 /** Editing one cannot move it to a different person, only reword or reschedule. */
-export const reminderEditSchema = reminderInputSchema.omit({ personId: true });
+export const reminderEditSchema = reminderInputSchema.omit({ personIds: true });
 
 const customLabel = z
   .string()

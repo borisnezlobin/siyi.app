@@ -31,10 +31,10 @@ const baseInput: NotificationEvaluationInput = {
   reminders: [
     {
       id: "40000000-0000-4000-8000-000000000001",
-      personId: "20000000-0000-4000-8000-000000000001",
+      personIds: ["20000000-0000-4000-8000-000000000001"],
       text: "Send the studio hours",
       dueAt: "2026-08-03T16:00:00.000Z",
-      personName: "Maya",
+      peopleLabel: "Amelia",
     },
   ],
 };

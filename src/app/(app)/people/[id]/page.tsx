@@ -96,7 +96,7 @@ export default async function PersonDetailPage({
 
   const timeline = buildPersonTimeline(personUpdates, interactions);
   const openReminders = allReminders.filter(
-    (reminder) => reminder.personId === person.id && !reminder.completedAt,
+    (reminder) => reminder.personIds.includes(person.id) && !reminder.completedAt,
   );
   const visibleNoteSections = noteSections.sections.filter((noteSection) =>
     noteSection.body.trim(),
@@ -187,7 +187,15 @@ export default async function PersonDetailPage({
       {/* Held at the top of the page: on a long profile, going back or reaching
           for edit should not mean scrolling up first. The blur and the negative
           margins let it sit over the glow rather than cutting a band out of it. */}
-      <div className="sticky top-0 z-20 -mx-4 -mt-5 flex items-center justify-between bg-porcelain/70 px-4 py-3 backdrop-blur sm:-mx-7 sm:-mt-9 sm:px-7 lg:-mx-10 lg:-mt-12 lg:px-10">
+      <div className="sticky top-0 z-20 -mx-4 -mt-5 flex items-center justify-between px-4 py-3 sm:-mx-7 sm:-mt-9 sm:px-7 lg:-mx-10 lg:-mt-12 lg:px-10">
+        {/* The bar reaches the window; its contents stay with the column. The
+            negative margins only ever cancelled the page padding, so on a wide
+            screen the blur stopped at the column edge and drew a 760px band
+            across the middle of the glow. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 bg-porcelain/70 backdrop-blur"
+        />
         <Link
           href="/people"
           className="inline-flex items-center gap-2 rounded-full px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"

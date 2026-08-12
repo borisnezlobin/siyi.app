@@ -236,7 +236,16 @@ export type OfflineSnapshot = {
 };
 
 const cachePrefix = "siyi.offline.cache";
-const queuePrefix = "siyi.offline.queue";
+/**
+ * Bumped to v2 when a reminder stopped being about exactly one person.
+ *
+ * Queued mutations are persisted, so an upgrade would otherwise replay a
+ * create-reminder holding `personId` at a server that no longer has the
+ * column. Reading both shapes is the compatibility layer this project has
+ * said no to, so the old queue is abandoned instead. It only costs anything
+ * for someone who was offline with unsent work across the update itself.
+ */
+const queuePrefix = "siyi.offline.queue.v2";
 const mediaDirectory = new Directory(Paths.document, "siyi-offline-media");
 const locks = new Map<string, Promise<void>>();
 const listeners = new Set<() => void>();

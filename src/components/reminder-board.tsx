@@ -15,13 +15,18 @@ import {
   type ReminderBucket,
 } from "@/lib/reminder-buckets";
 import { dueDateLabel } from "@/lib/relative-time";
+import { reminderPeopleLabel } from "@/lib/reminder-people";
 import type { Reminder } from "@/lib/types";
 
 function matchesQuery(reminder: Reminder, query: string) {
   return [
     reminder.text,
-    reminder.person?.fullName,
-    reminder.person?.preferredName,
+    // Every name, not only the two the row shows: searching for the person who
+    // came third must still find the reminder they are on.
+    ...reminder.people.flatMap((person) => [
+      person.fullName,
+      person.preferredName,
+    ]),
   ]
     .filter(Boolean)
     .join(" ")
@@ -362,8 +367,7 @@ function ReminderRow({
   onDelete: () => void;
   overdue?: boolean;
 }) {
-  const person = reminder.person;
-  const name = person?.preferredName || person?.fullName || "Someone";
+  const name = reminderPeopleLabel(reminder.people) || "Someone";
   const done = Boolean(reminder.completedAt);
 
   const copy = (
@@ -442,15 +446,17 @@ function ReminderRow({
   return (
     <li className="flex min-h-[4.25rem] items-center gap-3 border-b border-ink/[0.055] py-3">
       <Avatar
-        name={person?.fullName ?? "Someone"}
-        imageUrl={person?.profilePhotoUrl}
+        name={reminder.people[0]?.fullName ?? "Someone"}
+        imageUrl={reminder.people[0]?.profilePhotoUrl}
         size="sm"
       />
 
       <div className="min-w-0 flex-1">
-        {person ? (
+        {/* Linked only when there is one person to open. Several would make the
+            row pick a favourite, and the name beside it already lists them. */}
+        {reminder.people.length === 1 ? (
           <Link
-            href={`/people/${person.id}`}
+            href={`/people/${reminder.people[0].id}`}
             className="block rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             {copy}

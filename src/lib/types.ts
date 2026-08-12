@@ -122,14 +122,18 @@ export type Tag = {
 
 export type Reminder = {
   id: string;
-  personId: string;
+  /**
+   * Everyone the reminder is about, never empty: "feed her cat" is regularly
+   * about two people, and the last person leaving deletes the reminder.
+   */
+  personIds: string[];
   userId: string;
   text: string;
   dueAt: string;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  person?: Pick<Person, "id" | "fullName" | "preferredName" | "profilePhotoUrl">;
+  people: Pick<Person, "id" | "fullName" | "preferredName" | "profilePhotoUrl">[];
 };
 
 export type ReminderDefaults = Record<RelationshipStrength, number>;

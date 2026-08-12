@@ -5,6 +5,10 @@ import {
   isNotificationEvaluationTime,
 } from "@/lib/notification-evaluator";
 import { sendPushToUser } from "@/lib/push";
+import {
+  orderReminderPeople,
+  reminderPeopleLabel,
+} from "@/lib/reminder-people";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RelationshipStrength, ReminderDefaults } from "@/lib/types";
 
@@ -51,9 +55,9 @@ type InteractionRow = {
 type ReminderRow = {
   id: string;
   user_id: string;
-  person_id: string;
   text: string;
   due_at: string;
+  reminder_people: { person_id: string }[] | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -146,7 +150,7 @@ export async function GET(request: NextRequest) {
         .order("occurred_at", { ascending: false }),
       admin
         .from("reminders")
-        .select("id,user_id,person_id,text,due_at")
+        .select("id,user_id,text,due_at,reminder_people(person_id)")
         .in("user_id", eligibleUserIds)
         .is("completed_at", null),
     ]);
@@ -228,14 +232,23 @@ export async function GET(request: NextRequest) {
           reminders: reminders
             .filter((reminder) => reminder.user_id === preference.user_id)
             .map((reminder) => {
-              const person = peopleById.get(reminder.person_id);
+              const people = orderReminderPeople(
+                (reminder.reminder_people ?? [])
+                  .map((link) => peopleById.get(link.person_id))
+                  .filter((person): person is PersonRow => Boolean(person))
+                  .map((person) => ({
+                    id: person.id,
+                    fullName: person.full_name,
+                    preferredName: person.preferred_name,
+                    profilePhotoUrl: null,
+                  })),
+              );
               return {
                 id: reminder.id,
-                personId: reminder.person_id,
+                personIds: people.map((person) => person.id),
                 text: reminder.text,
                 dueAt: reminder.due_at,
-                personName:
-                  person?.preferred_name ?? person?.full_name ?? "someone",
+                peopleLabel: reminderPeopleLabel(people) || "someone",
               };
             }),
         },

@@ -124,10 +124,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (payload.reminders.length) {
+      const rows = payload.reminders.map((reminder) => ({
+        id: reminder.id ?? crypto.randomUUID(),
+        personIds: reminder.personIds.map(
+          (personId) => personIdMap.get(personId) ?? personId,
+        ),
+        reminder,
+      }));
+
       const { error } = await supabase.from("reminders").upsert(
-        payload.reminders.map((reminder) => ({
-          id: reminder.id ?? crypto.randomUUID(),
-          person_id: personIdMap.get(reminder.personId) ?? reminder.personId,
+        rows.map(({ id, reminder }) => ({
+          id,
           user_id: user.id,
           text: reminder.text,
           due_at: reminder.dueAt,
@@ -135,6 +142,14 @@ export async function POST(request: NextRequest) {
         })),
       );
       if (error) return apiError(error.message, 400);
+
+      const { error: linkError } = await supabase.from("reminder_people").upsert(
+        rows.flatMap(({ id, personIds }) =>
+          personIds.map((personId) => ({ reminder_id: id, person_id: personId })),
+        ),
+        { onConflict: "reminder_id,person_id" },
+      );
+      if (linkError) return apiError(linkError.message, 400);
     }
 
     if (payload.personTags.length) {

@@ -40,6 +40,7 @@ import {
   type AgendaItem,
 } from "@/lib/today-agenda";
 import { useCachedData } from "@/hooks/use-cached-data";
+import { reminderPeopleLabel } from "@/lib/reminder-people";
 import {
   loadToday,
   loadTodayCached,
@@ -150,12 +151,9 @@ export default function TodayScreen() {
       .filter((reminder) => !reminder.completedAt)
       .map((reminder) => ({
         id: reminder.id,
-        personId: reminder.personId,
+        personIds: reminder.personIds,
         text: reminder.text,
-        personName:
-          reminder.person?.preferredName ||
-          reminder.person?.fullName ||
-          "Someone",
+        personName: reminderPeopleLabel(reminder.people) || "Someone",
         daysAway: daysBetween(now, new Date(reminder.dueAt)),
       })),
     overdueCheckIns: people.flatMap((person) => {
@@ -191,7 +189,7 @@ export default function TodayScreen() {
     [
       ...agenda
         .filter((item) => item.kind === "check-in")
-        .map((item) => item.personId),
+        .flatMap((item) => item.personIds),
       ...recentlyMet.map((person) => person.id),
     ],
     now,
@@ -265,7 +263,11 @@ export default function TodayScreen() {
                 onComplete={() =>
                   item.reminderId ? void complete(item.reminderId) : undefined
                 }
-                onOpen={() => router.push(`/people/${item.personId}`)}
+                onOpen={() =>
+                  item.personIds.length === 1
+                    ? router.push(`/people/${item.personIds[0]}`)
+                    : router.push("/reminders")
+                }
                 showDivider={index < visibleAgenda.length - 1}
               />
             ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeft,
   Bell,
   Check,
   NotePencil,
@@ -10,7 +11,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,6 +21,7 @@ import {
   type InteractionDraft,
 } from "@/components/interaction-composer";
 import { DateField } from "@/components/date-field";
+import { PersonMultiPicker } from "@/components/person-multi-picker";
 import { PersonPicker } from "@/components/person-picker";
 import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
 import { UpdateProposalReview } from "@/components/update-proposal-review";
@@ -28,6 +30,7 @@ import { webProposalClient } from "@/lib/update-proposal-client";
 import {
   buildProposalItems,
   planFromItems,
+  planSize,
   type Decisions,
   type ProposalFieldName,
   type ProposalItem,
@@ -137,8 +140,12 @@ export function QuickCaptureHub({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<CaptureMode | null>(null);
   const [personId, setPersonId] = useState("");
+  // A reminder can be about several people; the other modes still pick one.
+  const [reminderPersonIds, setReminderPersonIds] = useState<string[]>([]);
   const [reminderText, setReminderText] = useState("");
   const [dueDate, setDueDate] = useState("");
+  // Optional: empty keeps the middle of the day the reminder always had.
+  const [dueTime, setDueTime] = useState("");
   const [interactionDraft, setInteractionDraft] = useState<InteractionDraft>(
     emptyInteractionDraft(),
   );
@@ -158,7 +165,9 @@ export function QuickCaptureHub({
     (nextMode: CaptureMode, nextPersonId?: string) => {
       onMenuOpenChange(false);
       setPersonId(nextPersonId ?? "");
-      setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+      // Opened from a profile, that person is already the subject.
+      setReminderPersonIds(nextPersonId ? [nextPersonId] : []);
+      setDueDate("");
       setInteractionDraft(
         emptyInteractionDraft(nextPersonId ? [nextPersonId] : []),
       );
@@ -206,7 +215,9 @@ export function QuickCaptureHub({
   function resetSheet() {
     setMode(null);
     setPersonId("");
+    setReminderPersonIds([]);
     setReminderText("");
+    setDueTime("");
     setInteractionDraft(emptyInteractionDraft());
     setUpdateText("");
     setSaving(false);
@@ -227,7 +238,7 @@ export function QuickCaptureHub({
   }
 
   async function saveReminder() {
-    if (!personId) {
+    if (!reminderPersonIds.length) {
       setError("Choose who this is for.");
       return;
     }
@@ -253,9 +264,9 @@ export function QuickCaptureHub({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        personId,
+        personIds: reminderPersonIds,
         text: reminderText,
-        dueAt: new Date(`${dueDate}T12:00:00`).toISOString(),
+        dueAt: new Date(`${dueDate}T${dueTime || "12:00"}:00`).toISOString(),
       }),
     });
 
@@ -376,6 +387,14 @@ export function QuickCaptureHub({
   }
 
   const copy = modeCopy[mode ?? "interaction"];
+  const reviewChangeCount = review
+    ? planSize(planFromItems(review.items, review.decisions))
+    : 0;
+  const reviewSaveLabel = !review
+    ? null
+    : reviewChangeCount === 0
+      ? "Save the note on its own"
+      : `Save ${reviewChangeCount} ${reviewChangeCount === 1 ? "change" : "changes"}`;
 
   return (
     <>
@@ -477,42 +496,54 @@ export function QuickCaptureHub({
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/12 sm:hidden" />
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold text-coral-strong">
-                {copy.eyebrow}
-              </p>
+              {review ? null : (
+                <p className="text-xs font-semibold text-coral-strong">
+                  {copy.eyebrow}
+                </p>
+              )}
               <h2
                 id="quick-capture-title"
-                className="mt-1 font-display text-3xl leading-none"
+                className={clsx(
+                  "font-display leading-none",
+                  review ? "text-2xl" : "mt-1 text-3xl",
+                )}
               >
-                {copy.title}
+                {review ? "Here is what I found" : copy.title}
               </h2>
+              {review ? (
+                <p className="mt-1.5 text-xs leading-5 text-ink-muted">
+                  Everything below gets saved. Drop anything that is wrong.
+                </p>
+              ) : null}
             </div>
+            {/* One way out of each step: while reviewing it goes back to what
+                you wrote, which is the only place the sheet can go. */}
             <button
               type="button"
-              onClick={closeSheet}
+              onClick={review ? () => setReview(null) : closeSheet}
               className="grid size-10 shrink-0 place-items-center rounded-full bg-mist text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-              aria-label="Close quick capture"
+              aria-label={review ? "Back to what you wrote" : "Close quick capture"}
             >
-              <X size={18} aria-hidden="true" />
+              {review ? (
+                <ArrowLeft size={18} aria-hidden="true" />
+              ) : (
+                <X size={18} aria-hidden="true" />
+              )}
             </button>
           </div>
 
           {review ? (
-            <div className="mt-6">
+            <div className="mt-5">
               <UpdateProposalReview
                 items={review.items}
                 decisions={review.decisions}
                 onDecisionsChange={(decisions) =>
                   setReview((current) => (current ? { ...current, decisions } : current))
                 }
-                onBack={() => setReview(null)}
-                onConfirm={() => void saveReviewedUpdate()}
-                saving={saving}
-                sourceLabel="Sorted by Siyi"
               />
-              {error ? (
-                <p className="mt-3 text-center text-xs text-coral-strong">{error}</p>
-              ) : null}
+              <p className="mt-3 text-center text-[11px] text-ink-muted">
+                Sorted by Siyi
+              </p>
             </div>
           ) : !peopleLoaded || people.length ? (
             <>
@@ -525,6 +556,14 @@ export function QuickCaptureHub({
                     facesShown={8}
                   />
                 </div>
+              ) : mode === "reminder" ? (
+                <PersonMultiPicker
+                  people={people}
+                  value={reminderPersonIds}
+                  onChange={setReminderPersonIds}
+                  facesShown={8}
+                  searchLabel="Who is this about?"
+                />
               ) : (
                 <PersonPicker
                   people={people}
@@ -546,46 +585,27 @@ export function QuickCaptureHub({
                       className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
                     />
                   </label>
-                  <fieldset className="mt-4">
-                    <legend className="text-xs font-semibold text-ink-muted">
-                      When?
-                    </legend>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      {[
-                        { label: "Today", days: 0 },
-                        { label: "Tomorrow", days: 1 },
-                        { label: "Next week", days: 7 },
-                      ].map((option) => {
-                        const value = format(
-                          addDays(new Date(), option.days),
-                          "yyyy-MM-dd",
-                        );
-                        return (
-                          <button
-                            key={option.label}
-                            type="button"
-                            onClick={() => setDueDate(value)}
-                            className={clsx(
-                              "rounded-xl px-2 py-3 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral",
-                              dueDate === value
-                                ? "bg-ink text-white"
-                                : "bg-porcelain text-ink-muted",
-                            )}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
                   <DateField
-                    className="mt-3"
+                    className="mt-4"
+                    defaultOpen
                     inputClassName="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
-                    label="Or choose a date"
+                    label="When?"
                     min={format(new Date(), "yyyy-MM-dd")}
                     onChange={setDueDate}
                     value={dueDate}
                   />
+                  <label className="mt-4 block text-xs font-semibold text-ink-muted">
+                    Time
+                    <input
+                      type="time"
+                      value={dueTime}
+                      onChange={(event) => setDueTime(event.target.value)}
+                      className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/20"
+                    />
+                    <span className="mt-1 block font-normal text-[11px] text-ink-muted">
+                      Optional — left empty it arrives midday.
+                    </span>
+                  </label>
                 </>
               ) : null}
 
@@ -642,11 +662,13 @@ export function QuickCaptureHub({
             <button
               type="button"
               onClick={
-                mode === "reminder"
-                  ? saveReminder
-                  : mode === "update"
-                    ? savePersonUpdate
-                    : saveInteraction
+                review
+                  ? () => void saveReviewedUpdate()
+                  : mode === "reminder"
+                    ? saveReminder
+                    : mode === "update"
+                      ? savePersonUpdate
+                      : saveInteraction
               }
               disabled={saving || saved}
               className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-sm font-semibold text-white shadow-float disabled:cursor-wait disabled:bg-sage-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
@@ -666,7 +688,7 @@ export function QuickCaptureHub({
                   Saving…
                 </>
               ) : (
-                copy.save
+                reviewSaveLabel ?? copy.save
               )}
             </button>
           </div>

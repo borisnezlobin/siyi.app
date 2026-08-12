@@ -1,4 +1,5 @@
 import { normalizeOwnCard, type OwnCard } from "@/lib/own-card";
+import { orderReminderPeople } from "@/lib/reminder-people";
 import { authenticatedWebRequest } from "@/lib/web-api";
 import {
   defaultNoteHeadings,
@@ -133,25 +134,22 @@ type PersonRow = {
 
 type ReminderRow = {
   id: string;
-  person_id: string;
   user_id: string;
   text: string;
   due_at: string;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
-  people?:
+  reminder_people?:
     | {
-        id: string;
-        full_name: string;
-        preferred_name: string | null;
-        profile_photo_url: string | null;
-      }
-    | {
-        id: string;
-        full_name: string;
-        preferred_name: string | null;
-        profile_photo_url: string | null;
+        people?:
+          | {
+              id: string;
+              full_name: string;
+              preferred_name: string | null;
+              profile_photo_url: string | null;
+            }
+          | null;
       }[]
     | null;
 };
@@ -275,19 +273,18 @@ async function cachePeopleAvatars(people: Person[]) {
 
 async function cacheReminderAvatars(reminders: Reminder[]) {
   return Promise.all(
-    reminders.map(async (reminder) => {
-      if (!reminder.person) return reminder;
-      return {
-        ...reminder,
-        person: {
-          ...reminder.person,
+    reminders.map(async (reminder) => ({
+      ...reminder,
+      people: await Promise.all(
+        reminder.people.map(async (person) => ({
+          ...person,
           profilePhotoUrl: await cachedAvatarUrl(
-            reminder.person.profilePhotoUrl,
-            reminder.person.profilePhotoPath,
+            person.profilePhotoUrl,
+            person.profilePhotoPath,
           ),
-        },
-      };
-    }),
+        })),
+      ),
+    })),
   );
 }
 
@@ -469,30 +466,17 @@ function mapPerson(
   };
 }
 
-function relatedPerson(
-  relation: ReminderRow["people"],
-) {
-  return Array.isArray(relation) ? relation[0] : relation;
-}
-
 function mapReminder(
   row: ReminderRow,
   avatarUrls: Map<string, string>,
 ): Reminder {
-  const person = relatedPerson(row.people);
-  const path = avatarPath(person?.profile_photo_url || null);
-
-  return {
-    id: row.id,
-    personId: row.person_id,
-    userId: row.user_id,
-    text: row.text,
-    dueAt: row.due_at,
-    completedAt: row.completed_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    person: person
-      ? {
+  const people = orderReminderPeople(
+    (row.reminder_people ?? [])
+      .map((link) => link.people)
+      .filter((person): person is NonNullable<typeof person> => Boolean(person))
+      .map((person) => {
+        const path = avatarPath(person.profile_photo_url || null);
+        return {
           id: person.id,
           fullName: person.full_name,
           preferredName: person.preferred_name,
@@ -500,8 +484,20 @@ function mapReminder(
             ? avatarUrls.get(path) || null
             : person.profile_photo_url,
           profilePhotoPath: path,
-        }
-      : undefined,
+        };
+      }),
+  );
+
+  return {
+    id: row.id,
+    personIds: people.map((person) => person.id),
+    userId: row.user_id,
+    text: row.text,
+    dueAt: row.due_at,
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    people,
   };
 }
 
@@ -563,14 +559,18 @@ async function getPeopleRemote() {
 async function getRemindersRemote() {
   const { data, error } = await supabase
     .from("reminders")
-    .select("*, people(id,full_name,preferred_name,profile_photo_url)")
+    .select(
+      "*, reminder_people(people(id,full_name,preferred_name,profile_photo_url))",
+    )
     .order("due_at", { ascending: true });
   if (error) throw error;
 
   const rows = data as ReminderRow[];
   const avatarUrls = await signedAvatarUrls(
-    rows.map(
-      (row) => relatedPerson(row.people)?.profile_photo_url || null,
+    rows.flatMap((row) =>
+      (row.reminder_people ?? []).map(
+        (link) => link.people?.profile_photo_url || null,
+      ),
     ),
   );
   return cacheReminderAvatars(
@@ -629,7 +629,7 @@ async function getOfflineDatasetRemote(userId: string) {
             (interaction) => interaction.personId === person.id,
           ),
           reminders: reminders.filter(
-            (reminder) => reminder.personId === person.id,
+            (reminder) => reminder.personIds.includes(person.id),
           ),
           updates: updates.filter((update) =>
             update.personIds.includes(person.id),
@@ -672,8 +672,12 @@ async function getPersonDetailsRemote(identifier: string) {
       .order("occurred_at", { ascending: false }),
     supabase
       .from("reminders")
-      .select("*, people(id,full_name,preferred_name,profile_photo_url)")
-      .eq("person_id", personId)
+      // Filtered through the join, and still selecting every person on each
+      // reminder: this person's profile has to show the others it names.
+      .select(
+        "*, reminder_people!inner(person_id), reminder_people(people(id,full_name,preferred_name,profile_photo_url))",
+      )
+      .eq("reminder_people.person_id", personId)
       .order("due_at", { ascending: true }),
   ]);
 
@@ -687,8 +691,10 @@ async function getPersonDetailsRemote(identifier: string) {
   ).map(mapInteraction);
   const reminderRows = remindersResult.data as ReminderRow[];
   const avatarUrls = await signedAvatarUrls(
-    reminderRows.map(
-      (row) => relatedPerson(row.people)?.profile_photo_url || null,
+    reminderRows.flatMap((row) =>
+      (row.reminder_people ?? []).map(
+        (link) => link.people?.profile_photo_url || null,
+      ),
     ),
   );
 
@@ -822,7 +828,7 @@ export async function getPersonDetails(identifier: string) {
       person,
       interactions: [],
       reminders: snapshot.reminders.filter(
-        (reminder) => reminder.personId === personId,
+        (reminder) => reminder.personIds.includes(personId),
       ),
       updates: [],
     };
@@ -1104,44 +1110,49 @@ export async function createReminder(userId: string, input: ReminderInput) {
     input: reminder,
   });
   await updateOfflineSnapshot(userId, (snapshot) => {
-    const person = snapshot.people.find(({ id }) => id === reminder.personId);
+    const people = orderReminderPeople(
+      reminder.personIds
+        .map((personId) => snapshot.people.find(({ id }) => id === personId))
+        .filter((person): person is NonNullable<typeof person> => Boolean(person))
+        .map((person) => ({
+          id: person.id,
+          fullName: person.fullName,
+          preferredName: person.preferredName,
+          profilePhotoUrl: person.profilePhotoUrl,
+          profilePhotoPath: person.profilePhotoPath,
+        })),
+    );
     createdReminder = {
       id: reminderId,
-      personId: reminder.personId,
+      personIds: reminder.personIds,
       userId,
       text: reminder.text,
       dueAt: reminder.dueAt,
       completedAt: null,
       createdAt,
       updatedAt: createdAt,
-      person: person
-        ? {
-            id: person.id,
-            fullName: person.fullName,
-            preferredName: person.preferredName,
-            profilePhotoUrl: person.profilePhotoUrl,
-            profilePhotoPath: person.profilePhotoPath,
-          }
-        : undefined,
+      people,
     };
-    const details = snapshot.personDetails[reminder.personId];
 
     return {
       ...snapshot,
       reminders: [...snapshot.reminders, createdReminder!].sort((left, right) =>
         left.dueAt.localeCompare(right.dueAt),
       ),
-      personDetails: details
-        ? {
-            ...snapshot.personDetails,
-            [reminder.personId]: {
-              ...details,
-              reminders: [...details.reminders, createdReminder!],
-            },
-          }
-        : snapshot.personDetails,
+      // Every profile it names has to show it, not just the first.
+      personDetails: Object.fromEntries(
+        Object.entries(snapshot.personDetails).map(([personId, details]) =>
+          reminder.personIds.includes(personId)
+            ? [
+                personId,
+                { ...details, reminders: [...details.reminders, createdReminder!] },
+              ]
+            : [personId, details],
+        ),
+      ),
     };
   });
+
   void flushOfflineMutations(userId);
   return createdReminder;
 }
@@ -2639,13 +2650,21 @@ async function executeOfflineMutation(mutation: OfflineMutation) {
       {
         id: mutation.reminderId,
         user_id: mutation.userId,
-        person_id: mutation.input.personId,
         text: mutation.input.text,
         due_at: mutation.input.dueAt,
       },
       { onConflict: "id" },
     );
     if (error) throw error;
+
+    const { error: linkError } = await supabase.from("reminder_people").upsert(
+      mutation.input.personIds.map((personId) => ({
+        reminder_id: mutation.reminderId,
+        person_id: personId,
+      })),
+      { onConflict: "reminder_id,person_id" },
+    );
+    if (linkError) throw linkError;
     return;
   }
 

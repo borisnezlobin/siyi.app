@@ -23,6 +23,7 @@ import {
 import { dueDateLabel } from "@/lib/relative-time";
 import type { Reminder } from "@/lib/types";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
+import { reminderPeopleLabel } from "@/lib/reminder-people";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
 
 export default function RemindersScreen() {
@@ -36,6 +37,16 @@ export default function RemindersScreen() {
   // A person page links here for one person, which arrives as a filled-in
   // search rather than a second, phone-only filter control.
   const { q } = useLocalSearchParams<{ q?: string }>();
+  // A reminder about one person opens that profile; about several there is no
+  // single one to open, so it opens the editor where all of them are listed.
+  function openReminder(reminder: Reminder) {
+    if (reminder.personIds.length === 1) {
+      router.push(`/people/${reminder.personIds[0]}`);
+      return;
+    }
+    quickCapture.editReminder(reminder);
+  }
+
   const [query, setQuery] = useState(q ?? "");
   const [focusedBucket, setFocusedBucket] = useState<ReminderBucket | null>(
     null,
@@ -60,8 +71,11 @@ export default function RemindersScreen() {
     const visible = (screenData.data?.reminders || []).filter((reminder) =>
       [
         reminder.text,
-        reminder.person?.fullName,
-        reminder.person?.preferredName,
+        // Every name, not only the ones the row shows.
+        ...reminder.people.flatMap((person) => [
+          person.fullName,
+          person.preferredName,
+        ]),
       ]
         .filter(Boolean)
         .join(" ")
@@ -180,12 +194,12 @@ export default function RemindersScreen() {
             text: reminder.text,
             dueAt: reminder.dueAt,
             completedAt: reminder.completedAt,
-            person: reminder.person
+            person: reminder.people[0]
               ? {
-                  id: reminder.person.id,
-                  name:
-                    reminder.person.preferredName || reminder.person.fullName,
-                  photoUrl: reminder.person.profilePhotoUrl,
+                  id: reminder.people[0].id,
+                  // One avatar per calendar entry; the label carries the rest.
+                  name: reminderPeopleLabel(reminder.people),
+                  photoUrl: reminder.people[0].profilePhotoUrl,
                 }
               : null,
           }))}
@@ -299,7 +313,7 @@ export default function RemindersScreen() {
                 <ReminderRow
                   reminder={reminder}
                   key={reminder.id}
-                  onOpen={() => router.push(`/people/${reminder.personId}`)}
+                  onOpen={() => openReminder(reminder)}
                   onEdit={() => quickCapture.editReminder(reminder)}
                   onToggle={() => void toggleComplete(reminder)}
                   overdue={bucket === "overdue"}
@@ -327,7 +341,7 @@ export default function RemindersScreen() {
               <ReminderRow
                 reminder={reminder}
                 key={reminder.id}
-                onOpen={() => router.push(`/people/${reminder.personId}`)}
+                onOpen={() => openReminder(reminder)}
                 onEdit={() => quickCapture.editReminder(reminder)}
                 onToggle={() => void toggleComplete(reminder)}
               />
@@ -370,9 +384,9 @@ function ReminderRow({
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <Avatar
-        name={reminder.person?.fullName || "Someone"}
+        name={reminder.people[0]?.fullName || "Someone"}
         size={40}
-        uri={reminder.person?.profilePhotoUrl}
+        uri={reminder.people[0]?.profilePhotoUrl}
       />
       <View style={styles.rowCopy}>
         <AppText
@@ -383,9 +397,7 @@ function ReminderRow({
           {reminder.text}
         </AppText>
         <AppText numberOfLines={1} variant="caption">
-          {reminder.person?.preferredName ||
-            reminder.person?.fullName ||
-            "Someone"}
+          {reminderPeopleLabel(reminder.people) || "Someone"}
           {done ? "" : ` · ${dueDateLabel(reminder.dueAt)}`}
         </AppText>
       </View>

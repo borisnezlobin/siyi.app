@@ -66,27 +66,6 @@ Working file. Delete entries as they ship. Ordered by launch risk.
 
 ## P2 — features requested
 
-- [ ] **Several people on one reminder.** "Feed her cat" is often about two
-      people, and today a reminder belongs to exactly one.
-      Schema: `reminders.person_id` is `uuid not null references people(id)`.
-      Add `reminder_people (reminder_id, person_id, primary key (reminder_id,
-      person_id))`, backfill it from `person_id`, then drop `person_id`. Do not
-      keep both — a nullable `person_id` alongside a join table is the
-      compatibility layer this project has said no to.
-      Blast radius, ~37 call sites: `src/lib/reminders.ts` and its mobile twin,
-      `src/app/api/reminders/*`, `src/app/api/cron/notifications/route.ts`
-      (groups by `reminder.person_id` to name the person in the push),
-      `reminder-board.tsx`, the person profile timeline on both apps, the
-      quick-capture reminder phase on both, `src/app/api/import|export`, and
-      the mobile offline queue (`enqueueOfflineMutation` payloads are
-      persisted, so a shape change there needs a queue drain or a version tag).
-      Decisions to make first: does a push name every person or just the count;
-      does completing a reminder complete it for everyone (yes, it is one
-      reminder); does a person's deletion delete the reminder or only their row
-      (only their row, and delete the reminder when the last one goes).
-      Time-of-day is already done — `due_at` is `timestamptz` and both apps
-      have a Time field; only the multi-person half is outstanding.
-
 ## Mobile parity — the rule going forward
 
 The phone app ships everything the web ships, in the same change. Skipping it

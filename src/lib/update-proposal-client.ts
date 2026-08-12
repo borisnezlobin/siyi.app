@@ -105,7 +105,7 @@ export function webProposalClient({
         await fetch("/api/reminders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ personId, text, dueAt }),
+          body: JSON.stringify({ personIds: [personId], text, dueAt }),
         }),
         "That reminder could not be saved.",
       );
