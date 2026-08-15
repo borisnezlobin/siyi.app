@@ -15,6 +15,7 @@ const easProjectId =
   "2a6e2096-32c9-46c1-af86-9391fa5b48fb";
 const iosProtectedCapabilitiesEnabled =
   process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false";
+const buildingForTheStore = process.env.EAS_BUILD_PROFILE === "production";
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -41,6 +42,13 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
         "Choose a profile photo for someone in your private circle.",
       NSCameraUsageDescription:
         "Take a profile photo for someone you want to remember.",
+      // The app speaks to Supabase over https and nothing else. The Expo
+      // template leaves this open, which is both untrue of the app and a
+      // question the reviewer then has to be answered.
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: false,
+      },
+      UIRequiredDeviceCapabilities: ["arm64"],
     },
     privacyManifests: {
       NSPrivacyAccessedAPITypes: [
@@ -80,7 +88,10 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
     ...(iosProtectedCapabilitiesEnabled
       ? (["expo-apple-authentication"] as const)
       : []),
-    "expo-secure-store",
+    // Nothing here is behind Face ID — SecureStore is used without
+    // requireAuthentication — so the plugin's placeholder string would be
+    // asking for a capability the app never exercises.
+    ["expo-secure-store", { faceIDPermission: false }],
     [
       "expo-image-picker",
       {
@@ -88,6 +99,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
           "Choose a profile photo for someone in your private circle.",
         cameraPermission:
           "Take a profile photo for someone you want to remember.",
+        // Profile photos only. Left unset, the plugin adds a microphone
+        // string and Android RECORD_AUDIO for recording the app never does.
+        microphonePermission: false,
       },
     ],
     ...(iosProtectedCapabilitiesEnabled
@@ -158,6 +172,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
     ...(iosProtectedCapabilitiesEnabled
       ? []
       : ["./plugins/without-protected-ios-capabilities"]),
+    ...(buildingForTheStore
+      ? ["./plugins/without-dev-launcher-local-network"]
+      : []),
   ],
   experiments: {
     typedRoutes: true,
