@@ -8,7 +8,7 @@ import {
 } from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
@@ -20,6 +20,19 @@ import { LoadingState } from "@/components/load-state";
 import { brand } from "@/config/brand";
 import { colors, fontFamilies } from "@/constants/theme";
 import { useAuth } from "@/providers/auth-provider";
+
+/**
+ * Backing out of the Apple sheet arrives as a thrown error like any other, and
+ * it is the one that must not be shown: the person chose to stop.
+ */
+function isCanceledByUser(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    (value as { code?: unknown }).code === "ERR_REQUEST_CANCELED"
+  );
+}
 
 type AuthMode = "sign-in" | "sign-up";
 /** Password and emailed link are separate ways in, never both at once. */
@@ -323,12 +336,24 @@ export default function AuthScreen() {
       ) : null}
 
       <View style={styles.providers}>
-        <Button
-          disabled
-          icon={AppleLogo}
-          label="Continue with Apple"
-          variant="secondary"
-        />
+        {Platform.OS === "ios" ? (
+          <Button
+            icon={AppleLogo}
+            label="Continue with Apple"
+            loading={loadingAction === "apple"}
+            onPress={() =>
+              void runAction("apple", async () => {
+                try {
+                  await auth.signInWithApple();
+                } catch (appleError) {
+                  if (isCanceledByUser(appleError)) return;
+                  throw appleError;
+                }
+              })
+            }
+            variant="secondary"
+          />
+        ) : null}
         <Button
           icon={GoogleLogo}
           label="Continue with Google"
@@ -340,9 +365,6 @@ export default function AuthScreen() {
           }
           variant="secondary"
         />
-        <AppText style={styles.providerNote} variant="caption">
-          Apple sign-in is coming soon.
-        </AppText>
       </View>
 
       <Button
@@ -437,10 +459,6 @@ const styles = StyleSheet.create({
   },
   providers: {
     gap: 10,
-  },
-  providerNote: {
-    color: colors.inkMuted,
-    textAlign: "center",
   },
   legal: {
     color: colors.inkMuted,

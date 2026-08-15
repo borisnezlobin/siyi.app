@@ -23,6 +23,8 @@ jest.mock("expo-router", () => ({
 
 const mockSendMagicLink = jest.fn().mockResolvedValue(undefined);
 const mockSignInWithPassword = jest.fn().mockResolvedValue(undefined);
+const mockSignInWithApple = jest.fn().mockResolvedValue(undefined);
+const mockSignInWithGoogle = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({
@@ -34,6 +36,8 @@ jest.mock("@/providers/auth-provider", () => ({
     signInWithPassword: mockSignInWithPassword,
     signUpWithPassword: jest.fn(),
     sendPasswordReset: jest.fn(),
+    signInWithApple: mockSignInWithApple,
+    signInWithGoogle: mockSignInWithGoogle,
   }),
 }));
 
@@ -74,6 +78,8 @@ describe("the sign-in screen", () => {
   beforeEach(() => {
     mockSendMagicLink.mockClear();
     mockSignInWithPassword.mockClear();
+    mockSignInWithApple.mockClear();
+    mockSignInWithGoogle.mockClear();
   });
 
   it("greets you with the tagline and nothing above it", async () => {
@@ -100,20 +106,54 @@ describe("the sign-in screen", () => {
     );
   });
 
-  it("keeps Apple visibly out of service while Google works", async () => {
+  // Offering Google without Apple is a guideline 4.8 rejection, and a button
+  // that only looks like a way in is a 2.1 one. Both have to actually work.
+  it("signs in with Apple and with Google, neither of them dead", async () => {
     await renderAuth();
 
-    expect(screen.getByText("Apple sign-in is coming soon.")).toBeTruthy();
+    expect(screen.queryByText("Apple sign-in is coming soon.")).toBeNull();
+
+    const apple = screen.getByRole("button", { name: "Continue with Apple" });
+    expect(apple.props.accessibilityState.disabled).toBeFalsy();
+    await fireEvent.press(apple);
+    expect(mockSignInWithApple).toHaveBeenCalledTimes(1);
+
+    const google = screen.getByRole("button", { name: "Continue with Google" });
+    expect(google.props.accessibilityState.disabled).toBeFalsy();
+    await fireEvent.press(google);
+    expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it("says nothing when you back out of the Apple sheet yourself", async () => {
+    mockSignInWithApple.mockRejectedValueOnce(
+      Object.assign(new Error("The user canceled the authorization attempt."), {
+        code: "ERR_REQUEST_CANCELED",
+      }),
+    );
+    await renderAuth();
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Continue with Apple" }),
+    );
+
     expect(
-      screen.getByRole("button", { name: "Continue with Apple" }).props
-        .accessibilityState.disabled,
-    ).toBe(true);
-    // Google is wired up now, so the note above must not be read as covering
-    // it and the button must not be sitting there dead.
+      screen.queryByText("The user canceled the authorization attempt."),
+    ).toBeNull();
+  });
+
+  it("reports an Apple sign-in that genuinely failed", async () => {
+    mockSignInWithApple.mockRejectedValueOnce(
+      new Error("Apple did not return an identity token."),
+    );
+    await renderAuth();
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Continue with Apple" }),
+    );
+
     expect(
-      screen.getByRole("button", { name: "Continue with Google" }).props
-        .accessibilityState.disabled,
-    ).toBeFalsy();
+      screen.getByText("Apple did not return an identity token."),
+    ).toBeTruthy();
   });
 
   it("pins the way in, so the keyboard never sits on top of it", async () => {
