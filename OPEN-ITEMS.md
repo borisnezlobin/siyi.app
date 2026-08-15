@@ -4,6 +4,11 @@ Raised 2026-08-07 after seeing the app on a real phone. Delete lines as they
 ship. Nothing here is speculative — every line is something the owner asked
 for directly.
 
+Audited 2026-08-15 against the working tree rather than against memory. Most of
+what was still unticked here had in fact shipped and nobody had come back to
+the file; those lines now carry what the answer turned out to be. Anything left
+unticked was checked and is genuinely still open.
+
 ## Your Card screen (web + phone)
 
 - [x] The public-page switch moves to the **top** of the screen and reads
@@ -30,13 +35,13 @@ for directly.
 
 ## Share sheet
 
-- [ ] It is a plain `Modal`, not a bottom sheet: cannot be swiped closed, and
-      the shadow animates in with the sheet, which no real app does.
-      `@gorhom/bottom-sheet` is already a dependency and already used by the
-      capture sheet — use it.
-- [ ] **`Share` icon, not `ShareNetwork`.** Asked for previously and missed.
-      Three places: `apps/mobile/src/app/(app)/people/[id].tsx` (x2) and
-      `apps/mobile/src/components/share-person-sheet.tsx`.
+- [x] It is an `AppBottomSheet` now, so it swipes closed and the backdrop
+      behaves like every other sheet in the app. The share and card actions sit
+      in the sheet's `footer` rather than in the scrolling content, which is
+      also what keeps them above the keyboard.
+- [x] **`Share` icon, not `ShareNetwork`.** `ShareNetwork` appears nowhere in
+      the repo any more. The person screen's header button and the sheet's
+      first action both use the plain `Share` glyph.
 
 ## Headings and typography
 
@@ -48,18 +53,25 @@ for directly.
 
 ## Person detail
 
-- [ ] The section header icons are unreadable. A duotone clock meaning "add an
-      update" and an arrow-out-of-box meaning "open reminders" are both guesses
-      the user should not have to make. Label the actions.
-- [ ] Reminders and History use different icon setups in the same screen. One
-      pattern for both.
+- [x] The section header icons are unreadable. Every section action goes
+      through one `SectionAction` in `surface.tsx` now, which draws a small icon
+      beside the words for what it does — "Add reminder", "See all", "Log
+      interaction", "Add update". Nothing is left to guess from a glyph.
+- [x] Reminders and History use different icon setups in the same screen. Both
+      are built from that same `SectionAction`, on the phone and on the web, so
+      there is one pattern rather than two.
 
 ## Web and phone still do not match
 
-- [ ] People list: avatars are multi-coloured on web and all green on the
-      phone; web rows carry an extra icon button the phone does not have.
-- [ ] Relative dates differ: web says "1 day ago" / "23 minutes ago" where the
-      phone says "Yesterday" / "Today". One helper, both platforms.
+- [x] People list: both platforms take the avatar colour from a shared
+      `avatar-colors.ts`, byte-identical in `src/lib` and `apps/mobile/src/lib`,
+      so a person is the same colour in both. The extra icon button is gone from
+      the web row, which now carries the same avatar, name, last-seen line, note
+      and chevron the phone row does.
+- [x] Relative dates differ. All of the wording lives in `relative-time.ts`,
+      again identical in both apps, and it counts calendar days rather than
+      elapsed hours — so something written at 11:58pm reads as "Yesterday" two
+      minutes later on both platforms, not "23 minutes ago" on one of them.
 
 ## Keyboard — the long-running one
 
@@ -80,4 +92,7 @@ for directly.
 
 ## Reminders
 
-- [ ] "Due in X days" must also show the actual date.
+- [x] "Due in X days" must also show the actual date. `dueDateLabel` appends it
+      whenever the phrase does not already name the day, so "Due in 5 days ·
+      Mar 16" and "4 days overdue · Mar 7", while today and tomorrow stay as
+      they were. The year is only printed when it is not the current one.
