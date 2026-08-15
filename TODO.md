@@ -74,6 +74,16 @@ because the offline queue is awkward is how it fell behind in the first place.
 - [x] Note sections, multiple contact methods, edit/delete updates, custom
       "Other" type, and the person typeahead all now exist on the phone, with
       offline queueing and conflict rules for each.
+- [x] Search landed on both in the same change. The phone is the one read in
+      the app that does not answer from the snapshot: the whole corpus is on
+      the device, so matching locally was possible, but it would have meant a
+      second implementation of the ranking `search_everything` already does,
+      drifting from the web's order the first time either side was tuned. One
+      ranking, in the database, was judged worth needing a connection for — so
+      offline says so plainly rather than quietly serving name matches dressed
+      up as the same feature. Both platforms reach it the same way, from the
+      people list's empty state, carrying the query across; a second search
+      field in the header would have left no way to tell the two apart.
 - Conflict rules chosen, worth knowing: a queued edit that lands on a row
       somebody already changed KEEPS BOTH rather than picking a winner. A
       queued delete is honoured unconditionally — the one accepted data-loss
