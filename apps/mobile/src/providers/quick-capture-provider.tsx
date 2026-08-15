@@ -1056,15 +1056,6 @@ export function QuickCaptureProvider({
         setError(message);
         return;
       }
-      // An update that just filled in their Instagram is the other moment
-      // worth looking for a picture.
-      const handle = plan.contacts.find(
-        (contact) => contact.kind === "instagram",
-      )?.value;
-      const subject = people.find(
-        (person) => person.id === selectedPersonIds[0],
-      );
-      if (subject) void offerFoundPhoto(subject, handle ?? null);
       await finishSaving();
     } catch (saveError) {
       reportFailure(saveError, "That update could not be saved.");
