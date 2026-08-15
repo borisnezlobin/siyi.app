@@ -329,24 +329,6 @@ export function PeopleDirectory({
             <Plus size={17} weight="bold" aria-hidden="true" />
             Add someone
           </Link>
-          {/*
-            This list only ever matches people. What you actually wrote — an
-            update, a note, a class — is not searched here, and the moment that
-            matters is this one: you looked for someone and the names came back
-            empty. Offering it anywhere else would put two search boxes on the
-            page with no way to tell which one you wanted.
-          */}
-          {search.trim() ? (
-            <p className="mt-4 text-sm text-ink-muted">
-              <Link
-                href={`/search?q=${encodeURIComponent(search.trim())}`}
-                className="font-semibold text-coral underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
-              >
-                Search everything you have written
-              </Link>{" "}
-              instead, including updates, notes and classes.
-            </p>
-          ) : null}
         </div>
       )}
     </div>

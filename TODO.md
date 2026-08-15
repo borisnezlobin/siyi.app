@@ -74,16 +74,6 @@ because the offline queue is awkward is how it fell behind in the first place.
 - [x] Note sections, multiple contact methods, edit/delete updates, custom
       "Other" type, and the person typeahead all now exist on the phone, with
       offline queueing and conflict rules for each.
-- [x] Search landed on both in the same change. The phone is the one read in
-      the app that does not answer from the snapshot: the whole corpus is on
-      the device, so matching locally was possible, but it would have meant a
-      second implementation of the ranking `search_everything` already does,
-      drifting from the web's order the first time either side was tuned. One
-      ranking, in the database, was judged worth needing a connection for — so
-      offline says so plainly rather than quietly serving name matches dressed
-      up as the same feature. Both platforms reach it the same way, from the
-      people list's empty state, carrying the query across; a second search
-      field in the header would have left no way to tell the two apart.
 - Conflict rules chosen, worth knowing: a queued edit that lands on a row
       somebody already changed KEEPS BOTH rather than picking a winner. A
       queued delete is honoured unconditionally — the one accepted data-loss
@@ -190,7 +180,7 @@ because the offline queue is awkward is how it fell behind in the first place.
 ## Applied migrations
 
 Nothing in this repo applies migrations automatically. Run these in order
-against production; every one is additive and touches no existing data:
+against production; both are additive and touch no existing data:
 
 - `0004_native_push_subscriptions.sql` — NOT APPLIED. This was the cause of
   the push and export failures. No longer urgent (the code copes), but the
@@ -203,16 +193,6 @@ against production; every one is additive and touches no existing data:
 - `0008_relationship_labels.sql` — NOT YET APPLIED. Adds relationship_label
   and reminders_enabled, and replaces the create-person RPC. Until it runs,
   relationship labels silently do not persist and every person gets reminders.
-- `0028_search_everything.sql` — NOT YET APPLIED. Creates six GIN indexes and
-  one `security invoker` function, and alters no existing table, column or
-  policy. Until it runs `/api/search` answers `available: false` and the search
-  UI stays hidden, which is why nothing breaks in the meantime — that is not
-  the same answer as no results, and the caller is expected to tell them apart.
-  It deliberately does not index `people.relationship_label` (0008) or
-  `interactions.custom_label` (0009), because those columns do not exist until
-  those migrations run and an index expression naming a missing column would
-  fail the whole migration rather than the one line. Fold both in once 0008 and
-  0009 are applied.
 
 ## Merged, awaiting migrations
 
@@ -264,22 +244,6 @@ against production; every one is additive and touches no existing data:
       child table so the web never shows a stale number.
       NOT verified against a real database: the backfill's idempotence is
       asserted structurally, not by running it twice. Run 0013 on a copy first.
-
-- [x] **Search everything, not just names.** Migration 0028 indexes the six
-      tables the user actually writes into — people, updates, notes,
-      interactions, classes and reminders — and adds one `search_everything`
-      function that queries all six and returns a single ranked list, which
-      `search.ts` (mirrored into both apps) groups by person. The function is
-      `security invoker`, so every row-level policy already on those tables
-      applies unchanged and no new access path is opened.
-      It uses the `english` text search config rather than the `simple` of the
-      abandoned `people_user_search_idx` in 0001: simple does no stemming, so a
-      note reading "she is moving to Boston" was not found by a search for
-      "move". Simple was right for a name index, because names do not stem, and
-      wrong for prose.
-      Additive, so it is safe to apply whenever — see the migrations list above
-      for what stays switched off until it runs, and for the two label columns
-      it cannot index yet.
 
 ## In flight
 

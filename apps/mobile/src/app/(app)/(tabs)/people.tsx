@@ -427,24 +427,6 @@ export default function PeopleScreen() {
               ? "Use the coral plus button when you meet someone."
               : "Try removing a filter or searching for something broader."}
           </AppText>
-          {/*
-            This list only ever matches people. What you actually wrote — an
-            update, a note, a class — is not searched here, and the moment that
-            matters is this one: you looked for someone and the names came back
-            empty. Offering it in the header instead would put two search
-            fields on one screen with no way to tell which one you wanted.
-          */}
-          {query.trim() ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push(`/search?q=${encodeURIComponent(query.trim())}`)}
-              style={styles.emptySearchAll}
-            >
-              <AppText style={styles.emptySearchAllLabel} variant="label">
-                Search everything you have written
-              </AppText>
-            </Pressable>
-          ) : null}
         </View>
       )}
     </Screen>
@@ -596,12 +578,6 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     maxWidth: 320,
     textAlign: "center",
-  },
-  emptySearchAll: {
-    marginTop: 6,
-  },
-  emptySearchAllLabel: {
-    color: colors.coral,
   },
   filterGroup: {
     gap: 8,
