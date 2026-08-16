@@ -107,6 +107,28 @@ varies. A send-only API key is enough.
 The EAS project is `@randomletters/siyi-app`. Production builds use the
 `production` EAS environment and bundle identifier `app.siyi.mobile`.
 
+Set `EXPO_PUBLIC_APP_DOMAIN` in the EAS production environment. Without it the
+build simply has no `associatedDomains`, so shared links open in a browser
+instead of the app, and nothing fails to tell you.
+
+### Store listing
+
+The files under `apps/mobile/store` are templates. Resolve them with:
+
+```bash
+npm run mobile:store:metadata            # writes apps/mobile/store/build
+npm run mobile:store:metadata -- --check # verifies without writing
+```
+
+It fills the `${…}` markers from the environment or `apps/mobile/.env.local`,
+refuses to write anything with a marker left in it, and checks the fields App
+Store Connect limits. `EXPO_PUBLIC_LEGAL_ENTITY_NAME` is empty by default and
+is what the copyright line and the legal pages name as the operator.
+
+`review-notes.txt` carries the review account. It has to be a real account with
+fictional people in it — the app is entirely behind a login, so review cannot
+see anything without one.
+
 Deploy the repository root to Vercel and configure the variables in
 `.env.example`. Configure the Apple values after creating the Sign in with
 Apple key; they are used for account-deletion token revocation and the
