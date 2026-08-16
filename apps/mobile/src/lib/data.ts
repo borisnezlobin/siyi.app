@@ -3067,3 +3067,30 @@ export async function catchUpStartersViaWeb(
     ? payload.starters.filter((entry): entry is string => typeof entry === "string")
     : [];
 }
+
+/**
+ * The calendar feed's token. Not part of the offline snapshot: the link is
+ * only useful to a calendar app that can reach the network anyway, and a
+ * stale copy of a token that has since been reset is worse than none.
+ */
+export async function getCalendarToken(userId: string) {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("calendar_token")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.calendar_token as string | null) ?? null;
+}
+
+/** A fresh token turns the feed on, and also resets it — the same write. */
+export async function saveCalendarToken(
+  userId: string,
+  token: string | null,
+) {
+  const { error } = await supabase
+    .from("user_profiles")
+    .update({ calendar_token: token })
+    .eq("auth_user_id", userId);
+  if (error) throw error;
+}
