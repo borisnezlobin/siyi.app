@@ -1,6 +1,7 @@
 import {
   AppleLogo,
   CheckSquare,
+  EnvelopeSimple,
   Eye,
   EyeSlash,
   GoogleLogo,
@@ -18,12 +19,14 @@ import {
 } from "@/components/keyboard-aware-form";
 import { LoadingState } from "@/components/load-state";
 import { brand } from "@/config/brand";
-import { colors, fontFamilies } from "@/constants/theme";
+import { cardShadow, colors, fontFamilies, radii } from "@/constants/theme";
 import { useAuth } from "@/providers/auth-provider";
 
 type AuthMode = "sign-in" | "sign-up";
 /** Password and emailed link are separate ways in, never both at once. */
 type EmailMethod = "password" | "link";
+
+type SentLink = { kind: "confirm" | "reset" | "sign-in"; email: string };
 
 type FieldErrors = {
   displayName?: string;
@@ -42,7 +45,9 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  // A one-line status under a still-filled form read as a failure, so a sent
+  // link takes over the whole screen instead.
+  const [sent, setSent] = useState<SentLink | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
@@ -67,7 +72,7 @@ export default function AuthScreen() {
 
   async function runAction(label: string, action: () => Promise<void>) {
     setLoadingAction(label);
-    setMessage(null);
+    setSent(null);
     setError(null);
     try {
       await action();
@@ -102,7 +107,7 @@ export default function AuthScreen() {
     const missing = missingFields();
     setFieldErrors(missing);
     if (Object.keys(missing).length > 0) {
-      setMessage(null);
+      setSent(null);
       setError(null);
       return;
     }
@@ -110,9 +115,7 @@ export default function AuthScreen() {
     if (!usingPassword) {
       await runAction("magic", async () => {
         await auth.sendMagicLink(email);
-        setMessage(
-          `We sent a sign-in link to ${email.trim()}. Open it on this phone.`,
-        );
+        setSent({ kind: "sign-in", email: email.trim() });
       });
       return;
     }
@@ -129,9 +132,7 @@ export default function AuthScreen() {
         marketingOptIn,
       );
       if (result === "confirmation-sent") {
-        setMessage(
-          "Check your email to confirm your account, then come back here.",
-        );
+        setSent({ kind: "confirm", email: email.trim() });
       }
     });
   }
@@ -140,7 +141,51 @@ export default function AuthScreen() {
     setMethod(next);
     setFieldErrors({});
     setError(null);
-    setMessage(null);
+    setSent(null);
+  }
+
+  if (sent) {
+    const linkKind =
+      sent.kind === "confirm"
+        ? "confirmation"
+        : sent.kind === "reset"
+          ? "password-reset"
+          : "sign-in";
+    const nextStep =
+      sent.kind === "confirm"
+        ? `Open it to confirm your account and finish setting up ${brand.shortName}.`
+        : sent.kind === "reset"
+          ? "Open it to choose a new password."
+          : "Open it on this phone and you are signed in.";
+
+    return (
+      <KeyboardAwareForm
+        bottomInset={40}
+        contentStyle={styles.sentScreen}
+        footer={
+          <Button
+            label="Back to sign in"
+            onPress={() => setSent(null)}
+            variant="quiet"
+          />
+        }
+        maxContentWidth={520}
+      >
+        <View style={styles.sentCard}>
+          <View style={styles.sentIcon}>
+            <EnvelopeSimple color={colors.paper} size={26} weight="bold" />
+          </View>
+          <AppText variant="display">Check your email</AppText>
+          <AppText style={styles.sentBody}>
+            {`Your ${linkKind} link is on its way to ${sent.email}. ${nextStep}`}
+          </AppText>
+          <AppText style={styles.sentBody} variant="caption">
+            It usually lands within a minute. If it has not shown up, have a
+            look in your spam folder.
+          </AppText>
+        </View>
+      </KeyboardAwareForm>
+    );
   }
 
   const primaryLabel = !usingPassword
@@ -177,7 +222,7 @@ export default function AuthScreen() {
                 setMode(option);
                 setFieldErrors({});
                 setError(null);
-                setMessage(null);
+                setSent(null);
               }}
               style={styles.modeTab}
             >
@@ -291,7 +336,7 @@ export default function AuthScreen() {
               }
               void runAction("reset", async () => {
                 await auth.sendPasswordReset(email);
-                setMessage("We sent a password-reset link to your email.");
+                setSent({ kind: "reset", email: email.trim() });
               });
             }}
             style={styles.inlineLink}
@@ -310,15 +355,6 @@ export default function AuthScreen() {
           variant="caption"
         >
           {auth.configurationError || error}
-        </AppText>
-      ) : null}
-      {message ? (
-        <AppText
-          accessibilityLiveRegion="polite"
-          style={styles.successText}
-          variant="caption"
-        >
-          {message}
         </AppText>
       ) : null}
 
@@ -423,8 +459,31 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.coralStrong,
   },
-  successText: {
-    color: colors.sageStrong,
+  sentScreen: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  sentCard: {
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    borderRadius: radii.large,
+    gap: 12,
+    paddingHorizontal: 26,
+    paddingVertical: 32,
+    ...cardShadow,
+  },
+  sentIcon: {
+    alignItems: "center",
+    backgroundColor: colors.ink,
+    borderRadius: 28,
+    height: 56,
+    justifyContent: "center",
+    marginBottom: 4,
+    width: 56,
+  },
+  sentBody: {
+    color: colors.inkMuted,
+    textAlign: "center",
   },
   consentRow: {
     alignItems: "flex-start",
