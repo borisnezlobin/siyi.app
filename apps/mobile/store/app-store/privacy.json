@@ -18,8 +18,14 @@
       "purposes": ["App Functionality"]
     }
   ],
-  "dataNotLinkedToUser": [],
+  "dataNotLinkedToUser": [
+    {
+      "category": "Diagnostics",
+      "types": ["Other Diagnostic Data"],
+      "purposes": ["App Functionality"]
+    }
+  ],
   "saleOfData": false,
   "targetedAdvertising": false,
-  "notes": "People, notes, contact details, interactions, photos, tags, and follow-ups are entered by the user and stored only to provide the private app. Device identifiers are random installation IDs used to refresh and revoke push subscriptions."
+  "notes": "People, notes, contact details, interactions, photos, tags, and follow-ups are entered by the user and stored only to provide the private app. Device identifiers are random installation IDs used to refresh and revoke push subscriptions. Diagnostics covers the IP address and request logs our hosting and database providers keep for security and reliability, which the privacy policy describes. Access to the device address book is optional and is used on the device to match and add contacts; the address book itself is never sent to our servers, so it is not declared as collected."
 }
