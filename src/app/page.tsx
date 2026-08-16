@@ -43,16 +43,15 @@ export default async function HomePage() {
           {/* Balanced rather than hard-broken: the same three <br /> tags that
               sat right at 1440 wrapped raggedly on a phone. */}
           <h1 className="text-balance font-display text-[2.9rem] leading-[0.95] tracking-[-0.045em] sm:text-[4rem] lg:text-[4.4rem]">
-            You met them once. {brand.shortName} makes sure it wasn’t the last
-            time.
+            Stay close to the people you just met.
           </h1>
           <div className="lg:pb-3">
             <p className="max-w-lg text-lg leading-8 text-ink-muted">
-              Write one sentence the day you meet someone. After that{" "}
-              {brand.shortName} does the remembering — the birthday, the favor
-              you promised, the friend you haven’t spoken to since October. Your
-              contacts sit and wait to be opened. {brand.shortName} comes and
-              finds you.
+              Write one sentence the day you meet someone, and{" "}
+              {brand.shortName} takes it from there — the birthday, the favor
+              you promised, the friend you haven’t spoken to since October. It
+              brings each of them up when it matters, so you don’t have to
+              remember to go looking.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -80,14 +79,14 @@ export default async function HomePage() {
       <section className="bg-ink text-white">
         <div className="mx-auto grid max-w-[1180px] gap-6 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
           <h2 className="font-display text-[2.4rem] leading-[0.95] tracking-[-0.03em] sm:text-5xl">
-            There is no feed here.
+            Private, and quiet about it.
           </h2>
           <p className="text-base leading-8 text-white/70">
-            {brand.shortName} is not social. Nothing you write is ranked,
-            scored, or shown to anyone, and there is no version of it where the
-            people you added find out. It’s a notebook, and it behaves like one
-            — you can take the whole thing with you, or delete every last line
-            of it, on any day you feel like it.
+            There is no feed in {brand.shortName}. Nothing you write is ranked,
+            scored, or shown to anyone, and the people you add are never told
+            they are in here. It is your notebook: export the whole thing
+            whenever you like, or delete every line of it, on any day you feel
+            like it.
           </p>
         </div>
       </section>
@@ -102,9 +101,9 @@ export default async function HomePage() {
             You met them.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-8 text-ink-muted">
-            Everything after that is remembering, and remembering is the bit a
-            phone is actually good at. Start with the last person you met and
-            see how little it takes.
+            Everything after that is keeping track, which a phone is genuinely
+            good at. Start with the last person you met and see how little it
+            takes.
           </p>
           <Link
             href="/auth?method=password&mode=signup"

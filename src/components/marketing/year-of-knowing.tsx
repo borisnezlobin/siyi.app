@@ -101,7 +101,7 @@ export function YearOfKnowing() {
         <Stop
           when="Tuesday night"
           title="Say who you saw, in four taps"
-          copy="Siyi guesses at who you probably ran into and asks once a day. Tapping a name is the whole interaction — it is what keeps everything else honest about when you last spoke."
+          copy="Siyi guesses at who you probably ran into and asks once a day. Tapping a name is the whole interaction, and it is how everything else knows when you last spoke."
         >
           <div className="rounded-[1.75rem] bg-white p-5 shadow-card sm:p-6">
             <p className="text-sm font-bold">Who did you see today?</p>
@@ -136,8 +136,8 @@ export function YearOfKnowing() {
 
         <Stop
           when="Three weeks in"
-          title="You find out before it’s awkward"
-          copy="Friendships rarely end. They just go quiet for long enough that reaching out starts to feel like a thing. Siyi counts the quiet for you and speaks up while it’s still nothing."
+          title="A nudge before it gets awkward"
+          copy="Most friendships go quiet long before they end, and the longer the quiet runs the harder it is to break. Siyi keeps count and says something early, while a text is still just a text."
         >
           <div className="rounded-[1.75rem] bg-white p-5 shadow-card sm:p-7">
             <div className="flex items-end gap-1" aria-hidden="true">
@@ -166,7 +166,7 @@ export function YearOfKnowing() {
         <Stop
           when="January"
           title="The follow-up you meant to do"
-          copy="Say you’ll send her the housing list and set it for Thursday. It waits with her name on it, so it’s a promise you kept rather than one you meant to."
+          copy="Say you’ll send her the housing list and set it for Thursday. It waits with her name on it and turns up that morning, so the thing you promised actually gets done."
         >
           <div className="space-y-3">
             <div className="flex items-center gap-4 rounded-[1.5rem] bg-white p-4 shadow-card">
@@ -202,7 +202,7 @@ export function YearOfKnowing() {
         <Stop
           when="March 3"
           title="Nobody has to remind you about a birthday"
-          copy="Every birthday you’ve ever written down sits on one calendar, and the ones that are close come and find you the morning of. No app has to be open for that to work."
+          copy="Every birthday you’ve ever written down sits on one calendar, and the ones coming up reach you the morning of. No app has to be open for that to work."
         >
           <div className="rounded-[1.75rem] bg-ink p-5 shadow-float sm:p-7">
             <div className="flex justify-between gap-1.5" aria-hidden="true">
