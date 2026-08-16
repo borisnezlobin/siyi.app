@@ -4,7 +4,7 @@ import { Bell, Check, MagnifyingGlass, NotePencil } from "phosphor-react-native"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
-import { Avatar } from "@/components/avatar";
+import { AvatarStack } from "@/components/avatar-stack";
 import { Button } from "@/components/button";
 import { RevealingTextInput } from "@/components/focus-scroll";
 import { ErrorState, LoadingState } from "@/components/load-state";
@@ -383,11 +383,7 @@ function ReminderRow({
       onPress={onOpen}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <Avatar
-        name={reminder.people[0]?.fullName || "Someone"}
-        size={40}
-        uri={reminder.people[0]?.profilePhotoUrl}
-      />
+      <AvatarStack people={reminder.people} size={40} />
       <View style={styles.rowCopy}>
         <AppText
           numberOfLines={2}

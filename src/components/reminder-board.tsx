@@ -5,7 +5,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Avatar } from "@/components/avatar";
+import { AvatarStack } from "@/components/avatar-stack";
 import {
   countsByBucket,
   reminderBucketEmptyLabels,
@@ -445,11 +445,7 @@ function ReminderRow({
 
   return (
     <li className="flex min-h-[4.25rem] items-center gap-3 border-b border-ink/[0.055] py-3">
-      <Avatar
-        name={reminder.people[0]?.fullName ?? "Someone"}
-        imageUrl={reminder.people[0]?.profilePhotoUrl}
-        size="sm"
-      />
+      <AvatarStack people={reminder.people} size="sm" />
 
       <div className="min-w-0 flex-1">
         {/* Linked only when there is one person to open. Several would make the
