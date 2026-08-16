@@ -166,6 +166,57 @@ because the offline queue is awkward is how it fell behind in the first place.
       i.e. the ordinary stack push. Don't re-attempt without a Reanimated
       upgrade that lists it as restored.
 
+## App Store submission
+
+Gone through on 2026-08-15 against the review guidelines. What the code was
+doing wrong is fixed and committed; what is left needs an account, a device or
+a decision, and cannot be done from the repository.
+
+Fixed in code:
+
+- [x] **The phone app could not be used at all past sign-in.** `(app)/_layout`
+      redirected every signed-in user to `/marketing-consent`, a route that
+      does not exist, because the flag it checked was never mapped and no
+      migration adds it. The sign-up form already asks the question.
+- [x] **Sign in with Apple was a disabled button** under "coming soon" while
+      Google worked — guideline 4.8, and 2.1 for the dead control. The native
+      flow was already written and correct; only the screen never called it.
+- [x] Face ID, microphone and local-network permissions were being shipped
+      with placeholder strings, for capabilities the app does not use.
+- [x] The found-photo path, which failed the save it was attached to and would
+      have been an Instagram scraper if anyone finished it.
+- [x] No error boundary: a render that threw took the whole app down.
+- [x] No way to report a shared page (guideline 1.2).
+- [x] Contacts access and the shareable card were missing from the privacy
+      policy and from the review notes.
+- [x] Dark and tinted app icons for iOS 18.
+- [x] `store/` placeholders resolve through `npm run mobile:store:metadata`,
+      which fails rather than emitting "2026 " as the copyright.
+
+Left, and blocking:
+
+- [ ] **An Apple Developer account.** Everything below waits on it, and it is
+      the one thing here nobody in the repo can do — see the age note in Ops.
+- [ ] **Screenshots.** None exist. At least one 6.9" iPhone set (1320×2868) is
+      required; `supportsTablet: false`, so no iPad set is owed. This needs the
+      app running on a device or simulator, which has never happened — the
+      mobile UI is covered by @testing-library/react-native and nothing else.
+- [ ] **A review account, seeded.** The app is entirely behind a login, so
+      review is blocked without one. Set `APP_REVIEW_EMAIL` and
+      `APP_REVIEW_PASSWORD` and preload fictional people. No real person data.
+- [ ] **Age rating questionnaire.** Unanswered anywhere. 4+ looks right: no
+      feed, no messaging between users, and the only published content is a
+      card you write about yourself.
+- [ ] `EXPO_PUBLIC_APP_DOMAIN` in the EAS **production** environment. Unset, it
+      silently drops `associatedDomains` and share links stop opening in the
+      app rather than failing loudly. `.env.example` is not what EAS reads.
+- [ ] `EXPO_APPLE_ID`, `EXPO_ASC_APP_ID`, `EXPO_APPLE_TEAM_ID` for the submit
+      profile, which reads them from the environment now.
+- [ ] `EXPO_PUBLIC_LEGAL_ENTITY_NAME` is empty, so the legal pages name
+      "Siyi.app" as the operator and the store copyright has nothing in it.
+- [ ] Run the app on a real device once before submitting. None of this has
+      ever been seen running.
+
 ## Ops / not code
 
 - [ ] Re-paste the five email templates into Supabase (they changed to
