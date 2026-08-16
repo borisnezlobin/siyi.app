@@ -78,6 +78,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "store:metadata": "node ./scripts/build-store-metadata.mjs",
     "test": "jest --runInBand"
   },
   "private": true,
