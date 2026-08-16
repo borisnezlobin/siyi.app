@@ -11,7 +11,8 @@ import * as Notifications from "expo-notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import type { ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ContactSyncOverlay } from "@/components/contact-sync-overlay";
@@ -77,6 +78,69 @@ function AppRuntime() {
     </>
   );
 }
+
+/**
+ * The last thing between a render that threw and a shut app.
+ *
+ * Deliberately built from plain Text and the system font: this has to draw
+ * when the fonts are what failed, and it sits above every provider, so it can
+ * assume none of them mounted.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <View style={errorStyles.screen}>
+      <Text style={errorStyles.title}>Something went wrong</Text>
+      <Text style={errorStyles.body}>
+        Nothing you saved has been lost. Try again, and if it keeps happening,
+        write to us and we will look into it.
+      </Text>
+      <Text style={errorStyles.detail}>{error.message}</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => void retry()}
+        style={errorStyles.action}
+      >
+        <Text style={errorStyles.actionLabel}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  screen: {
+    backgroundColor: colors.porcelain,
+    flex: 1,
+    gap: 14,
+    justifyContent: "center",
+    padding: 28,
+  },
+  title: {
+    color: colors.ink,
+    fontSize: 26,
+  },
+  body: {
+    color: colors.inkMuted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  detail: {
+    color: colors.inkMuted,
+    fontSize: 13,
+  },
+  action: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.coral,
+    borderRadius: 14,
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  actionLabel: {
+    color: colors.paper,
+    fontSize: 15,
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
