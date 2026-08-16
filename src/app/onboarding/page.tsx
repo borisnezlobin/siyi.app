@@ -3,15 +3,24 @@ import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Set up your account",
 };
 
 export default async function OnboardingPage() {
+  let knownName = "";
   if (isSupabaseConfigured()) {
     const user = await getAuthenticatedUser();
     if (!user) redirect("/auth");
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("display_name")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    knownName = (data?.display_name ?? "").trim();
   }
 
   return (
@@ -19,13 +28,13 @@ export default async function OnboardingPage() {
       <div className="mx-auto max-w-[620px]">
         <header className="space-y-2">
           <h1 className="font-display text-[2.75rem] leading-[0.95] tracking-[-0.04em]">
-            Make it yours
+            {knownName ? `Make it yours, ${knownName}` : "Make it yours"}
           </h1>
           <p className="text-sm leading-6 text-ink-muted">
             You can change all of this from Settings.
           </p>
         </header>
-        <OnboardingForm />
+        <OnboardingForm knownName={knownName} />
       </div>
     </main>
   );

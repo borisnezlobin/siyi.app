@@ -34,15 +34,19 @@ export async function POST(request: NextRequest) {
           onboarding_completed_at: new Date().toISOString(),
         })
         .eq("auth_user_id", user.id),
-      supabase
-        .from("notification_preferences")
-        .upsert({
+      // The primary key is id, so the conflict target has to be named
+      // explicitly or this tries to insert a second row for a user who
+      // already got one from the signup trigger.
+      supabase.from("notification_preferences").upsert(
+        {
           user_id: user.id,
           push_enabled: settings.pushEnabled,
           overdue_contact_enabled: settings.overdueContactEnabled,
           birthday_enabled: settings.birthdayEnabled,
           follow_up_enabled: settings.reminderEnabled,
-        }),
+        },
+        { onConflict: "user_id" },
+      ),
     ]);
 
     if (profileError || preferenceError) {
