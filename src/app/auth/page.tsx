@@ -1,4 +1,4 @@
-import { AppleLogo } from "@phosphor-icons/react/dist/ssr";
+import { AppleLogo, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -47,15 +47,52 @@ export default async function AuthPage({
   const error = isExpired
     ? "That link has expired. Magic links are short-lived, so request a new one."
     : parameters.error;
-  const message = parameters.sent
-    ? `We sent ${
-        parameters.reason === "confirm"
-          ? "a confirmation"
-          : parameters.reason === "reset"
-            ? "a password-reset"
-            : "a sign-in"
-      } link to ${parameters.sent}. It can take a minute to arrive — check your spam folder if it does not show up.`
-    : null;
+  // A one-line status under a still-filled form read as a failure. When
+  // something has been sent, the sent state is the whole screen.
+  if (parameters.sent && !error) {
+    const linkKind =
+      parameters.reason === "confirm"
+        ? "confirmation"
+        : parameters.reason === "reset"
+          ? "password-reset"
+          : "sign-in";
+    const nextStep =
+      parameters.reason === "confirm"
+        ? `Open it to confirm your account and finish setting up ${brand.shortName}.`
+        : parameters.reason === "reset"
+          ? "Open it to choose a new password."
+          : "Open it and you are signed in. No password needed.";
+
+    return (
+      <main className="flex min-h-screen items-center bg-porcelain px-5 py-10">
+        <div className="mx-auto w-full max-w-[520px]">
+          <div className="rounded-3xl bg-white p-8 text-center shadow-card">
+            <span className="mx-auto grid size-14 place-items-center rounded-full bg-ink text-white">
+              <EnvelopeSimple size={26} weight="bold" aria-hidden="true" />
+            </span>
+            <h1 className="mt-5 font-display text-[2.25rem] leading-[1] tracking-[-0.03em]">
+              Check your email
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-ink-muted">
+              Your {linkKind} link is on its way to{" "}
+              <span className="font-semibold text-ink">{parameters.sent}</span>.{" "}
+              {nextStep}
+            </p>
+            <p className="mt-4 text-xs leading-5 text-ink-muted">
+              It usually lands within a minute. If it has not shown up, have a
+              look in your spam folder.
+            </p>
+          </div>
+          <Link
+            href="/auth"
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold text-ink transition-colors hover:bg-ink/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center bg-porcelain px-5 py-10">
@@ -192,11 +229,6 @@ export default async function AuthPage({
         {error ? (
           <p role="alert" className="text-xs leading-5 text-coral-strong">
             {error}
-          </p>
-        ) : null}
-        {message ? (
-          <p role="status" className="text-xs leading-5 text-sage-strong">
-            {message}
           </p>
         ) : null}
 
