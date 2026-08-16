@@ -29,6 +29,8 @@ type DateFieldProps = Omit<TextInputProps, "onChangeText" | "value"> & {
   hint?: string;
   error?: string;
   bottomSheet?: boolean;
+  /** For a field the calendar is the point of, like a reminder's "when?". */
+  defaultOpen?: boolean;
   /** Always YYYY-MM-DD once it can be read, and whatever was typed until then. */
   value: string;
   onChangeText: (value: string) => void;
@@ -44,13 +46,14 @@ export function DateField({
   value,
   onChangeText,
   bottomSheet = false,
+  defaultOpen = false,
   maximumDate,
   minimumDate,
   error,
   onBlur,
   ...props
 }: DateFieldProps) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(defaultOpen);
   const understood = dateInputLabel(value);
   const unreadable = value.trim().length > 0 && !understood;
   const pickerValue = dateFromDateInput(value) ?? maximumDate ?? new Date();
