@@ -119,7 +119,14 @@ export default async function SharedPersonPage({
         <Link href="/" className="font-semibold text-ink hover:underline">
           {brand.name}
         </Link>
-        , a private place to remember the people in your life.
+        , a private place to remember the people in your life.{" "}
+        <Link
+          href="/support"
+          className="font-semibold text-ink hover:underline"
+        >
+          Report this card
+        </Link>{" "}
+        if it should not have been sent to you.
       </p>
     </main>
   );
