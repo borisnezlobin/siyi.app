@@ -31,6 +31,12 @@ type ScreenProps = ScrollViewProps & {
   showBack?: boolean;
   /** Controls that stay put on the glass while the list scrolls under them. */
   stickyHeader?: React.ReactNode;
+  /**
+   * The screen's primary action, pinned outside the scrolling region so the
+   * keyboard lifts it rather than burying it. Same contract as a sheet's
+   * footer, for the same reason: padding cannot rescue a button below the fold.
+   */
+  footer?: React.ReactNode;
 };
 
 export function Screen({
@@ -45,6 +51,7 @@ export function Screen({
   keyboardAvoiding = true,
   showBack = false,
   stickyHeader,
+  footer,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
@@ -141,6 +148,18 @@ export function Screen({
 
           {children}
         </ScrollView>
+        {footer ? (
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 14) },
+            ]}
+          >
+            <View style={[styles.footerInner, { maxWidth: maxContentWidth }]}>
+              {footer}
+            </View>
+          </View>
+        ) : null}
       </FocusScrollProvider>
     </KeyboardAvoidingView>
   );
@@ -167,6 +186,17 @@ const styles = StyleSheet.create({
   // colour goes back in and the list stops showing through the gaps.
   stickyFallback: {
     backgroundColor: colors.porcelain,
+  },
+  footer: {
+    backgroundColor: colors.porcelain,
+    borderTopColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  footerInner: {
+    alignSelf: "center",
+    width: "100%",
   },
   backRow: {
     alignItems: "flex-start",
