@@ -19,11 +19,6 @@ export default function AuthenticatedLayout() {
 
   if (loading) return <LoadingState />;
   if (!session) return <Redirect href="/auth" />;
-  // Asked before onboarding, the same order the website asks in: the question
-  // belongs to signing up, not to the app.
-  if (profile && !profile.marketingPromptedAt) {
-    return <Redirect href="/marketing-consent" />;
-  }
   if (!profile?.onboardingCompletedAt) {
     return <Redirect href="/onboarding" />;
   }
