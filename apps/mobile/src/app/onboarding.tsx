@@ -22,9 +22,10 @@ export default function OnboardingScreen() {
     Intl.DateTimeFormat().resolvedOptions().timeZone ||
     "UTC";
   const locale = Localization.getLocales()[0]?.languageTag || "en-US";
-  const [displayName, setDisplayName] = useState(
-    auth.profile?.displayName || "",
-  );
+  // Signup already asked for a name, so the field only appears for the accounts
+  // that arrived without one — a provider sign-in that handed over no profile.
+  const knownName = (auth.profile?.displayName || "").trim();
+  const [displayName, setDisplayName] = useState(knownName);
   const [timezone, setTimezone] = useState(detectedTimezone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,25 +93,29 @@ export default function OnboardingScreen() {
       maxContentWidth={720}
     >
       <View style={styles.intro}>
-        <AppText variant="display">Make it yours</AppText>
+        <AppText variant="display">
+          {knownName ? `Make it yours, ${knownName}` : "Make it yours"}
+        </AppText>
         <AppText style={styles.muted}>
           You can change all of this from Settings.
         </AppText>
       </View>
 
-      <FormField
-        autoCapitalize="words"
-        autoComplete="name"
-        error={nameError ?? undefined}
-        label="Your name"
-        onChangeText={(value) => {
-          setDisplayName(value);
-          if (nameError) setNameError(null);
-        }}
-        placeholder="What should we call you?"
-        returnKeyType="done"
-        value={displayName}
-      />
+      {knownName ? null : (
+        <FormField
+          autoCapitalize="words"
+          autoComplete="name"
+          error={nameError ?? undefined}
+          label="Your name"
+          onChangeText={(value) => {
+            setDisplayName(value);
+            if (nameError) setNameError(null);
+          }}
+          placeholder="What should we call you?"
+          returnKeyType="done"
+          value={displayName}
+        />
+      )}
 
       <View style={styles.timezoneGroup}>
         <View style={styles.timezoneCopy}>

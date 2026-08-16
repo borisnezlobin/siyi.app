@@ -7,9 +7,11 @@ import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
 import { friendlyTimezoneOptions } from "@/lib/timezones";
 
-export function OnboardingForm() {
+// Signup already asked for a name, so the field only appears for the accounts
+// that arrived without one — a provider sign-in that handed over no profile.
+export function OnboardingForm({ knownName }: { knownName: string }) {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(knownName);
   const [timezone, setTimezone] = useState("UTC");
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState("");
@@ -78,25 +80,27 @@ export function OnboardingForm() {
       }}
       className="mt-8 space-y-7"
     >
-      <label className="block text-xs font-semibold text-ink-muted">
-        Your name
-        <input
-          autoFocus
-          value={displayName}
-          onChange={(event) => {
-            setDisplayName(event.target.value);
-            if (nameError) setNameError("");
-          }}
-          autoComplete="name"
-          placeholder="What should we call you?"
-          className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
-        />
-        {nameError ? (
-          <span className="mt-1.5 block text-xs font-normal text-coral-strong">
-            {nameError}
-          </span>
-        ) : null}
-      </label>
+      {knownName ? null : (
+        <label className="block text-xs font-semibold text-ink-muted">
+          Your name
+          <input
+            autoFocus
+            value={displayName}
+            onChange={(event) => {
+              setDisplayName(event.target.value);
+              if (nameError) setNameError("");
+            }}
+            autoComplete="name"
+            placeholder="What should we call you?"
+            className="mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20"
+          />
+          {nameError ? (
+            <span className="mt-1.5 block text-xs font-normal text-coral-strong">
+              {nameError}
+            </span>
+          ) : null}
+        </label>
+      )}
 
       <label className="block text-sm font-semibold">
         Your local time
