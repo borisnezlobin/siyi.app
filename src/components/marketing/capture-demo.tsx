@@ -326,8 +326,8 @@ export function CaptureDemo() {
       </div>
 
       <p className="mt-5 text-center text-sm leading-7 text-ink-muted">
-        You wrote one line about Amelia in September. You did not open the app
-        again.
+        You wrote one line about Amelia in September. Everything above happened
+        without you opening the app again.
       </p>
     </div>
   );
