@@ -33,6 +33,14 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier,
     buildNumber: "1",
+    // Left as one image, iOS makes its own grey of the light icon for tinted
+    // mode, and the sage ground goes muddy. Rendered from the -source.svg
+    // files beside them.
+    icon: {
+      light: "./assets/images/icon.png",
+      dark: "./assets/images/icon-dark.png",
+      tinted: "./assets/images/icon-tinted.png",
+    },
     supportsTablet: false,
     usesAppleSignIn: iosProtectedCapabilitiesEnabled,
     associatedDomains: appDomain ? [`applinks:${appDomain}`] : undefined,
