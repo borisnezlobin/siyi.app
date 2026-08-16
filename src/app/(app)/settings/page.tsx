@@ -1,3 +1,4 @@
+import { CalendarFeedControls } from "@/components/calendar-feed-controls";
 import { DefaultUniversityControl } from "@/components/default-university-control";
 import { ProfileControls } from "@/components/profile-controls";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
   let initialDefaultUniversity = "";
   let initialTimezone = "America/Los_Angeles";
   let initialMarketingOptIn = false;
+  let initialCalendarToken: string | null = null;
   let initialIntervals: Record<RelationshipStrength, number> = {
     ...DEFAULT_REMINDER_INTERVALS,
   };
@@ -44,7 +46,9 @@ export default async function SettingsPage() {
     const [{ data: profile }, { data: settings }] = await Promise.all([
       supabase
         .from("user_profiles")
-        .select("timezone,handle,handle_tag,profile_public,public_fields")
+        .select(
+          "timezone,handle,handle_tag,profile_public,public_fields,calendar_token",
+        )
         .eq("auth_user_id", user.id)
         .maybeSingle(),
       supabase
@@ -59,6 +63,7 @@ export default async function SettingsPage() {
     initialHandle = profile?.handle ?? "";
     initialHandleTag = profile?.handle_tag ?? "";
     initialProfilePublic = profile?.profile_public ?? false;
+    initialCalendarToken = profile?.calendar_token ?? null;
 
     // Read consent on its own so a deployment that lands before migration
     // 0007 cannot null out the whole profile row and reset the timezone.
@@ -115,6 +120,16 @@ export default async function SettingsPage() {
             Push and reminder timing
             <CaretRight size={14} aria-hidden="true" />
           </Link>
+        </section>
+
+        <section className="py-7">
+          <h2 className="text-sm font-bold">Calendar</h2>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            Birthdays and reminders, in the calendar you already use.
+          </p>
+          <div className="mt-4">
+            <CalendarFeedControls initialToken={initialCalendarToken} />
+          </div>
         </section>
 
         {/* A default for the people you add, not a detail about you — so it

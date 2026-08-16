@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { OwnCardSection } from "@/components/own-card-section";
 import { AppText } from "@/components/app-text";
+import { CalendarFeedSection } from "@/components/calendar-feed-section";
 import { Button } from "@/components/button";
 import { CollegeField } from "@/components/college-field";
 import { FormField } from "@/components/form-field";
@@ -329,6 +330,11 @@ export default function SettingsScreen() {
           label="Push and reminder timing"
           onPress={() => router.push("/notifications")}
         />
+      </Section>
+
+      {/* Same place as the web settings page: right after notifications. */}
+      <Section title="Calendar">
+        <CalendarFeedSection />
       </Section>
 
       <DeviceContactsSection />
