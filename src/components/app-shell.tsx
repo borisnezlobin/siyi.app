@@ -17,6 +17,7 @@ import {
   QuickCaptureTrigger,
 } from "@/components/quick-capture-hub";
 import { AnnouncementBanner } from "@/components/announcement-banner";
+import { FoundPhotoHost } from "@/components/found-photo-host";
 import { brand } from "@/config/brand";
 import { InstallPrompt } from "@/components/install-prompt";
 
@@ -238,6 +239,8 @@ export function AppShell({
         menuOpen={quickCaptureOpen}
         onMenuOpenChange={setQuickCaptureOpen}
       />
+      {/* Outside the page, so an offer outlives the navigation that starts it. */}
+      <FoundPhotoHost />
     </div>
   );
 }

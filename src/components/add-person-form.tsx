@@ -17,6 +17,7 @@ import { Avatar } from "@/components/avatar";
 import { ContactFields } from "@/components/contact-fields";
 import { RelationshipFields } from "@/components/relationship-fields";
 import { parseContactDraftsJson } from "@/lib/contact-methods";
+import { offerFoundPhoto } from "@/lib/found-photo-ui";
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { createClient } from "@/lib/supabase/client";
@@ -144,6 +145,12 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
 
         if (!result?.person) {
           throw new Error("The app returned an unexpected response. Try again.");
+        }
+
+        // Only ever fills a gap, and never delays leaving the page: the offer
+        // is hosted up in the shell, so it can arrive after the navigation.
+        if (!profilePhotoUrl) {
+          void offerFoundPhoto(result.person.id, payload.instagramUsername);
         }
 
         router.push(`/people/${result.person.id}`);
