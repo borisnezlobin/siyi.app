@@ -67,10 +67,18 @@ export function ContactMethodField({
   kind,
   drafts,
   onChange,
+  bottomSheet = false,
 }: {
   kind: ContactMethodKind;
   drafts: ContactMethodDraft[];
   onChange: (drafts: ContactMethodDraft[]) => void;
+  /**
+   * Forwarded to every field in the group. A plain TextInput never registers
+   * with the sheet it sits in, so the sheet never knows to lift for the
+   * keyboard — this was the one field component in the set that could not be
+   * told, which made it a trap for whoever next put this form in a sheet.
+   */
+  bottomSheet?: boolean;
 }) {
   const { heading, noun, placeholder, labelPlaceholder, inputProps } =
     presentation[kind];
@@ -94,6 +102,7 @@ export function ContactMethodField({
           <View style={styles.valueField}>
             <FormField
               {...inputProps}
+              bottomSheet={bottomSheet}
               label={showRowControls ? `${heading} ${ordinal + 1}` : heading}
               onBlur={() => {
                 if (kind !== "instagram") return;
@@ -115,6 +124,7 @@ export function ContactMethodField({
             <View style={styles.rowControls}>
               <View style={styles.labelField}>
                 <FormField
+                  bottomSheet={bottomSheet}
                   label="Label"
                   maxLength={maxContactMethodLabelLength}
                   onChangeText={(label) => replaceAt(index, { label })}

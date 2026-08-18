@@ -374,3 +374,19 @@ export const personShareInputSchema = z.object({
 });
 
 export type PersonShareInput = z.infer<typeof personShareInputSchema>;
+
+/**
+ * Writing a review for the public /reviews page.
+ *
+ * The rating is bounded here and again by a check constraint on the table. What
+ * is deliberately absent is any way for the client to set `status`: a review
+ * arrives pending and is published by a person, never by the request that
+ * created it.
+ */
+export const reviewInputSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  body: z.string().trim().min(20).max(1200),
+  authorLabel: z.string().trim().min(1).max(60),
+});
+
+export type ReviewInput = z.infer<typeof reviewInputSchema>;

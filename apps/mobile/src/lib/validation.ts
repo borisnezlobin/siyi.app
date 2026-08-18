@@ -70,8 +70,11 @@ export const personInputSchema = z.object({
     .nullable()
     .transform((value) => value || null),
   birthday: z
+    // `.date()` rather than a shape check: the regex accepted 2026-13-45,
+    // which the web rejects, so the same typed birthday saved on one app and
+    // failed on the other.
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .date()
     .or(z.literal(""))
     .optional()
     .nullable()
@@ -123,7 +126,9 @@ export const personInputSchema = z.object({
     .max(3650)
     .optional()
     .nullable(),
-  status: z.enum(personStatuses).optional(),
+  // Defaulted, not optional, so a person created on the phone carries the same
+  // status as one created on the web rather than `undefined`.
+  status: z.enum(personStatuses).default("active"),
   firstMetAt: pastTimestamp.optional(),
   firstMetLocation: optionalText,
   generalNotes: optionalText,

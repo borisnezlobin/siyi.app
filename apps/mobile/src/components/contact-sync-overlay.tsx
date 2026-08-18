@@ -1,8 +1,9 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from "react";
-import { Modal, StyleSheet, View } from "react-native";
+import { useEffect, useSyncExternalStore } from "react";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
+import { Sheet } from "@/components/sheet";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import {
   dismissContactSyncRun,
@@ -60,15 +61,8 @@ export function ContactsAccessExplainer({
           current as you edit them.
         </AppText>
         <AppText style={styles.body}>
-          To do that without making duplicates, Siyi reads your address book to
-          find the person you already have. That happens entirely on this phone.
-          Your contacts are never uploaded and never leave the device; all Siyi
-          keeps is a note of which contact goes with which person.
-        </AppText>
-        <AppText style={styles.body}>
-          Siyi only adds details that aren&rsquo;t there yet. A number or address
-          already saved on a contact is left exactly as it is, and you&rsquo;ll
-          see a count of anything it left alone.
+          It reads your address book on this phone to avoid duplicates, and only
+          fills in what is missing. Your contacts never leave the device.
         </AppText>
       </View>
       <AppText style={styles.footnote} variant="caption">
@@ -231,28 +225,7 @@ function ContactSyncToast({ id, message }: { id: number; message: string }) {
   );
 }
 
-function Sheet({
-  visible,
-  onRequestClose,
-  children,
-}: {
-  visible: boolean;
-  onRequestClose?: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onRequestClose}
-      transparent
-      visible={visible}
-    >
-      <View style={styles.scrim}>
-        <View style={styles.sheet}>{children}</View>
-      </View>
-    </Modal>
-  );
-}
+
 
 const styles = StyleSheet.create({
   scrim: {

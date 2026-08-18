@@ -95,6 +95,18 @@ function matchRank(college: College, query: string): number | null {
   return null;
 }
 
+/**
+ * Builds the parsed table without asking it anything.
+ *
+ * The first real search pays for splitting a megabyte of text, and on the phone
+ * that lands on the first keystroke — the worst possible moment, because the
+ * keyboard is already up and the person is already typing. Calling this when a
+ * field is focused moves that cost to the pause before they start.
+ */
+export function warmColleges() {
+  allColleges();
+}
+
 export function searchColleges(rawQuery: string, limit = 8): College[] {
   const query = normalizeCollegeText(rawQuery);
   if (query.length < 2) return [];

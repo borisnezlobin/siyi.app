@@ -11,7 +11,7 @@ import {
 } from "phosphor-react-native";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AppText } from "@/components/app-text";
@@ -25,6 +25,7 @@ import {
   SectionHeading,
 } from "@/components/surface";
 import { brand } from "@/config/brand";
+import { readableError } from "@/lib/error-text";
 import { colors, radii } from "@/constants/theme";
 import { ageAtNextBirthday } from "@/lib/birthday-age";
 import { lastSeenLabel } from "@/lib/relative-time";
@@ -203,8 +204,14 @@ export default function TodayScreen() {
         Haptics.NotificationFeedbackType.Success,
       );
       await screenData.reload();
-    } catch {
+    } catch (error) {
+      // A buzz was the only thing that happened here, which is indistinguishable
+      // from a mis-tap. The reminder is still open and the reader should know.
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "That did not save",
+        readableError(error, "The reminder is still open. Try again in a moment."),
+      );
     }
   }
 

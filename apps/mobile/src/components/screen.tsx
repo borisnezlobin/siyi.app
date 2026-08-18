@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { ArrowLeft } from "phosphor-react-native";
 import {
   KeyboardAvoidingView,
@@ -31,6 +32,12 @@ type ScreenProps = ScrollViewProps & {
   showBack?: boolean;
   /** Controls that stay put on the glass while the list scrolls under them. */
   stickyHeader?: React.ReactNode;
+  /**
+   * The screen's primary action, pinned above the safe area. A button at the
+   * end of a list is only reachable by scrolling to the end of the list, and on
+   * a long one it is not obvious it is there at all.
+   */
+  footer?: React.ReactNode;
 };
 
 export function Screen({
@@ -45,6 +52,7 @@ export function Screen({
   keyboardAvoiding = true,
   showBack = false,
   stickyHeader,
+  footer,
   contentContainerStyle,
   ...props
 }: ScreenProps) {
@@ -70,6 +78,9 @@ export function Screen({
   // decides its index, and getting it wrong sticks the wrong thing.
   const stickyIndex = (showBack ? 1 : 0) + (heading ? 1 : 0);
   const { focusScroll, scrollProps } = useFocusScrollArea();
+  // Measured rather than assumed: the footer holds whatever the screen puts in
+  // it, and a guessed height either hides the last row or leaves a gap.
+  const [footerHeight, setFooterHeight] = useState(0);
 
   return (
     <KeyboardAvoidingView
@@ -90,7 +101,7 @@ export function Screen({
               // With a sticky block the inset is on the scroll view itself, so
               // the block pins below the status bar rather than under it.
               paddingTop: stickyHeader ? 10 : Math.max(insets.top + 10, 22),
-              paddingBottom: bottomInset + insets.bottom,
+              paddingBottom: bottomInset + insets.bottom + footerHeight,
             },
             contentContainerStyle,
           ]}
@@ -141,12 +152,37 @@ export function Screen({
 
           {children}
         </ScrollView>
+
+        {footer ? (
+          <View
+            onLayout={(event) =>
+              setFooterHeight(event.nativeEvent.layout.height)
+            }
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom, 12) },
+            ]}
+          >
+            {footer}
+          </View>
+        ) : null}
       </FocusScrollProvider>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  footer: {
+    backgroundColor: colors.porcelain,
+    borderTopColor: colors.mist,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    position: "absolute",
+    right: 0,
+  },
   fill: {
     backgroundColor: colors.porcelain,
     flex: 1,

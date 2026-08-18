@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminUserFacts } from "@/lib/admin";
 import type * as adminDataModule from "@/lib/admin-data";
@@ -84,11 +84,19 @@ describe("arriving at /admin as an allowlisted admin", () => {
 
     expect(screen.getByRole("heading", { name: "Admin" })).toBeTruthy();
     expect(screen.getByText("How Siyi is doing")).toBeTruthy();
-    // Three accounts, one with push, 125 contacts between them.
-    expect(screen.getByText("Total users")).toBeTruthy();
-    expect(screen.getByText("3")).toBeTruthy();
-    expect(screen.getByText("Contacts saved")).toBeTruthy();
-    expect(screen.getByText("125")).toBeTruthy();
+    // Three accounts, one with push, 125 contacts between them. Each number is
+    // read out of its own card: bare counts like "3" now appear in the funnel
+    // and retention tables too, and a document-wide match would be asserting
+    // that some element somewhere says 3.
+    const statCard = (label: string) => {
+      const heading = screen.getByText(label);
+      const card = heading.parentElement;
+      if (!card) throw new Error(`${label} card has no container`);
+      return within(card);
+    };
+
+    expect(statCard("Total users").getByText("3")).toBeTruthy();
+    expect(statCard("Contacts saved").getByText("125")).toBeTruthy();
     expect(notFound).not.toHaveBeenCalled();
   });
 

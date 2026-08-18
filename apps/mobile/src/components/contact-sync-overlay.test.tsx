@@ -92,7 +92,7 @@ describe("asking for contacts access", () => {
 
     expect(screen.getByText(explainerTitle)).toBeTruthy();
     expect(
-      screen.getByText(/reads your address book to find the person/),
+      screen.getByText(/reads your address book on this phone to avoid duplicates/),
     ).toBeTruthy();
     expect(mockRequestPermissions).not.toHaveBeenCalled();
 

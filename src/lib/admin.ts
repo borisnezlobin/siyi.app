@@ -12,6 +12,10 @@ export type AdminUserFacts = {
   lastActiveAt: string | null;
   marketingOptIn: boolean;
   emailConfirmedAt: string | null;
+  /** The account that referred this one, if any. */
+  referredBy?: string | null;
+  /** This account's own code, present only once it has asked for one. */
+  referralCode?: string | null;
 };
 
 export type AdminSegment = {
@@ -249,4 +253,151 @@ export function bucketContactCounts(
     users: counts.filter((count) => bucketForContactCount(count).id === bucket.id)
       .length,
   }));
+}
+
+/**
+ * Retention and activation.
+ *
+ * The question this answers is the one that matters after a growth push: people
+ * arrived, so did they stay? Both are computed from facts already collected —
+ * when an account was created and when it was last active — so nothing new has
+ * to be recorded to start seeing the answer.
+ */
+
+export type ActivationFunnel = {
+  signedUp: number;
+  addedFirstPerson: number;
+  addedThreePeople: number;
+  returnedAfterFirstDay: number;
+};
+
+/**
+ * Where people fall out between signing up and having a reason to come back.
+ *
+ * Restricted to accounts old enough to have had the chance: an account created
+ * this morning has not failed to return, it simply has not had a second day
+ * yet, and counting it as a drop-off makes every funnel look worse the faster
+ * you are growing.
+ */
+export function activationFunnel(
+  users: AdminUserFacts[],
+  now: Date = new Date(),
+): ActivationFunnel {
+  const eligible = users.filter((facts) => {
+    const created = new Date(facts.createdAt).getTime();
+    return !Number.isNaN(created) && now.getTime() - created >= dayInMs;
+  });
+
+  return {
+    signedUp: eligible.length,
+    addedFirstPerson: eligible.filter((facts) => facts.contactCount >= 1).length,
+    addedThreePeople: eligible.filter((facts) => facts.contactCount >= 3).length,
+    returnedAfterFirstDay: eligible.filter((facts) => {
+      if (!facts.lastActiveAt) return false;
+      const created = new Date(facts.createdAt).getTime();
+      const active = new Date(facts.lastActiveAt).getTime();
+      if (Number.isNaN(created) || Number.isNaN(active)) return false;
+      // Activity strictly after the first 24 hours. `lastActiveAt` defaults to
+      // the signup timestamp, so anything inside that window is the signup
+      // itself rather than a return visit.
+      return active - created >= dayInMs;
+    }).length,
+  };
+}
+
+export type RetentionCohort = {
+  weekStarting: string;
+  signedUp: number;
+  /** Still active at least a week after joining. */
+  activeAfter7: number;
+  /** Still active at least a month after joining. Null until the cohort is old enough to say. */
+  activeAfter30: number | null;
+};
+
+function startOfWeek(date: Date) {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+  return start;
+}
+
+/**
+ * Weekly signup cohorts and how many of each were still around later.
+ *
+ * A cohort younger than the window it is being measured against reports null
+ * rather than zero. A two-week-old cohort has not failed its 30-day retention;
+ * it has not reached it, and showing a 0% there would read as a catastrophe
+ * every single week.
+ */
+export function retentionCohorts(
+  users: AdminUserFacts[],
+  now: Date = new Date(),
+  weeks = 8,
+): RetentionCohort[] {
+  const cohorts: RetentionCohort[] = [];
+  const thisWeek = startOfWeek(now);
+
+  for (let index = weeks - 1; index >= 0; index -= 1) {
+    const start = new Date(thisWeek);
+    start.setUTCDate(start.getUTCDate() - index * 7);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 7);
+
+    const members = users.filter((facts) => {
+      const created = new Date(facts.createdAt);
+      return !Number.isNaN(created.getTime()) && created >= start && created < end;
+    });
+
+    const survivedFor = (days: number) =>
+      members.filter((facts) => {
+        if (!facts.lastActiveAt) return false;
+        const created = new Date(facts.createdAt).getTime();
+        const active = new Date(facts.lastActiveAt).getTime();
+        if (Number.isNaN(created) || Number.isNaN(active)) return false;
+        return active - created >= days * dayInMs;
+      }).length;
+
+    // Measured from the end of the cohort week, so the youngest member has also
+    // had the full window.
+    const cohortMature = (days: number) =>
+      now.getTime() - end.getTime() >= days * dayInMs;
+
+    cohorts.push({
+      weekStarting: start.toISOString().slice(0, 10),
+      signedUp: members.length,
+      activeAfter7: survivedFor(7),
+      activeAfter30: cohortMature(30) ? survivedFor(30) : null,
+    });
+  }
+
+  return cohorts;
+}
+
+export type ReferralStanding = { code: string; joined: number };
+
+/**
+ * Who has brought the most people in. Codes rather than names or ids: the
+ * question an ambassador programme asks is which codes are working, and there
+ * is no reason for that screen to identify anybody.
+ */
+export function referralStandings(
+  users: AdminUserFacts[],
+  limit = 20,
+): ReferralStanding[] {
+  const joinedBy = new Map<string, number>();
+  for (const facts of users) {
+    if (!facts.referredBy) continue;
+    joinedBy.set(facts.referredBy, (joinedBy.get(facts.referredBy) ?? 0) + 1);
+  }
+
+  const codeFor = new Map(
+    users
+      .filter((facts) => facts.referralCode)
+      .map((facts) => [facts.userId, facts.referralCode as string]),
+  );
+
+  return [...joinedBy.entries()]
+    .map(([userId, joined]) => ({ code: codeFor.get(userId) ?? "unknown", joined }))
+    .sort((a, b) => b.joined - a.joined || a.code.localeCompare(b.code))
+    .slice(0, limit);
 }

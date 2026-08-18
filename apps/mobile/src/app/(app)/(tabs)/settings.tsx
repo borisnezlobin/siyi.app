@@ -15,6 +15,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { OwnCardSection } from "@/components/own-card-section";
+import { ReferralSection } from "@/components/referral-section";
 import { AppText } from "@/components/app-text";
 import { CalendarFeedSection } from "@/components/calendar-feed-section";
 import { Button } from "@/components/button";
@@ -322,6 +323,10 @@ export default function SettingsScreen() {
           the web puts it on this page too. */}
       <Section title="Your card">
         <OwnCardSection />
+      </Section>
+
+      <Section title="Invite a friend">
+        <ReferralSection />
       </Section>
 
       <Section title="Notifications">

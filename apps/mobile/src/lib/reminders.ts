@@ -32,11 +32,16 @@ export function reminderDueDate(
   person: Person,
   defaults: ReminderDefaults = defaultReminderIntervals,
 ) {
+  // `??`, not `||`, to match the web: a stored interval of 0 is a value the
+  // person chose, and `||` quietly replaced it with the default for their
+  // relationship strength, so the two apps would have disagreed about who was
+  // overdue. Validation puts a floor of 1 on it today, which is why nobody has
+  // hit this — but the two files must not read differently.
   const latestInteraction = new Date(
-    person.lastInteractionAt || person.firstMetAt,
+    person.lastInteractionAt ?? person.firstMetAt,
   );
   const interval =
-    person.reminderIntervalDays || defaults[person.relationshipStrength];
+    person.reminderIntervalDays ?? defaults[person.relationshipStrength];
   const due = new Date(latestInteraction);
   due.setDate(due.getDate() + interval);
   return due;
@@ -51,11 +56,6 @@ export function overdueDays(
   return Math.max(0, daysBetween(reminderDueDate(person, defaults), now));
 }
 
-export function formatOverdueDuration(overdue: number): string {
-  if (overdue <= 0) return "Due today";
-  if (overdue === 1) return "1 day overdue";
-  return `${overdue} days overdue`;
-}
 
 export function nextReminderDate(
   person: Person,

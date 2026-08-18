@@ -14,7 +14,9 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { ContactSyncOverlay } from "@/components/contact-sync-overlay";
+import { FoundPhotoOverlay } from "@/components/found-photo-overlay";
 import { colors } from "@/constants/theme";
 import { startCacheInvalidation } from "@/lib/cache-invalidation";
 import { SharedElementProvider } from "@/components/shared-element";
@@ -74,6 +76,7 @@ function AppRuntime() {
         }}
       />
       <ContactSyncOverlay />
+      <FoundPhotoOverlay />
     </>
   );
 }
@@ -95,19 +98,23 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <BottomSheetModalProvider>
-          <AuthProvider>
-            <OfflineSyncProvider>
-              {/* Outside the navigator on purpose: the copy in flight has to
-                  draw above both the screen it leaves and the one it joins. */}
-              <SharedElementProvider>
-                <AppRuntime />
-              </SharedElementProvider>
-            </OfflineSyncProvider>
-          </AuthProvider>
-        </BottomSheetModalProvider>
-      </SafeAreaProvider>
+      {/* Outside every provider, because a throw inside one of them is exactly
+          the case that used to leave a white screen with nothing to press. */}
+      <AppErrorBoundary>
+        <SafeAreaProvider>
+          <BottomSheetModalProvider>
+            <AuthProvider>
+              <OfflineSyncProvider>
+                {/* Outside the navigator on purpose: the copy in flight has to
+                    draw above both the screen it leaves and the one it joins. */}
+                <SharedElementProvider>
+                  <AppRuntime />
+                </SharedElementProvider>
+              </OfflineSyncProvider>
+            </AuthProvider>
+          </BottomSheetModalProvider>
+        </SafeAreaProvider>
+      </AppErrorBoundary>
     </GestureHandlerRootView>
   );
 }

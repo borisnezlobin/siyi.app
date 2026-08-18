@@ -22,7 +22,13 @@ const columnsAwaitingMigration = [
 type WriteError = { code?: string; message: string };
 type WriteResult<T> = { data: T | null; error: WriteError | null };
 
-function isMissingColumn(error: WriteError | null) {
+/**
+ * A column the database does not have yet, as opposed to a network drop or a
+ * row the reader is not allowed to see. Only the first is safe to treat as "the
+ * feature is dark"; the other two have to be errors, because reading them as an
+ * absence makes the caller act on data that was never fetched.
+ */
+export function isMissingColumn(error: WriteError | null) {
   return Boolean(error && ["42703", "PGRST204"].includes(error.code ?? ""));
 }
 

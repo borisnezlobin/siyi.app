@@ -12,6 +12,7 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
@@ -65,6 +66,7 @@ export function SettingsControls({
   initialIntervals: Record<RelationshipStrength, number>;
   initialMarketingOptIn: boolean;
 }) {
+  const router = useRouter();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [intervals, setIntervals] = useState(initialIntervals);
@@ -108,6 +110,9 @@ export function SettingsControls({
 
     setMessage("Settings saved.");
     setWorking(null);
+    // The reminder intervals decide who counts as overdue, so People and Today
+    // are answering a different question the moment these change.
+    router.refresh();
   }
 
   async function savePassword(event: React.FormEvent<HTMLFormElement>) {
@@ -341,6 +346,9 @@ export function SettingsControls({
     setMessage("Import complete.");
     setImportPreview(null);
     setWorking(null);
+    // An import creates people in bulk. Without this the rest of the app went
+    // on showing the list from before the file was opened.
+    router.refresh();
   }
 
   async function deleteAccount() {
@@ -482,21 +490,24 @@ export function SettingsControls({
             Save password
           </button>
         </form>
+        {/* Its own row at full width. As a muted twelve-pixel label tucked
+            beside a sentence it read as a caption, and people went looking for
+            it. Signing out is a thing you come to this page to do. */}
         <form
           action="/auth/signout"
           method="post"
-          className="mt-5 flex items-center justify-between gap-3 border-t border-black/[0.06] pt-4"
+          className="mt-6 border-t border-black/[0.06] pt-5"
         >
-          <p className="text-[11px] leading-5 text-ink-muted">
-            Signed in on this browser.
-          </p>
           <button
             type="submit"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-ink-muted transition-colors hover:bg-porcelain hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-mist px-5 text-sm font-semibold text-ink transition-colors hover:bg-ink/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral focus-visible:ring-offset-2"
           >
-            <SignOut size={16} aria-hidden="true" />
+            <SignOut size={18} weight="bold" aria-hidden="true" />
             Sign out
           </button>
+          <p className="mt-2 text-center text-[11px] leading-5 text-ink-muted">
+            Signed in on this browser.
+          </p>
         </form>
       </section>
 

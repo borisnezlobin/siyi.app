@@ -1,21 +1,38 @@
-export function normalizeInstagramUsername(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
+const INSTAGRAM_HOSTS = new Set([
+  "instagram.com",
+  "www.instagram.com",
+  "m.instagram.com",
+]);
 
-  try {
-    const withProtocol = /^https?:\/\//i.test(trimmed)
-      ? trimmed
-      : `https://${trimmed}`;
-    const parsed = new URL(withProtocol);
-    if (
-      parsed.hostname === "instagram.com" ||
-      parsed.hostname.endsWith(".instagram.com")
-    ) {
-      return parsed.pathname.split("/").filter(Boolean)[0]?.toLowerCase() || "";
-    }
-  } catch {
-    return trimmed.replace(/^@/, "").toLowerCase();
+export function normalizeInstagramUsername(value: string): string {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return "";
   }
 
-  return trimmed.replace(/^@/, "").toLowerCase();
+  const candidateUrl = trimmedValue.match(/^https?:\/\//i)
+    ? trimmedValue
+    : trimmedValue.includes("instagram.com/")
+      ? `https://${trimmedValue}`
+      : null;
+
+  if (candidateUrl) {
+    try {
+      const parsedUrl = new URL(candidateUrl);
+      if (INSTAGRAM_HOSTS.has(parsedUrl.hostname.toLowerCase())) {
+        return (
+          parsedUrl.pathname.split("/").filter(Boolean)[0]?.toLowerCase() ?? ""
+        );
+      }
+    } catch {
+      return "";
+    }
+  }
+
+  return trimmedValue
+    .replace(/^@+/, "")
+    .split(/[/?#]/)[0]
+    .trim()
+    .toLowerCase();
 }

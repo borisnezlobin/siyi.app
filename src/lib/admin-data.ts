@@ -1,10 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  type ActivationFunnel,
   type AdminUserFacts,
   type IdleCounts,
+  type ReferralStanding,
+  type RetentionCohort,
+  activationFunnel,
   bucketContactCounts,
   contactCountBuckets,
   countIdleUsers,
+  referralStandings,
+  retentionCohorts,
 } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Announcement } from "@/lib/types";
@@ -62,6 +68,8 @@ type ProfileRow = {
   auth_user_id: string;
   created_at: string;
   marketing_opt_in?: boolean | null;
+  referred_by?: string | null;
+  referral_code?: string | null;
 };
 
 /**
@@ -101,7 +109,7 @@ export async function getAdminUserFacts(): Promise<AdminUserFacts[]> {
     fetchAllRows<ProfileRow>(
       admin,
       "user_profiles",
-      "auth_user_id,created_at,marketing_opt_in",
+      "auth_user_id,created_at,marketing_opt_in,referred_by,referral_code",
     ),
     fetchAllRows<{ user_id: string; created_at: string }>(
       admin,
@@ -144,6 +152,8 @@ export async function getAdminUserFacts(): Promise<AdminUserFacts[]> {
       lastActiveAt: profile.created_at,
       marketingOptIn: profile.marketing_opt_in ?? false,
       emailConfirmedAt: confirmations.get(profile.auth_user_id) ?? null,
+      referredBy: profile.referred_by ?? null,
+      referralCode: profile.referral_code ?? null,
     });
   }
 
@@ -184,6 +194,10 @@ export type AdminStats = {
   activeLast30: number;
   idle: IdleCounts;
   marketingSubscribers: number;
+  activation: ActivationFunnel;
+  retention: RetentionCohort[];
+  referrals: ReferralStanding[];
+  referredSignups: number;
 };
 
 function withinDays(iso: string | null, days: number, now: Date) {
@@ -243,6 +257,10 @@ export function summariseUsers(
       .length,
     idle: countIdleUsers(users, now),
     marketingSubscribers: users.filter((facts) => facts.marketingOptIn).length,
+    activation: activationFunnel(users, now),
+    retention: retentionCohorts(users, now),
+    referrals: referralStandings(users),
+    referredSignups: users.filter((facts) => facts.referredBy).length,
   };
 }
 
@@ -262,6 +280,15 @@ export const emptyStats: AdminStats = {
   activeLast30: 0,
   idle: { quiet: 0, withoutContacts: 0, emailUnverified: 0 },
   marketingSubscribers: 0,
+  activation: {
+    signedUp: 0,
+    addedFirstPerson: 0,
+    addedThreePeople: 0,
+    returnedAfterFirstDay: 0,
+  },
+  retention: [],
+  referrals: [],
+  referredSignups: 0,
 };
 
 type AnnouncementRow = {

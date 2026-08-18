@@ -159,6 +159,12 @@ export function AddPersonForm({ defaultUniversity = "" }: { defaultUniversity?: 
         router.push("/people?added=1");
       }
 
+      // Refresh after the push, never before it. Next discards a pending
+      // refresh when a navigation is dispatched (`app-router-instance.js`:
+      // ACTION_NAVIGATE sets `pending.discarded`, and `handleResult` then drops
+      // the result), and only a discarded *server action* schedules a follow-up.
+      // Refreshing first would throw the refresh away and leave the list you
+      // land on as it was before this person existed.
       router.refresh();
     } catch (caughtError) {
       setError(

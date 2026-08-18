@@ -192,7 +192,11 @@ export function SharedElementProvider({ children }: { children: ReactNode }) {
           // flight *starts* drew the destination and the copy at the same
           // time, which is two of the same avatar for the whole 300ms.
           onLanded();
-          clear();
+          // A frame later, so the real one is on screen before the copy goes.
+          // Removing both in the same tick leaves whichever commits second a
+          // frame with nothing drawn in that spot — the flicker at the end.
+          // Overlapping identical, coincident copies for one frame is invisible.
+          requestAnimationFrame(clear);
         });
         return { ...current, to };
       });

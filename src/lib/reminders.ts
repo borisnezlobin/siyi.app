@@ -49,14 +49,3 @@ export function getContactReminderState(
   };
 }
 
-export function formatOverdueDuration(overdueDays: number): string {
-  if (overdueDays <= 0) {
-    return "Due today";
-  }
-
-  if (overdueDays === 1) {
-    return "1 day overdue";
-  }
-
-  return `${overdueDays} days overdue`;
-}

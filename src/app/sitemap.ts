@@ -1,8 +1,6 @@
 import type { MetadataRoute } from "next";
 import { publicPages, type PublicPageKey } from "@/lib/public-pages";
-
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-  "https://www.siyi.app";
+import { absoluteUrl } from "@/lib/site-url";
 
 /**
  * Sign-in is public but not worth indexing, and robots disallows the rest of
@@ -23,7 +21,7 @@ export const sitemapPaths = (
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return sitemapPaths.map((path) => ({
-    url: `${baseUrl}${path === "/" ? "" : path}`,
+    url: absoluteUrl(path),
     changeFrequency: "monthly",
     priority: path === "/" ? 1 : 0.5,
   }));

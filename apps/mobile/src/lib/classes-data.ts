@@ -1,5 +1,6 @@
 import type { PersonClass } from "@/lib/classes";
 import { normalizeCourseCode } from "@/lib/classes";
+import { markStale } from "@/lib/query-cache";
 import { supabase } from "@/lib/supabase";
 
 type ClassRow = {
@@ -43,6 +44,18 @@ export async function getClasses(userId: string): Promise<PersonClass[]> {
   return (data as ClassRow[]).map(mapClass);
 }
 
+/**
+ * The screens that show classes, and would otherwise keep the old list.
+ *
+ * Written out rather than imported from `screen-queries`, which is where
+ * `peopleTabQueryKey` lives: that module imports this one, and closing the loop
+ * risks one of the two seeing the other half-initialised. If these keys move,
+ * they move together.
+ */
+function markClassesStale() {
+  for (const key of ["classes", "peopleTab"]) markStale(key);
+}
+
 export async function addClass(
   userId: string,
   input: Omit<PersonClass, "id"> & { personId: string },
@@ -65,6 +78,12 @@ export async function addClass(
     .single();
 
   if (error) throw error;
+  // The classes screen and the People tab both read this, and neither is fed by
+  // the offline snapshot the way people and reminders are — so without saying
+  // so here, nothing knew the list had changed and a class added to somebody
+  // was missing from the filters until the fifteen-second freshness window
+  // happened to lapse.
+  markClassesStale();
   return mapClass(data as ClassRow);
 }
 
@@ -75,4 +94,5 @@ export async function removeClass(userId: string, id: string) {
     .eq("user_id", userId)
     .eq("id", id);
   if (error) throw error;
+  markClassesStale();
 }

@@ -12,8 +12,8 @@ import {
 import { AppText } from "@/components/app-text";
 import { colors, radii } from "@/constants/theme";
 import { useReduceMotion } from "@/hooks/use-reduce-motion";
-import { lastSeenLabel } from "@/lib/relative-time";
-import { formatOverdueDuration, overdueDays } from "@/lib/reminders";
+import { dueDateLabelFromDaysAway, lastSeenLabel } from "@/lib/relative-time";
+import { overdueDays } from "@/lib/reminders";
 import type { Person } from "@/lib/types";
 
 export function PersonRow({
@@ -159,7 +159,7 @@ export function PersonRow({
         {overdue > 0 ? (
           <View style={styles.overdueChip}>
             <AppText style={styles.overdueText} variant="caption">
-              {formatOverdueDuration(overdue)}
+              {dueDateLabelFromDaysAway(-overdue)}
             </AppText>
           </View>
         ) : null}

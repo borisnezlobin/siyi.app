@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { brand } from "@/config/brand";
+import { claimReferralFromCookie } from "@/lib/referral-server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -184,6 +185,11 @@ export async function signUpWithPassword(formData: FormData) {
   }
 
   if (data.session) {
+    // Only when a session exists. Signing up with confirmation still pending
+    // has no `auth.uid()` yet, so the claim would fail and spend the cookie;
+    // that path credits the referrer when the confirmation link lands on
+    // /auth/callback instead.
+    await claimReferralFromCookie();
     redirect("/onboarding");
   }
 

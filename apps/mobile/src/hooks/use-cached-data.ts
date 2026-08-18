@@ -1,5 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { AppState } from "react-native";
+import { readableError } from "@/lib/error-text";
 import {
   loadQuery,
   queryUpdatedAt,
@@ -60,9 +62,7 @@ export function useCachedData<T>(
         // the screen keeps showing what it has.
         if (readQuery<T>(key) === undefined) {
           setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "This screen could not be loaded.",
+            readableError(loadError, "This screen could not be loaded."),
           );
         }
       } finally {
@@ -71,6 +71,13 @@ export function useCachedData<T>(
     },
     [key],
   );
+
+  /** The same rule for both moments a screen might need newer data. */
+  const revalidateIfStale = useCallback(async () => {
+    const updatedAt = queryUpdatedAt(key) ?? 0;
+    if (Date.now() - updatedAt < freshForMs) return;
+    await revalidate(false);
+  }, [key, revalidate]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,15 +99,29 @@ export function useCachedData<T>(
         }
 
         if (cancelled) return;
-        const updatedAt = queryUpdatedAt(key) ?? 0;
-        if (Date.now() - updatedAt < freshForMs) return;
-        await revalidate(false);
+        await revalidateIfStale();
       })();
+
+      /**
+       * Coming back to the app is the other moment the screen may be out of
+       * date, and it is not a focus change: the tab never lost focus while the
+       * app was in the background, so nothing here re-ran. Somebody who added a
+       * person on the web, then picked their phone up, was looking at a list
+       * that would not correct itself until they switched tabs and back.
+       *
+       * Registered inside the focus effect so only the screen actually on
+       * screen does the work.
+       */
+      const subscription = AppState.addEventListener("change", (state) => {
+        if (state !== "active" || cancelled) return;
+        void revalidateIfStale();
+      });
 
       return () => {
         cancelled = true;
+        subscription.remove();
       };
-    }, [enabled, key, revalidate]),
+    }, [enabled, key, revalidateIfStale]),
   );
 
   return {

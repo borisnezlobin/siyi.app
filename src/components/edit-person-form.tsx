@@ -5,6 +5,11 @@ import { DateField } from "@/components/date-field";
 import { Camera, Check, ImageSquare, SpinnerGap, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FoundPhotoDialog } from "@/components/found-photo-dialog";
+import {
+  findInstagramPhoto,
+  saveFoundPhoto,
+} from "@/lib/found-photo-client";
 import { Avatar } from "@/components/avatar";
 import { ContactFields } from "@/components/contact-fields";
 import {
@@ -91,6 +96,8 @@ export function EditPersonForm({
   const pendingDestinationRef = useRef(`/people/${person.id}`);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [foundPhoto, setFoundPhoto] = useState<Blob | null>(null);
+  const [savingFoundPhoto, setSavingFoundPhoto] = useState(false);
   const [error, setError] = useState("");
   const initialValues = useMemo(() => initialFormValues(person), [person]);
   const [values, setValues] = useState<FormValues>(initialValues);
@@ -269,13 +276,52 @@ export function EditPersonForm({
     }
 
     setDirty(false);
+
+    // Only ever fills a gap, and only when the handle is what just changed.
+    // Their own picture always wins, and a lookup that finds nothing says
+    // nothing — so this never delays leaving the page.
+    const handle = normalizeInstagramUsername(
+      String(formData.get("instagramUsername") ?? ""),
+    );
+    const alreadyHasPhoto = Boolean(profilePhotoUrl || person.profilePhotoUrl);
+    if (!alreadyHasPhoto && handle && handle !== person.instagramUsername) {
+      void findInstagramPhoto(handle).then((photo) => {
+        if (photo) setFoundPhoto(photo);
+      });
+    }
+
+    // Push first, then refresh — NOT the other way round, however much the
+    // reverse reads like it should invalidate before the navigation reads the
+    // cache. Next discards a pending refresh the moment a navigation is
+    // dispatched (`app-router-instance.js`: ACTION_NAVIGATE sets
+    // `pending.discarded`, and the refresh's result is then dropped in
+    // `handleResult`), and only a discarded *server action* schedules a
+    // follow-up refresh. Refreshing first therefore throws the refresh away and
+    // the stale destination never corrects itself. Queued after the push it
+    // runs once the navigation settles: a brief stale flash, then the truth.
     router.push(`/people/${person.id}`);
+    router.refresh();
+  }
+
+  async function keepFoundPhoto() {
+    if (!foundPhoto) return;
+    setSavingFoundPhoto(true);
+    await saveFoundPhoto(person.id, foundPhoto);
+    setSavingFoundPhoto(false);
+    setFoundPhoto(null);
     router.refresh();
   }
 
   const displayName = values.preferredName?.trim() || values.fullName || "Them";
 
   return (
+    <>
+    <FoundPhotoDialog
+      onDismiss={() => setFoundPhoto(null)}
+      onUse={() => void keepFoundPhoto()}
+      photoUrl={foundPhoto ? URL.createObjectURL(foundPhoto) : null}
+      saving={savingFoundPhoto}
+    />
     <form
       ref={formRef}
       onSubmit={handleSubmit}
@@ -595,5 +641,6 @@ export function EditPersonForm({
         </div>
       </dialog>
     </form>
+    </>
   );
 }

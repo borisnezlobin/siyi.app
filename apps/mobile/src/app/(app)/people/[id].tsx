@@ -42,6 +42,7 @@ import { SharePersonSheet } from "@/components/share-person-sheet";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
 import { Card, SectionAction, SectionHeading } from "@/components/surface";
+import { readableError } from "@/lib/error-text";
 import { colors, floatShadow, radii } from "@/constants/theme";
 import { ageOnDate } from "@/lib/birthday-age";
 import {
@@ -247,11 +248,21 @@ export default function PersonDetailScreen() {
                 );
                 router.replace("/people");
               })
-              .catch(() =>
-                Haptics.notificationAsync(
+              .catch((error: unknown) => {
+                // A confirmed destructive action that quietly does nothing is
+                // worse than one that fails loudly: the reader walks away
+                // believing it happened.
+                void Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Error,
-                ),
-              );
+                );
+                Alert.alert(
+                  "That did not save",
+                  readableError(
+                    error,
+                    `${person.preferredName || person.fullName} is still in your people. Try again in a moment.`,
+                  ),
+                );
+              });
           },
         },
       ],
