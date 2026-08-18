@@ -273,15 +273,61 @@ const monthNames = [
   "december",
 ];
 
+/** A clock time, which is never a day and must not be read as one. */
+const clockTimePattern = /\b\d{1,2}[:.]\d{2}\s*(?:am|pm)?\b/g;
+
+const weekdayNames = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+const numberWords: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
+
+function atNine(base: Date, addDays: number): Date {
+  const due = new Date(base);
+  due.setDate(due.getDate() + addDays);
+  due.setHours(9, 0, 0, 0);
+  return due;
+}
+
 /**
- * A date as somebody wrote it — "august 23rd", "23 Aug", "2026-08-23".
+ * A date as somebody wrote it — "august 23rd", "23 Aug", "2026-08-23",
+ * "tomorrow", "friday", "the 23rd".
+ *
+ * The relative words matter as much as the calendar ones. The model is told to
+ * copy whatever the note said about timing into `dueOn` and leave the counting
+ * to us, and notes say "tomorrow" far more often than they say a date — so a
+ * parser that only understood "august 23rd" sent every one of them through the
+ * `dueInDays: 0` fallback and landed the reminder on today. A reminder to meet
+ * someone tomorrow, arriving now, was the whole complaint.
  *
  * Parsed by hand rather than with `Date.parse`, which on Hermes understands
  * little beyond ISO and would quietly return a different answer on the phone
  * than in a test. A date with no year means the next one to come around.
  */
 export function parseWrittenDate(value: string, now: Date): Date | null {
-  const text = value.trim().toLowerCase();
+  const raw = value.trim().toLowerCase();
+  if (!raw) return null;
+
+  // "tomorrow 3:30-4:30" is a day and a time. Only the day is a date, and
+  // leaving the clock in would offer 3 and 4 as days of the month.
+  const text = raw.replace(clockTimePattern, " ").replace(/\s+/g, " ").trim();
   if (!text) return null;
 
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text);
@@ -290,17 +336,63 @@ export function parseWrittenDate(value: string, now: Date): Date | null {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
+  if (/\bday after tomorrow\b/.test(text)) return atNine(now, 2);
+  if (/\b(?:tomorrow|tmrw?|2moro)\b/.test(text)) return atNine(now, 1);
+  if (/\b(?:today|tonight|this (?:morning|afternoon|evening))\b/.test(text)) {
+    return atNine(now, 0);
+  }
+
+  // "in three weeks" is meant to reach us as dueInDays, but the model hands it
+  // over often enough that refusing it would put the reminder on today.
+  const span = /\bin (\d{1,3}|[a-z]+)\s*(day|week|month)s?\b/.exec(text);
+  if (span) {
+    const count = /^\d+$/.test(span[1]) ? Number(span[1]) : numberWords[span[1]];
+    if (count) {
+      if (span[2] === "day") return atNine(now, count);
+      if (span[2] === "week") return atNine(now, count * 7);
+      const due = new Date(now);
+      due.setMonth(due.getMonth() + count);
+      due.setHours(9, 0, 0, 0);
+      return due;
+    }
+  }
+  if (/\bnext week\b/.test(text)) return atNine(now, 7);
+
+  // A named day means the next time it comes round. Today is excluded, so a
+  // reminder can never be created already in the past; somebody who means
+  // today writes "today", which is handled above.
+  const weekday = weekdayNames.findIndex((name) =>
+    new RegExp(`\\b${name.slice(0, 3)}(?:${name.slice(3)})?\\b`).test(text),
+  );
+  if (weekday >= 0) {
+    const ahead = (weekday - now.getDay() + 7) % 7;
+    return atNine(now, ahead === 0 ? 7 : ahead);
+  }
+
   // "23rd" is a day; the suffix carries nothing.
   const cleaned = text.replace(/(\d+)(?:st|nd|rd|th)\b/g, "$1");
   const month = monthNames.findIndex((name) =>
     new RegExp(`\\b${name.slice(0, 3)}[a-z]*\\b`).test(cleaned),
   );
-  if (month < 0) return null;
 
   const numbers = cleaned.match(/\d{1,4}/g) ?? [];
-  const day = numbers.map(Number).find((value) => value >= 1 && value <= 31);
+  if (month < 0) {
+    // A bare day of the month, but only written as an ordinal — "the 23rd".
+    // A loose number could be anything, and guessing is how a time became a day.
+    if (!/\b\d{1,2}(?:st|nd|rd|th)\b/.test(text)) return null;
+    const dayOnly = numbers.map(Number).find((entry) => entry >= 1 && entry <= 31);
+    if (dayOnly === undefined) return null;
+    const due = new Date(now.getFullYear(), now.getMonth(), dayOnly, 9, 0, 0, 0);
+    if (due.getDate() !== dayOnly) return null;
+    if (due.getTime() <= new Date(now).setHours(0, 0, 0, 0)) {
+      due.setMonth(due.getMonth() + 1);
+    }
+    return due;
+  }
+
+  const day = numbers.map(Number).find((entry) => entry >= 1 && entry <= 31);
   if (day === undefined) return null;
-  const year = numbers.map(Number).find((value) => value >= 1900 && value <= 2200);
+  const year = numbers.map(Number).find((entry) => entry >= 1900 && entry <= 2200);
 
   const due = new Date(year ?? now.getFullYear(), month, day, 9, 0, 0, 0);
   if (due.getMonth() !== month || due.getDate() !== day) return null;
@@ -313,15 +405,26 @@ export function parseWrittenDate(value: string, now: Date): Date | null {
 }
 
 /**
- * When a reminder is due. A date the note named wins over a number of days,
- * because it is the thing the person actually said.
+ * When a reminder is due, and whether the note's own words were understood.
+ *
+ * A `dueOn` we cannot read used to fall through to `dueInDays`, which the model
+ * is told to set to 0 whenever it copies a date — so an unreadable date became
+ * "today", the one answer that is actively wrong: it fires immediately for
+ * something that has not happened yet. Nothing here guesses a day instead. The
+ * caller is told the date was not understood so the reader can see it and drop
+ * the reminder, and the placeholder is tomorrow rather than now.
  */
-export function reminderDueAt(
+export function resolveReminderDue(
   reminder: { dueInDays: number; dueOn?: string },
   now: Date,
-): string {
+): { dueAt: string; understood: boolean } {
   const written = reminder.dueOn ? parseWrittenDate(reminder.dueOn, now) : null;
-  return written ? written.toISOString() : dueAtFromDays(reminder.dueInDays, now);
+  if (written) return { dueAt: written.toISOString(), understood: true };
+  if (reminder.dueOn) {
+    const fallback = reminder.dueInDays > 0 ? reminder.dueInDays : 1;
+    return { dueAt: dueAtFromDays(fallback, now), understood: false };
+  }
+  return { dueAt: dueAtFromDays(reminder.dueInDays, now), understood: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -408,8 +511,13 @@ export function proposalInstructions(): string {
     "Only make a reminder for something with a date or a deadline in the future.",
     // Counting days is arithmetic, and getting it wrong by one puts the
     // reminder on the wrong day. Repeating the date is not.
-    "When the note names a date, copy it into dueOn exactly as written and set dueInDays to 0.",
-    "Only work out dueInDays when the note says something relative, like 'in three weeks', and leave dueOn empty.",
+    "When the note says when, copy those words into dueOn exactly as written and set dueInDays to 0.",
+    // "tomorrow" used to sit between the two rules — a named day by one reading
+    // and a relative one by the other — so the model copied it into dueOn and
+    // set dueInDays to 0, which was correct and which this app then could not
+    // read. It reads them now, so the rule can say plainly that they belong there.
+    "Words like tomorrow, tonight, Friday, next week or the 23rd count as saying when: put them in dueOn too.",
+    "Only work out dueInDays when the note gives a span with no day in it, like 'in three weeks', and leave dueOn empty.",
     "Put anything you are unsure about, or that fits nowhere, in leftover, copied word for word.",
     'Use "" for leftover when everything was sorted.',
   ].join("\n");
@@ -428,7 +536,15 @@ export type ProposalItem =
       /** A further phone or email, kept alongside the ones already there. */
       adds: boolean;
     }
-  | { id: string; kind: "reminder"; text: string; dueAt: string; dueInDays: number }
+  | {
+      id: string;
+      kind: "reminder";
+      text: string;
+      dueAt: string;
+      dueInDays: number;
+      /** The note named a day this app could not read. Say so rather than pick one. */
+      dueUnclear?: boolean;
+    }
   | { id: string; kind: "class"; course: string };
 
 export type ItemDecision = { removed?: boolean; keepExisting?: boolean };
@@ -542,12 +658,13 @@ export function buildProposalItems({
   });
 
   proposal.reminders.forEach((entry, index) => {
-    const dueAt = reminderDueAt(entry, now);
+    const { dueAt, understood } = resolveReminderDue(entry, now);
     items.push({
       id: `reminder:${index}`,
       kind: "reminder",
       text: entry.text,
       dueAt,
+      dueUnclear: understood ? undefined : true,
       // Taken back off the date rather than trusted from the model: when the
       // note named a day, that day decides how far away it is, and the two
       // disagreeing is how a reminder ends up shown as one date and saved as
@@ -643,6 +760,12 @@ export function describeItem(item: ProposalItem): { title: string; detail: strin
   }
   // Anything more than a week out is named by its date. "In 14 days" is not
   // something a person can check, and this is the screen for checking.
+  if (item.dueUnclear) {
+    return {
+      title: "Reminder",
+      detail: `${item.text} · date unclear, check it`,
+    };
+  }
   const when =
     item.dueInDays === 0
       ? "today"

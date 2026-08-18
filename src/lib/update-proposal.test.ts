@@ -8,7 +8,7 @@ import {
   dueAtFromDays,
   normalizeProposal,
   parseWrittenDate,
-  reminderDueAt,
+  resolveReminderDue,
   planFromItems,
   planSize,
   proposalFieldNames,
@@ -318,26 +318,115 @@ describe("parseWrittenDate", () => {
   });
 
   it("turns down what is not a date", () => {
-    expect(parseWrittenDate("in three weeks", today)).toBeNull();
     expect(parseWrittenDate("", today)).toBeNull();
     expect(parseWrittenDate("february 31st", today)).toBeNull();
+    expect(parseWrittenDate("sometime soon", today)).toBeNull();
+    // A bare number is not a day. Reading one is how "3:30-4:30" became the 3rd.
+    expect(parseWrittenDate("3", today)).toBeNull();
+  });
+
+  // The words notes actually use. Every one of these used to return null and
+  // land the reminder on today.
+  describe("the words people actually write", () => {
+    // Sunday 9 August 2026.
+    const sunday = new Date(2026, 7, 9, 20, 0, 0);
+    const dayOf = (value: string) => parseWrittenDate(value, sunday)?.getDate();
+
+    it("reads tomorrow, today and the day after", () => {
+      expect(dayOf("tomorrow")).toBe(10);
+      expect(dayOf("today")).toBe(9);
+      expect(dayOf("tonight")).toBe(9);
+      expect(dayOf("day after tomorrow")).toBe(11);
+    });
+
+    it("reads a day named on its own as the next one to come round", () => {
+      expect(dayOf("tuesday")).toBe(11);
+      expect(dayOf("next friday")).toBe(14);
+      // Today is Sunday, and a reminder must never be created in the past.
+      expect(dayOf("sunday")).toBe(16);
+    });
+
+    it("reads a span, which the model hands over more often than it should", () => {
+      expect(dayOf("in three weeks")).toBe(30);
+      expect(dayOf("in 2 days")).toBe(11);
+      expect(dayOf("next week")).toBe(16);
+    });
+
+    it("ignores a clock time riding along with the day", () => {
+      // The exact case from the report: "tomorrow 3:30-4:30".
+      expect(dayOf("tomorrow 3:30-4:30")).toBe(10);
+      expect(dayOf("friday 3:30-4:30")).toBe(14);
+    });
+
+    it("reads a bare day of the month only when it is written as one", () => {
+      expect(dayOf("the 23rd")).toBe(23);
+      // Already gone by, so they mean next month's.
+      expect(parseWrittenDate("the 3rd", sunday)?.getMonth()).toBe(8);
+    });
+
+    it("always lands at nine in the morning", () => {
+      expect(parseWrittenDate("tomorrow", sunday)?.getHours()).toBe(9);
+    });
   });
 });
 
-describe("reminderDueAt", () => {
+describe("a date this app cannot read", () => {
+  const today = new Date(2026, 7, 9, 20, 0, 0);
+
+  it("is never quietly turned into today", () => {
+    // The bug this exists to stop: the model copies the note's own words into
+    // dueOn and sets dueInDays to 0, as it is told to. A dueOn we cannot read
+    // then fell through to 0 days, and a reminder about something in the future
+    // arrived immediately.
+    const { dueAt, understood } = resolveReminderDue(
+      { dueInDays: 0, dueOn: "whenever he gets round to it" },
+      today,
+    );
+
+    expect(understood).toBe(false);
+    expect(new Date(dueAt).getDate()).not.toBe(9);
+  });
+
+  it("says so, because the review screen cannot edit a date", () => {
+    const [item] = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        reminders: [{ text: "meet up", dueInDays: 0, dueOn: "no idea" }],
+      },
+      person,
+      sections: [],
+      now: today,
+    });
+
+    expect(describeItem(item).detail).toContain("date unclear");
+  });
+
+  it("keeps quiet when the words were understood", () => {
+    const { understood } = resolveReminderDue(
+      { dueInDays: 0, dueOn: "tomorrow" },
+      today,
+    );
+
+    expect(understood).toBe(true);
+  });
+});
+
+describe("resolveReminderDue", () => {
   const today = new Date(2026, 7, 9, 20, 0, 0);
 
   it("uses the date the note named, not the model's arithmetic", () => {
     // A model counting to 23 August said 15 days, which is one too many. The
     // date it copied out is not something it can be wrong about.
-    const due = new Date(reminderDueAt({ dueInDays: 15, dueOn: "august 23rd" }, today));
+    const due = new Date(
+      resolveReminderDue({ dueInDays: 15, dueOn: "august 23rd" }, today).dueAt,
+    );
 
     expect(due.getDate()).toBe(23);
     expect(due.getMonth()).toBe(7);
   });
 
   it("counts days when the note only said something relative", () => {
-    const due = new Date(reminderDueAt({ dueInDays: 21 }, today));
+    const due = new Date(resolveReminderDue({ dueInDays: 21 }, today).dueAt);
 
     expect(due.getMonth()).toBe(7);
     expect(due.getDate()).toBe(30);
