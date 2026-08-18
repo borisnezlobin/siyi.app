@@ -158,6 +158,9 @@ export function ReminderBoard({
         body: JSON.stringify({ completedAt }),
       });
       if (!response.ok) {
+        // The reminder is not settled after all, so it must not keep the place
+        // a settled one is given.
+        settledIds.current.delete(reminder.id);
         setWorkingId(null);
         return;
       }
@@ -173,6 +176,11 @@ export function ReminderBoard({
       ),
     );
     setWorkingId(null);
+    // Editing and deleting a reminder both refresh; completing one did not, so
+    // Today went on counting a reminder that was already done. The local update
+    // above is what keeps the row in place, so this only corrects the pages that
+    // are not looking at this list.
+    router.refresh();
   }
 
   const shownBuckets = focusedBucket ? [focusedBucket] : reminderBucketOrder;

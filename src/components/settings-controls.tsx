@@ -12,6 +12,7 @@ import {
   UploadSimple,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { brand } from "@/config/brand";
 import { getApiResponseError } from "@/lib/http";
@@ -65,6 +66,7 @@ export function SettingsControls({
   initialIntervals: Record<RelationshipStrength, number>;
   initialMarketingOptIn: boolean;
 }) {
+  const router = useRouter();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [intervals, setIntervals] = useState(initialIntervals);
@@ -108,6 +110,9 @@ export function SettingsControls({
 
     setMessage("Settings saved.");
     setWorking(null);
+    // The reminder intervals decide who counts as overdue, so People and Today
+    // are answering a different question the moment these change.
+    router.refresh();
   }
 
   async function savePassword(event: React.FormEvent<HTMLFormElement>) {
@@ -341,6 +346,9 @@ export function SettingsControls({
     setMessage("Import complete.");
     setImportPreview(null);
     setWorking(null);
+    // An import creates people in bulk. Without this the rest of the app went
+    // on showing the list from before the file was opened.
+    router.refresh();
   }
 
   async function deleteAccount() {
