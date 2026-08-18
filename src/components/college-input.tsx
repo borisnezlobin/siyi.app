@@ -2,8 +2,23 @@
 
 import { X } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { useId, useMemo, useRef, useState } from "react";
-import { normalizeCollegeText, searchColleges } from "@/lib/colleges";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { College } from "@/lib/colleges";
+
+/**
+ * The college table is over a megabyte, and this field appears on Settings,
+ * Add someone, Edit and Your card — four of the heaviest routes in the app,
+ * one of them a tab in the bottom bar. Loading it with the page put that
+ * megabyte on the main thread of a tap that may never touch this field.
+ *
+ * It is fetched the first time the field is focused instead. Until it lands the
+ * input behaves exactly as the comment below promises: a plain text box that
+ * accepts anything. Only the suggestions wait.
+ */
+type CollegeSearch = {
+  searchColleges: (query: string, limit?: number) => College[];
+  normalizeCollegeText: (value: string) => string;
+};
 
 /**
  * A university field that suggests schools as you type, so "cmu" or "uc berkeley"
@@ -28,17 +43,31 @@ export function CollegeInput({
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [colleges, setColleges] = useState<CollegeSearch | null>(null);
+
+  useEffect(() => {
+    if (!open || colleges) return;
+    let stillMounted = true;
+    void import("@/lib/colleges").then(({ searchColleges, normalizeCollegeText }) => {
+      if (stillMounted) setColleges({ searchColleges, normalizeCollegeText });
+    });
+    return () => {
+      stillMounted = false;
+    };
+  }, [colleges, open]);
+
   const suggestions = useMemo(() => {
-    if (!open) return [];
-    const matches = searchColleges(value, 6);
+    if (!open || !colleges) return [];
+    const matches = colleges.searchColleges(value, 6);
     if (
       matches.length === 1 &&
-      normalizeCollegeText(matches[0].name) === normalizeCollegeText(value)
+      colleges.normalizeCollegeText(matches[0].name) ===
+        colleges.normalizeCollegeText(value)
     ) {
       return [];
     }
     return matches;
-  }, [open, value]);
+  }, [colleges, open, value]);
 
   function update(next: string) {
     setValue(next);

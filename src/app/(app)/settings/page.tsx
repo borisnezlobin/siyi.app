@@ -5,6 +5,10 @@ import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
+import { ReferralControl } from "@/components/referral-control";
+import { ReviewControl } from "@/components/review-control";
+import { countReferrals, ensureReferralCode } from "@/lib/referral-server";
+import { siteUrl } from "@/lib/site-url";
 import { SettingsControls } from "@/components/settings-controls";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { DEFAULT_REMINDER_INTERVALS } from "@/lib/constants";
@@ -40,10 +44,18 @@ export default async function SettingsPage() {
   let initialIntervals: Record<RelationshipStrength, number> = {
     ...DEFAULT_REMINDER_INTERVALS,
   };
+  let existingReview: {
+    rating: number;
+    body: string;
+    author_label: string;
+    status: string;
+  } | null = null;
+  let referralCode: string | null = null;
+  let referralJoined = 0;
 
   if (user && isSupabaseConfigured()) {
     const supabase = await createClient();
-    const [{ data: profile }, { data: settings }] = await Promise.all([
+    const [{ data: profile }, { data: settings }, { data: review }] = await Promise.all([
       supabase
         .from("user_profiles")
         .select(
@@ -58,6 +70,21 @@ export default async function SettingsPage() {
         )
         .eq("user_id", user.id)
         .maybeSingle(),
+      // RLS lets an author read their own review at any status, so this returns
+      // a pending one too — which is what the form needs in order to be
+      // editable while it waits to be published.
+      supabase
+        .from("reviews")
+        .select("rating,body,author_label,status")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+    ]);
+    existingReview = review;
+    // Generated on first sight of this page rather than at signup, so an
+    // account that never opens settings never gets a code it will not use.
+    [referralCode, referralJoined] = await Promise.all([
+      ensureReferralCode(user.id),
+      countReferrals(),
     ]);
     initialTimezone = profile?.timezone ?? "UTC";
     initialHandle = profile?.handle ?? "";
@@ -160,6 +187,22 @@ export default async function SettingsPage() {
         initialMarketingOptIn={initialMarketingOptIn}
       />
 
+      <div className="mt-8">
+        <ReferralControl
+          code={referralCode}
+          joined={referralJoined}
+          baseUrl={siteUrl}
+        />
+      </div>
+
+      <div className="mt-8">
+        <ReviewControl
+          initialRating={existingReview?.rating ?? 0}
+          initialBody={existingReview?.body ?? ""}
+          initialAuthorLabel={existingReview?.author_label ?? ""}
+          alreadyPublished={existingReview?.status === "published"}
+        />
+      </div>
     </div>
   );
 }

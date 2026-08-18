@@ -5,6 +5,8 @@ export type ReminderPerson = Pick<
   Person,
   "id" | "fullName" | "preferredName" | "profilePhotoUrl"
 >;
+// Generic over the person shape on purpose: the phone carries an extra
+// profilePhotoPath on each one, and narrowing here would drop it.
 
 export function reminderPersonName(person: ReminderPerson) {
   return person.preferredName ?? person.fullName;
@@ -48,7 +50,7 @@ export function reminderNotificationBody(
  * Without this the pair in the notification depends on whatever order the rows
  * came back in, and the same reminder reads differently each time it fires.
  */
-export function orderReminderPeople(people: ReminderPerson[]) {
+export function orderReminderPeople<T extends ReminderPerson>(people: T[]): T[] {
   return [...people].sort((left, right) =>
     reminderPersonName(left).localeCompare(reminderPersonName(right)),
   );

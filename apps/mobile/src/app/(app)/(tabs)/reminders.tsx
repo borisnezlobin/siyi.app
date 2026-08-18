@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Bell, Check, MagnifyingGlass, NotePencil } from "phosphor-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { AvatarStack } from "@/components/avatar-stack";
 import { Button } from "@/components/button";
@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from "@/components/load-state";
 import { ReminderCalendar } from "@/components/reminder-calendar";
 import { Screen } from "@/components/screen";
 import { colors, fontFamilies, radii } from "@/constants/theme";
+import { readableError } from "@/lib/error-text";
 import { getPeople, getReminders, setReminderComplete } from "@/lib/data";
 import {
   countsByBucket,
@@ -128,8 +129,17 @@ export default function RemindersScreen() {
       await setReminderComplete(reminder.id, !reminder.completedAt);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await screenData.reload();
-    } catch {
+    } catch (error) {
+      // The row was marked settled before the save was attempted, so it has to
+      // be un-marked when the save does not happen. Without this the reminder
+      // kept the place a done one is given and read as complete, while the
+      // server still had it open — and the only sign was a buzz.
+      settledIds.current.delete(reminder.id);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "That did not save",
+        readableError(error, "The reminder is still open. Try again in a moment."),
+      );
     }
   }
 

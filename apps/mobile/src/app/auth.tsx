@@ -1,10 +1,8 @@
 import {
-  AppleLogo,
   CheckSquare,
   EnvelopeSimple,
   Eye,
   EyeSlash,
-  GoogleLogo,
   Square,
 } from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
@@ -13,6 +11,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
+import { ProviderButton } from "@/components/provider-button";
 import {
   KeyboardAwareForm,
   useFieldChain,
@@ -359,14 +358,8 @@ export default function AuthScreen() {
       ) : null}
 
       <View style={styles.providers}>
-        <Button
-          disabled
-          icon={AppleLogo}
-          label="Continue with Apple"
-          variant="secondary"
-        />
-        <Button
-          icon={GoogleLogo}
+        <ProviderButton disabled label="Continue with Apple" provider="apple" />
+        <ProviderButton
           label="Continue with Google"
           loading={loadingAction === "google"}
           onPress={() =>
@@ -374,7 +367,7 @@ export default function AuthScreen() {
               await auth.signInWithGoogle();
             })
           }
-          variant="secondary"
+          provider="google"
         />
         <AppText style={styles.providerNote} variant="caption">
           Apple sign-in is coming soon.

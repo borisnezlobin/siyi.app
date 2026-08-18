@@ -431,3 +431,30 @@ export async function syncAllPeopleToDeviceContacts(
 export async function forgetContactLink(personId: string) {
   await AsyncStorage.removeItem(linkKey(personId));
 }
+
+/**
+ * The photo on whichever device contact this person already matches.
+ *
+ * Free, private and instant compared with asking Instagram: the address book
+ * is already on the phone, and the sync above has usually worked out which
+ * contact belongs to whom. Only ever read — nothing is written back.
+ */
+export async function findDeviceContactPhoto(
+  person: Person,
+): Promise<string | null> {
+  if (!(await hasContactsPermission())) return null;
+
+  try {
+    const linkedId = await AsyncStorage.getItem(linkKey(person.id));
+    const contacts = await readDeviceContacts();
+    const matchedId =
+      linkedId && contacts.some((contact) => contact.id === linkedId)
+        ? linkedId
+        : findContactMatch(person, contacts)?.contact.id;
+    if (!matchedId) return null;
+
+    return await new Contact(matchedId).getImage();
+  } catch {
+    return null;
+  }
+}

@@ -1,18 +1,31 @@
-import { CaretRight, Clock } from "@phosphor-icons/react/dist/ssr";
+"use client";
+
+import { CaretRight, Clock } from "@phosphor-icons/react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
-import { lastSeenLabel } from "@/lib/relative-time";
-import { formatOverdueDuration, getContactReminderState } from "@/lib/reminders";
+import { dueDateLabelFromDaysAway, lastSeenLabel } from "@/lib/relative-time";
+import { getContactReminderState } from "@/lib/reminders";
 import { personPath } from "@/lib/slug";
 import type { Person } from "@/lib/types";
 
 export function PersonRow({ person }: { person: Person }) {
   const reminder = getContactReminderState(person);
+  const href = personPath(person);
+
+  /**
+   * No prefetch handlers here on purpose.
+   *
+   * `Link` already warms on the first sign of intent, on both pointers and
+   * touch (`onMouseEnter` and `onTouchStart` in next/link), and at the same
+   * depth a bare `router.prefetch(href)` asks for — as far as the loading
+   * skeleton, not the whole profile. The handlers this row used to carry were
+   * doing the work twice and reading as though they did something more.
+   */
 
   return (
     <Link
-      href={personPath(person)}
-      className="flex items-center gap-3 px-1 py-3 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral sm:px-2"
+      href={href}
+      className="flex items-center gap-3 px-1 py-3 transition-colors hover:bg-white active:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral sm:px-2"
     >
       <Avatar name={person.fullName} imageUrl={person.profilePhotoUrl} size="md" />
       <span className="min-w-0 flex-1">
@@ -28,7 +41,7 @@ export function PersonRow({ person }: { person: Person }) {
         </span>
         {reminder?.isOverdue ? (
           <span className="mt-2 inline-flex rounded-full bg-coral-soft px-2 py-1 text-[10px] font-semibold text-coral-strong">
-            {formatOverdueDuration(reminder.overdueDays)}
+            {dueDateLabelFromDaysAway(-reminder.overdueDays)}
           </span>
         ) : null}
       </span>

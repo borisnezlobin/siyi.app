@@ -336,6 +336,95 @@ export function AdminDashboard({
         <p className="mt-2 text-xs text-ink-muted">Last 12 weeks.</p>
       </section>
 
+      <section aria-labelledby="activation-heading" className="rounded-2xl bg-paper p-5 shadow-card">
+        <h2 id="activation-heading" className="font-display text-xl text-ink">
+          Where people stop
+        </h2>
+        <p className="mt-1 text-xs text-ink-muted">
+          Accounts at least a day old, so a signup from this morning is not
+          counted as someone who never came back.
+        </p>
+        <div className="mt-4 space-y-2.5">
+          <DistributionBar
+            label="Signed up"
+            users={stats.activation.signedUp}
+            total={stats.activation.signedUp}
+          />
+          <DistributionBar
+            label="Added someone"
+            users={stats.activation.addedFirstPerson}
+            total={stats.activation.signedUp}
+          />
+          <DistributionBar
+            label="Added three"
+            users={stats.activation.addedThreePeople}
+            total={stats.activation.signedUp}
+          />
+          <DistributionBar
+            label="Came back after day one"
+            users={stats.activation.returnedAfterFirstDay}
+            total={stats.activation.signedUp}
+          />
+        </div>
+      </section>
+
+      <section aria-labelledby="retention-heading" className="rounded-2xl bg-paper p-5 shadow-card">
+        <h2 id="retention-heading" className="font-display text-xl text-ink">
+          Retention by joining week
+        </h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="text-ink-muted">
+              <tr>
+                <th className="py-1.5 pr-4 font-semibold">Week</th>
+                <th className="py-1.5 pr-4 font-semibold">Joined</th>
+                <th className="py-1.5 pr-4 font-semibold">Still here after 7d</th>
+                <th className="py-1.5 font-semibold">After 30d</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {stats.retention.map((cohort) => (
+                <tr key={cohort.weekStarting} className="border-t border-black/5">
+                  <td className="py-1.5 pr-4">{cohort.weekStarting}</td>
+                  <td className="py-1.5 pr-4">{cohort.signedUp}</td>
+                  <td className="py-1.5 pr-4">{cohort.activeAfter7}</td>
+                  {/* A dash, never a zero: a cohort that has not reached 30
+                      days has not failed to reach it. */}
+                  <td className="py-1.5">{cohort.activeAfter30 ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="referrals-heading" className="rounded-2xl bg-paper p-5 shadow-card">
+        <h2 id="referrals-heading" className="font-display text-xl text-ink">
+          Referrals
+        </h2>
+        {/* One string rather than interpolated fragments: JSX would otherwise
+            make each number its own text node, which is both worse for screen
+            readers and matchable on its own. */}
+        <p className="mt-1 text-xs text-ink-muted">
+          {`${stats.referredSignups} of ${stats.totalUsers} accounts arrived on someone’s code. Codes rather than names — which code is working is the question here, not who is behind it.`}
+        </p>
+        {stats.referrals.length === 0 ? (
+          <p className="mt-4 text-xs text-ink-muted">Nobody has referred anyone yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-1.5 text-xs tabular-nums">
+            {stats.referrals.map((standing) => (
+              <li
+                key={standing.code}
+                className="flex items-center justify-between border-t border-black/5 py-1.5"
+              >
+                <span className="font-mono tracking-widest">{standing.code}</span>
+                <span>{standing.joined}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-labelledby="compose-heading" className="rounded-2xl bg-paper p-5 shadow-card">
         <h2 id="compose-heading" className="font-display text-2xl text-ink">
           Send an announcement

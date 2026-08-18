@@ -202,10 +202,22 @@ export function QuickCaptureHub({
     if (mode && dialog && !dialog.open) dialog.showModal();
   }, [mode]);
 
-  // Fetched the first time the sheet opens rather than with every page load,
-  // because most visits never capture anything.
+  /**
+   * Fetched when the sheet opens rather than with every page load, because most
+   * visits never capture anything — and fetched on *every* open, not only the
+   * first.
+   *
+   * This hub lives in the shell, so it is mounted once and outlives every
+   * navigation in the session. Loading the list once meant somebody added or
+   * renamed a person, opened the capture sheet an hour later and picked from
+   * the roster as it stood when the app was opened. `router.refresh()` cannot
+   * fix that: it replaces server-rendered output, and this list is client state.
+   *
+   * The previous list stays on screen while the new one is in flight, so
+   * reopening the sheet never flashes an empty picker.
+   */
   useEffect(() => {
-    if (!mode || peopleLoaded) return;
+    if (!mode) return;
     let cancelled = false;
     fetch("/api/quick-people")
       .then((response) => (response.ok ? response.json() : null))
@@ -218,7 +230,7 @@ export function QuickCaptureHub({
     return () => {
       cancelled = true;
     };
-  }, [mode, peopleLoaded]);
+  }, [mode]);
 
   function resetSheet() {
     setMode(null);

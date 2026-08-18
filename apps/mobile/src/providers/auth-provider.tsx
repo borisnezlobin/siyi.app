@@ -57,6 +57,7 @@ type ProfileRow = {
   timezone: string;
   locale: string;
   onboarding_completed_at: string | null;
+  marketing_prompted_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -73,6 +74,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     timezone: row.timezone,
     locale: row.locale,
     onboardingCompletedAt: row.onboarding_completed_at,
+    marketingPromptedAt: row.marketing_prompted_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

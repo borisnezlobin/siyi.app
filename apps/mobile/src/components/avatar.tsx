@@ -7,7 +7,10 @@ import { avatarColorFor, avatarInitials } from "@/lib/avatar-colors";
 export function Avatar({
   name,
   uri,
-  size = 50,
+  // 48, matching the web's `md`. The two apps drew the same avatar at two
+  // sizes, which is the sort of difference that reads as one of them being
+  // slightly wrong without anyone being able to say which.
+  size = 48,
 }: {
   name: string;
   uri?: string | null;

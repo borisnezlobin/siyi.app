@@ -1,3 +1,8 @@
+import {
+  BottomSheetFlatList,
+  BottomSheetTextInput,
+  type BottomSheetModal,
+} from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import {
   Check,
@@ -6,18 +11,9 @@ import {
   MapPin,
   X,
 } from "phosphor-react-native";
-import { useMemo, useState } from "react";
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppBottomSheet } from "@/components/app-bottom-sheet";
 import { AppText } from "@/components/app-text";
 import {
   friendlyTimezones,
@@ -27,12 +23,7 @@ import {
   timezoneSearchText,
   timezoneTitle,
 } from "@/lib/timezones";
-import {
-  colors,
-  fontFamilies,
-  floatShadow,
-  radii,
-} from "@/constants/theme";
+import { colors, fontFamilies, radii } from "@/constants/theme";
 
 export function TimezonePicker({
   detectedTimezone,
@@ -43,8 +34,7 @@ export function TimezonePicker({
   onChange: (timezone: string) => void;
   value: string;
 }) {
-  const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState(false);
+  const sheetRef = useRef<BottomSheetModal>(null);
   const [query, setQuery] = useState("");
   const options = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -75,10 +65,59 @@ export function TimezonePicker({
 
   function choose(timezone: string) {
     onChange(timezone);
-    setOpen(false);
-    setQuery("");
+    sheetRef.current?.dismiss();
     void Haptics.selectionAsync();
   }
+
+  /**
+   * The header rides in the list rather than beside it, because the sheet sizes
+   * itself to one scrollable child. Passed as an element, never as a function
+   * component: a new component type on each render would remount the search box
+   * and take focus away between keystrokes.
+   */
+  const listHeader = (
+    <View>
+      <View style={styles.header}>
+        <View style={styles.flex}>
+          <AppText variant="title">Where are you?</AppText>
+          <AppText style={styles.muted}>
+            Search for a city or country. We’ll handle the clock changes.
+          </AppText>
+        </View>
+        <Pressable
+          accessibilityLabel="Close"
+          accessibilityRole="button"
+          onPress={() => sheetRef.current?.dismiss()}
+          style={({ pressed }) => [styles.close, pressed && styles.pressed]}
+        >
+          <X color={colors.ink} size={20} weight="bold" />
+        </Pressable>
+      </View>
+
+      <View style={styles.search}>
+        <MagnifyingGlass color={colors.inkMuted} size={20} />
+        {/*
+          A BottomSheetTextInput, not a plain one. This is the registration the
+          project rule is about — a plain TextInput never tells the sheet it has
+          focus, so the sheet never lifts and the keyboard covers the very box
+          being typed in. It is not a `FormField` only because this search box
+          has no label and a leading icon, and FormField draws neither.
+        */}
+        <BottomSheetTextInput
+          accessibilityLabel="Search cities or countries"
+          autoCapitalize="words"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder="Search city or country…"
+          placeholderTextColor={colors.inkMuted}
+          returnKeyType="search"
+          selectionColor={colors.coral}
+          style={styles.searchInput}
+          value={query}
+        />
+      </View>
+    </View>
+  );
 
   return (
     <>
@@ -86,7 +125,7 @@ export function TimezonePicker({
         accessibilityHint="Opens a searchable list of cities and timezones"
         accessibilityLabel={`Timezone, ${timezoneTitle(value)}`}
         accessibilityRole="button"
-        onPress={() => setOpen(true)}
+        onPress={() => sheetRef.current?.present()}
         style={({ pressed }) => [
           styles.selection,
           pressed && styles.pressed,
@@ -108,156 +147,82 @@ export function TimezonePicker({
         </AppText>
       </Pressable>
 
-      <Modal
-        animationType="slide"
-        onRequestClose={() => setOpen(false)}
-        statusBarTranslucent
-        transparent
-        visible={open}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.modal}
-        >
-          <Pressable
-            accessibilityLabel="Close timezone picker"
-            onPress={() => setOpen(false)}
-            style={styles.backdrop}
-          />
-          <View
-            style={[
-              styles.sheet,
-              { paddingBottom: Math.max(insets.bottom, 18) },
-            ]}
-          >
-            <View style={styles.handle} />
-            <View style={styles.header}>
-              <View style={styles.flex}>
-                <AppText variant="title">Where are you?</AppText>
-                <AppText style={styles.muted}>
-                  Search for a city or country. We’ll handle the clock changes.
-                </AppText>
-              </View>
+      <AppBottomSheet onDismiss={() => setQuery("")} ref={sheetRef}>
+        <BottomSheetFlatList
+          contentContainerStyle={styles.list}
+          data={options}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(timezone) => timezone.name}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <AppText variant="heading">No matching place</AppText>
+              <AppText style={styles.muted}>
+                Try a nearby city or the country name.
+              </AppText>
+            </View>
+          }
+          ListHeaderComponent={listHeader}
+          renderItem={({ item }) => {
+            const selected = item.name === value || item.group.includes(value);
+            const detected =
+              item.name === detectedTimezone ||
+              item.group.includes(detectedTimezone || "");
+            return (
               <Pressable
-                accessibilityLabel="Close"
-                accessibilityRole="button"
-                onPress={() => setOpen(false)}
-                style={styles.close}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                onPress={() =>
+                  choose(
+                    detected && detectedTimezone ? detectedTimezone : item.name,
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.option,
+                  selected && styles.optionSelected,
+                  pressed && styles.pressed,
+                ]}
               >
-                <X color={colors.ink} size={20} weight="bold" />
-              </Pressable>
-            </View>
-
-            <View style={styles.search}>
-              <MagnifyingGlass color={colors.inkMuted} size={20} />
-              <TextInput
-                accessibilityLabel="Search cities or countries"
-                autoCapitalize="words"
-                autoCorrect={false}
-                onChangeText={setQuery}
-                placeholder="Search city or country…"
-                placeholderTextColor={colors.inkMuted}
-                returnKeyType="search"
-                selectionColor={colors.coral}
-                style={styles.searchInput}
-                value={query}
-              />
-            </View>
-
-            <FlatList
-              contentContainerStyle={styles.list}
-              data={options}
-              keyboardDismissMode="on-drag"
-              keyboardShouldPersistTaps="handled"
-              keyExtractor={(timezone) => timezone.name}
-              ListEmptyComponent={
-                <View style={styles.empty}>
-                  <AppText variant="heading">No matching place</AppText>
-                  <AppText style={styles.muted}>
-                    Try a nearby city or the country name.
+                <View style={styles.placeIcon}>
+                  <MapPin
+                    color={selected ? colors.sageStrong : colors.inkMuted}
+                    size={20}
+                    weight={selected ? "fill" : "duotone"}
+                  />
+                </View>
+                <View style={styles.flex}>
+                  <View style={styles.optionTitle}>
+                    <AppText variant="label">{item.alternativeName}</AppText>
+                    {detected ? (
+                      <AppText style={styles.detected} variant="caption">
+                        This device
+                      </AppText>
+                    ) : null}
+                  </View>
+                  <AppText numberOfLines={2} variant="caption">
+                    {[
+                      item.mainCities.slice(0, 2).join(", "),
+                      item.countryName,
+                      timezoneOffset(item.name),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </AppText>
                 </View>
-              }
-              renderItem={({ item }) => {
-                const selected =
-                  item.name === value || item.group.includes(value);
-                const detected =
-                  item.name === detectedTimezone ||
-                  item.group.includes(detectedTimezone || "");
-                return (
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    onPress={() =>
-                      choose(
-                        detected && detectedTimezone
-                          ? detectedTimezone
-                          : item.name,
-                      )
-                    }
-                    style={[
-                      styles.option,
-                      selected && styles.optionSelected,
-                    ]}
-                  >
-                    <View style={styles.placeIcon}>
-                      <MapPin
-                        color={
-                          selected ? colors.sageStrong : colors.inkMuted
-                        }
-                        size={20}
-                        weight={selected ? "fill" : "duotone"}
-                      />
-                    </View>
-                    <View style={styles.flex}>
-                      <View style={styles.optionTitle}>
-                        <AppText variant="label">
-                          {item.alternativeName}
-                        </AppText>
-                        {detected ? (
-                          <AppText style={styles.detected} variant="caption">
-                            This device
-                          </AppText>
-                        ) : null}
-                      </View>
-                      <AppText numberOfLines={2} variant="caption">
-                        {[
-                          item.mainCities.slice(0, 2).join(", "),
-                          item.countryName,
-                          timezoneOffset(item.name),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </AppText>
-                    </View>
-                    {selected ? (
-                      <Check
-                        color={colors.sageStrong}
-                        size={20}
-                        weight="bold"
-                      />
-                    ) : null}
-                  </Pressable>
-                );
-              }}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+                {selected ? (
+                  <Check color={colors.sageStrong} size={20} weight="bold" />
+                ) : null}
+              </Pressable>
+            );
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+      </AppBottomSheet>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: "rgba(10, 17, 14, 0.46)",
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
   change: {
     color: colors.sageStrong,
     fontFamily: fontFamilies.bodySemibold,
@@ -283,14 +248,6 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: colors.mist,
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 15,
-    width: 42,
-  },
   header: {
     alignItems: "flex-start",
     flexDirection: "row",
@@ -299,11 +256,11 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 5,
-    paddingBottom: 18,
-  },
-  modal: {
-    flex: 1,
-    justifyContent: "flex-end",
+    // The sheet draws no padding of its own, so the list carries what the
+    // modal shell used to.
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 11,
   },
   muted: {
     color: colors.inkMuted,
@@ -368,17 +325,5 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     width: 40,
-  },
-  sheet: {
-    backgroundColor: colors.paper,
-    borderTopLeftRadius: radii.large,
-    borderTopRightRadius: radii.large,
-    // No minimum: the keyboard has to be able to squeeze this, or the sheet is
-    // pushed off the top of the screen instead of shrinking.
-    maxHeight: "88%",
-    flexShrink: 1,
-    paddingHorizontal: 20,
-    paddingTop: 11,
-    ...floatShadow,
   },
 });

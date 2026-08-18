@@ -186,6 +186,12 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     gap: 22,
+    // A floor, because the sheet sizes itself to whatever it is holding. While
+    // the people were still loading the content was a lone spinner, so the
+    // sheet shrank to fit it and the form appeared as a sliver above the
+    // keyboard. Whatever the body happens to be at any instant, the sheet stays
+    // big enough to be a sheet.
+    minHeight: 260,
     paddingHorizontal: 20,
     paddingTop: 8,
   },

@@ -110,6 +110,12 @@ export function PersonProfileHeader({ person }: { person: Person }) {
   const [nameProgress] = useState(
     () => new Animated.Value(intro.animate && !arriving ? 0 : 1),
   );
+  // The badge is the one part of the header that was not in flight, so it has
+  // nothing to arrive from. Fading it in once everything has landed lets it
+  // appear rather than blink into place beside the name.
+  const [badgeProgress] = useState(
+    () => new Animated.Value(intro.animate && arriving ? 0 : 1),
+  );
 
   // Hand this screen's rectangles to the flight, so the copies know where to
   // land. Measured after layout, which is why this is an effect.
@@ -122,6 +128,13 @@ export function PersonProfileHeader({ person }: { person: Person }) {
       setArriving(false);
       avatarProgress.setValue(1);
       nameProgress.setValue(1);
+      Animated.timing(badgeProgress, {
+        delay: 40,
+        duration: 200,
+        easing: Easing.out(Easing.quad),
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
     };
 
     const handle = requestAnimationFrame(() => {
@@ -251,7 +264,7 @@ export function PersonProfileHeader({ person }: { person: Person }) {
         {person.preferredName ? (
           <AppText style={styles.muted}>{person.fullName}</AppText>
         ) : null}
-        <View style={styles.tagRow}>
+        <Animated.View style={[styles.tagRow, { opacity: badgeProgress }]}>
           <View style={styles.strengthChip}>
             <AppText style={styles.strengthText} variant="caption">
               {relationshipLabelFor(person)}
@@ -262,7 +275,7 @@ export function PersonProfileHeader({ person }: { person: Person }) {
               <AppText variant="caption">{tag.name}</AppText>
             </View>
           ))}
-        </View>
+        </Animated.View>
       </Animated.View>
     </View>
   );

@@ -30,13 +30,10 @@ for directly.
 
 ## Share sheet
 
-- [ ] It is a plain `Modal`, not a bottom sheet: cannot be swiped closed, and
-      the shadow animates in with the sheet, which no real app does.
-      `@gorhom/bottom-sheet` is already a dependency and already used by the
-      capture sheet — use it.
-- [ ] **`Share` icon, not `ShareNetwork`.** Asked for previously and missed.
-      Three places: `apps/mobile/src/app/(app)/people/[id].tsx` (x2) and
-      `apps/mobile/src/components/share-person-sheet.tsx`.
+- [x] It is a plain `Modal`, not a bottom sheet. `share-person-sheet.tsx` uses
+      `AppBottomSheet` with a real `footer` now.
+- [x] **`Share` icon, not `ShareNetwork`.** No `ShareNetwork` left anywhere in
+      the phone app.
 
 ## Headings and typography
 
@@ -48,18 +45,20 @@ for directly.
 
 ## Person detail
 
-- [ ] The section header icons are unreadable. A duotone clock meaning "add an
-      update" and an arrow-out-of-box meaning "open reminders" are both guesses
-      the user should not have to make. Label the actions.
-- [ ] Reminders and History use different icon setups in the same screen. One
-      pattern for both.
+- [x] The section header icons are unreadable. Every section action is a
+      labelled `SectionAction` now — no clock or arrow-out-of-box to decode.
+- [x] Reminders and History use different icon setups in the same screen. Both
+      go through the one `SectionAction`.
 
 ## Web and phone still do not match
 
-- [ ] People list: avatars are multi-coloured on web and all green on the
+- [x] People list: avatars are multi-coloured on web and all green on the
       phone; web rows carry an extra icon button the phone does not have.
-- [ ] Relative dates differ: web says "1 day ago" / "23 minutes ago" where the
-      phone says "Yesterday" / "Today". One helper, both platforms.
+      `avatar-colors.ts` is identical on both and neither row has the button.
+      The phone's `Avatar` now defaults to 48 to match the web's `md`.
+- [x] Relative dates differ: web says "1 day ago" / "23 minutes ago" where the
+      phone says "Yesterday" / "Today". `relative-time.ts` is identical on both
+      and both rows call `lastSeenLabel`.
 
 ## Keyboard — the long-running one
 
@@ -70,7 +69,15 @@ for directly.
       The mechanism has to be structural rather than trusting the sheet library
       to lift far enough: the primary action pinned in a footer outside the
       scrollable region, and the focused field scrolled into view on focus.
-      IN FLIGHT.
+      Both known holes are closed:
+      - `timezone-picker.tsx` was a hand-rolled `Modal` with a bare
+        `TextInput`. It is an `AppBottomSheet` with a `BottomSheetFlatList` and
+        a `BottomSheetTextInput` now, so the sheet lifts for the keyboard
+        instead of the keyboard covering the search box. NEEDS A LOOK ON THE
+        DEVICE — it ships in onboarding, and nobody has seen it run.
+      - `contact-method-field.tsx` could not be told it was in a sheet at all.
+        It takes and forwards `bottomSheet` now, so the trap is gone even
+        though its only caller is still a full screen.
 
 - [x] The add button in the tab bar sat at `top: -35` inside the bar, so its
       raised half hung outside its parent. iOS does not deliver touches to a
@@ -80,4 +87,8 @@ for directly.
 
 ## Reminders
 
-- [ ] "Due in X days" must also show the actual date.
+- [x] "Due in X days" must also show the actual date. `dueDateLabel` reads
+      "Due in 5 days · Aug 22" everywhere, and the people-row overdue chip goes
+      through the same helper rather than its own wording —
+      `formatOverdueDuration` is deleted from both platforms, so there is one
+      sentence for one idea.

@@ -429,6 +429,7 @@ describe("edits made offline reaching the server", () => {
       personId,
       {
         fullName: "Jordan Lee",
+        status: "active",
         preferredName: null,
         instagramUsername: null,
         phoneNumber: "(555) 555-0123",
@@ -496,6 +497,7 @@ describe("edits made offline reaching the server", () => {
       personId,
       {
         fullName: "Jordan Lee",
+        status: "active",
         preferredName: null,
         instagramUsername: null,
         phoneNumber: "(555) 555-0123",

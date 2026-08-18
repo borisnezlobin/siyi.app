@@ -147,6 +147,19 @@ export default function PeopleScreen() {
     [filteredPeople, sort],
   );
 
+  // Memoized because it walks every person's tags and sorts the result, and it
+  // sat in the render body: every filter chip, every keystroke in the search
+  // box and every clear re-ran the whole thing for a list that only changes
+  // when the people do. It sits above the early returns because it is a hook.
+  const tags = useMemo(() => {
+    const people = screenData.data?.people ?? [];
+    return Array.from(
+      new Map(
+        people.flatMap((person) => person.tags).map((tag) => [tag.id, tag]),
+      ).values(),
+    ).sort((left, right) => left.name.localeCompare(right.name));
+  }, [screenData.data]);
+
   if (screenData.loading && !screenData.data) {
     return <LoadingState label="Opening your circle…" />;
   }
@@ -171,14 +184,6 @@ export default function PeopleScreen() {
     setTagId(null);
     setMissing([]);
   }
-
-  const tags = Array.from(
-    new Map(
-      screenData.data!.people
-        .flatMap((person) => person.tags)
-        .map((tag) => [tag.id, tag]),
-    ).values(),
-  ).sort((left, right) => left.name.localeCompare(right.name));
 
   return (
     <Screen

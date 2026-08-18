@@ -16,9 +16,12 @@ import FoundationModels
 @available(iOS 26.0, *)
 @Generable
 struct SortedUpdate {
-  @Guide(description: "Facts that belong under one of the person's note headings")
+  // Each entry says one thing, and says it once. Without this the same
+  // sentence came back as several notes under different headings, and again as
+  // a field, so the review screen offered four copies of one fact.
+  @Guide(description: "Facts that belong under one of the person's note headings. One fact each, and nothing that is already a field below.")
   var notes: [SortedNote]
-  @Guide(description: "Profile details this note fills in")
+  @Guide(description: "Profile details this note fills in. Leave empty when the note gives none.")
   var fields: [SortedField]
   @Guide(description: "Things to be reminded about on a future date")
   var reminders: [SortedReminder]
@@ -57,8 +60,14 @@ enum SortedFieldName: String {
 @available(iOS 26.0, *)
 @Generable
 struct SortedField {
+  @Guide(description: "Which profile detail this is. Only include a field the note actually gives.")
   var field: SortedFieldName
-  @Guide(description: "The value exactly as it was written")
+  // "The value exactly as it was written" was read as an instruction to copy
+  // the sentence, so one note came back as the hometown, the residence and the
+  // relationship all at once — and a field name came back as its own value.
+  // Guided generation leans on these descriptions far harder than on the
+  // instructions, so the boundary of a value has to be drawn here.
+  @Guide(description: "Only the detail itself, in the note's own words — \"Palo Alto\", not the sentence it appeared in. Never the name of the field.")
   var value: String
 }
 

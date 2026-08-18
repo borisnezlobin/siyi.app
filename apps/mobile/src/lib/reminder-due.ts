@@ -1,12 +1,5 @@
 import { differenceInCalendarDays, format } from "date-fns";
 
-export const reminderQuickChoices = [
-  { label: "Today", daysAway: 0 },
-  { label: "Tomorrow", daysAway: 1 },
-  { label: "Next week", daysAway: 7 },
-  { label: "In 2 weeks", daysAway: 14 },
-] as const;
-
 export function reminderDayFromDaysAway(
   daysAway: number,
   now: Date = new Date(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, SpinnerGap } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CollegeInput } from "@/components/college-input";
 import { DateField } from "@/components/date-field";
 import { getApiResponseError } from "@/lib/http";
@@ -15,10 +15,7 @@ import {
   type OwnCard,
   type OwnCardField,
 } from "@/lib/own-card";
-import {
-  suggestUniversityFromEmail,
-  universitySuggestionNote,
-} from "@/lib/university-suggestion";
+import { useUniversitySuggestion } from "@/components/use-university-suggestion";
 
 const inputClassName =
   "mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";
@@ -52,10 +49,7 @@ export function OwnCardForm({
   // The school field keeps its own text, so accepting a suggestion remounts it.
   const [universitySeed, setUniversitySeed] = useState(0);
 
-  const suggestion = useMemo(
-    () => suggestUniversityFromEmail(accountEmail, card.university),
-    [accountEmail, card.university],
-  );
+  const suggestion = useUniversitySuggestion(accountEmail, card.university);
 
   function edit(field: OwnCardField, value: string) {
     setCard((current) => ({ ...current, [field]: value }));
@@ -179,7 +173,7 @@ export function OwnCardForm({
                   {suggestion ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2.5">
                       <p className="text-xs text-ink-muted">
-                        {universitySuggestionNote(suggestion.domain)}:{" "}
+                        {suggestion.note}:{" "}
                         <span className="font-semibold text-ink">{suggestion.name}</span>
                       </p>
                       <button
