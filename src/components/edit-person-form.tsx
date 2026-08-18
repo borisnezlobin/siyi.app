@@ -269,6 +269,14 @@ export function EditPersonForm({
     }
 
     setDirty(false);
+    // Push first, then refresh — NOT the other way round, however much the
+    // reverse reads like it should invalidate before the navigation reads the
+    // cache. Next discards a pending refresh the moment a navigation is
+    // dispatched (`app-router-instance.js`: ACTION_NAVIGATE sets
+    // `pending.discarded`, and the refresh's result is dropped in
+    // `handleResult`), and only a discarded *server action* schedules a
+    // follow-up. Refreshing first therefore throws the refresh away and the
+    // stale destination never corrects itself.
     router.push(`/people/${person.id}`);
     router.refresh();
   }

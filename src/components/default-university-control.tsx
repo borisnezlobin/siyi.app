@@ -1,13 +1,10 @@
 "use client";
 
 import { Check, SpinnerGap } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CollegeInput } from "@/components/college-input";
+import { useUniversitySuggestion } from "@/components/use-university-suggestion";
 import { getApiResponseError } from "@/lib/http";
-import {
-  suggestUniversityFromEmail,
-  universitySuggestionNote,
-} from "@/lib/university-suggestion";
 
 const inputClassName =
   "mt-1.5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-coral focus:ring-2 focus:ring-coral/20";
@@ -32,10 +29,7 @@ export function DefaultUniversityControl({
   const [seed, setSeed] = useState(0);
 
   // Offered while the field is blank, and gone the moment it is not.
-  const suggestion = useMemo(
-    () => suggestUniversityFromEmail(accountEmail, value),
-    [accountEmail, value],
-  );
+  const suggestion = useUniversitySuggestion(accountEmail, value);
 
   async function save() {
     setSaving(true);
@@ -78,7 +72,7 @@ export function DefaultUniversityControl({
       {suggestion ? (
         <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
           <p className="text-xs text-ink-muted">
-            {universitySuggestionNote(suggestion.domain)}:{" "}
+            {suggestion.note}:{" "}
             <span className="font-semibold text-ink">{suggestion.name}</span>
           </p>
           <button

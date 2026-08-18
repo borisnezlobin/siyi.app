@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, findAllByRole, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OwnCardForm } from "@/components/own-card-form";
 
@@ -97,33 +97,41 @@ describe("the What gets shared page", () => {
     expect(chip("Goes by").textContent).toContain("not shared");
   });
 
-  it("offers the school behind the account's own address, without filling it in", () => {
+  // The college table is loaded on demand, so the offer arrives a tick after
+  // the form does rather than with it.
+  it("offers the school behind the account's own address, without filling it in", async () => {
     renderForm();
 
     expect(
-      screen.getByText(/From your berkeley.edu address/),
+      await screen.findByText(/From your berkeley.edu address/),
     ).toBeTruthy();
     expect(screen.getByText("University of California, Berkeley")).toBeTruthy();
     expect(screen.getByLabelText("University").getAttribute("value")).toBe("");
   });
 
-  it("never offers a school over one already recorded", () => {
+  it("never offers a school over one already recorded", async () => {
     renderForm({ ...filledCard, university: "Carnegie Mellon University" });
 
+    // A single microtask cannot outlast a dynamic import, so asserting after
+    // one would pass whether the suggestion was withheld or merely slow. The
+    // school field renders either way, so waiting for it puts this assertion
+    // past the point where an offer would have appeared.
+    await screen.findByLabelText("University");
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByText(/From your berkeley.edu address/)).toBeNull();
   });
 
-  it("asks for a school by autocomplete, offering matches as you type", () => {
+  it("asks for a school by autocomplete, offering matches as you type", async () => {
     renderForm();
 
     const university = screen.getByLabelText("University");
     fireEvent.focus(university);
     fireEvent.change(university, { target: { value: "berkeley" } });
 
-    const options = screen.getAllByRole("option");
-    expect(options.some((option) => option.textContent?.includes("Berkeley"))).toBe(
-      true,
-    );
+    // Focus starts the table loading; the first matches appear once it lands.
+    const list = university.closest("div") as HTMLElement;
+    const options = await findAllByRole(list, "option", { name: /Berkeley/ });
+    expect(options.length).toBeGreaterThan(0);
   });
 
   it("takes a graduation year on a numeric keypad", () => {

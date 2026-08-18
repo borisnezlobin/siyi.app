@@ -75,8 +75,20 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+/**
+ * Every matched request pays a `supabase.auth.getUser()`, which is a call to
+ * the auth server rather than a read of the cookie. What this middleware does —
+ * refresh the session and hide /admin — is about a person looking at a page, so
+ * the files a browser fetches alongside one are excluded: the worker it
+ * re-checks on every navigation, the manifest, the offline page, and the files
+ * crawlers ask for. None is auth-gated, and each was costing a round trip.
+ *
+ * `/api` stays in. Handlers authenticate themselves, so this is not what guards
+ * them, but it is what keeps a long-lived session's cookie rotating, and taking
+ * that away is a bigger change than it looks.
+ */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|offline|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

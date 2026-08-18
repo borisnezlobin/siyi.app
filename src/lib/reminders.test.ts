@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { dueDateLabelFromDaysAway } from "@/lib/relative-time";
 import {
-  formatOverdueDuration,
   getContactReminderState,
   getEffectiveReminderInterval,
 } from "@/lib/reminders";
@@ -67,8 +67,12 @@ describe("contact reminders", () => {
   });
 
   it("formats overdue durations without guilt language", () => {
-    expect(formatOverdueDuration(0)).toBe("Due today");
-    expect(formatOverdueDuration(1)).toBe("1 day overdue");
-    expect(formatOverdueDuration(9)).toBe("9 days overdue");
+    // The overdue chip reads through `dueDateLabelFromDaysAway` now, so that a
+    // people row and a reminder say the same thing about the same day rather
+    // than "9 days overdue" in one place and "Due in 9 days · Aug 26" in the
+    // other. Its own tests live in relative-time.test.ts.
+    expect(dueDateLabelFromDaysAway(0)).toBe("Due today");
+    expect(dueDateLabelFromDaysAway(-1)).toContain("1 day overdue");
+    expect(dueDateLabelFromDaysAway(-9)).toContain("9 days overdue");
   });
 });
