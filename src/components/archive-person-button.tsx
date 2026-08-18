@@ -38,6 +38,15 @@ export function ArchivePersonButton({
       }
     }
 
+    // Push first, then refresh — NOT the other way round, however much the
+    // reverse reads like it should invalidate before the navigation reads the
+    // cache. Next discards a pending refresh the moment a navigation is
+    // dispatched (`app-router-instance.js`: ACTION_NAVIGATE sets
+    // `pending.discarded`, and the refresh's result is then dropped in
+    // `handleResult`), and only a discarded *server action* schedules a
+    // follow-up refresh. Refreshing first therefore throws the refresh away and
+    // the stale destination never corrects itself. Queued after the push it
+    // runs once the navigation settles: a brief stale flash, then the truth.
     router.push("/people");
     router.refresh();
   }
