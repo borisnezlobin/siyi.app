@@ -1,4 +1,5 @@
 import { CollegeField } from "@/components/college-field";
+import { offerFoundPhoto } from "@/lib/found-photo-ui";
 import { storedPersonInput } from "@/lib/person-input";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -363,7 +364,10 @@ export function PersonForm({
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         );
-        void offerContactSyncAfterSave({ ...person, ...buildInput() } as Person);
+        const saved = { ...person, ...buildInput() } as Person;
+        void offerContactSyncAfterSave(saved);
+        // Only worth looking when they still have no picture of their own.
+        void offerFoundPhoto(saved, contactValues.instagramUsername);
         router.back();
       } else {
         const created = await createPerson(
@@ -376,6 +380,7 @@ export function PersonForm({
           Haptics.NotificationFeedbackType.Success,
         );
         void offerContactSyncAfterSave(created);
+        void offerFoundPhoto(created, contactValues.instagramUsername);
         router.replace(`/people/${created.id}`);
       }
     } catch (saveError) {

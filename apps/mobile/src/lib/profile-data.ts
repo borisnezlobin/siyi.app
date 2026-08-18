@@ -1,5 +1,6 @@
 import * as Crypto from "expo-crypto";
 import { createHandleTag, normalizeHandle } from "@/lib/handles";
+import { isMissingColumn } from "@/lib/pending-columns";
 import { supabase } from "@/lib/supabase";
 
 export type OwnProfile = {
@@ -19,6 +20,12 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
     .maybeSingle();
 
   // Missing until migration 0019 has run, which is not worth an error screen.
+  // Any OTHER error has to be thrown rather than read as a blank profile: the
+  // saver below mints a new tag when it sees an empty one, so answering a
+  // dropped connection with `empty` re-minted the tag and broke every link the
+  // user had already handed out. An absent row is a real blank; an unanswered
+  // question is not.
+  if (error && !isMissingColumn(error)) throw error;
   if (error || !data) return empty;
 
   return {

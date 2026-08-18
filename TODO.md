@@ -51,6 +51,47 @@ Working file. Delete entries as they ship. Ordered by launch risk.
       and the interaction would otherwise reappear as its own entry. Both
       orders are safe to retry.
 
+## P0 — the offline queue can wedge (found, NOT fixed — read this first)
+
+Two real bugs in `apps/mobile/src/lib/offline-store.ts` / `data.ts`. Both are
+left alone on purpose; the obvious fix for the first is worse than the bug.
+
+- [ ] **One mutation the server will never accept stops the queue forever.**
+      `flushOfflineMutations` takes the head of the queue and `return false` on
+      any throw, and all three read paths (`getPeople`, `getReminders`,
+      `getPersonDetails`) answer from the local snapshot whenever the flush
+      returns false. That bail-out is correct on its own — it stops the server's
+      copy overwriting work that has not reached it — but a mutation that can
+      never succeed (a row deleted on another device, a payload a later
+      validation rejects) makes it permanent, and the phone quietly stops
+      showing anything new. The banner does say "N changes have not saved yet".
+
+      An attempt counter that drops the mutation after N tries was written and
+      then reverted, because it loses data in ways the wedge does not:
+      - `syncNow()` runs on every NetInfo change to online AND every AppState
+        `active`. Walking out of a building, or four pulls of control centre,
+        can burn five attempts in a minute on a mutation that was only ever
+        going to fail because the radio was flapping. `isOnline()` is checked
+        once before the loop and is true long before a request will succeed.
+      - Attempts have to be counted only when the server actually **answered**
+        with a refusal, never on a transport failure, and with backoff.
+      - Ordering is load-bearing. Dropping a `create-person` and then applying
+        the `update-person` behind it is silent deletion: Supabase's
+        `.update().eq("id", …)` matching zero rows returns no error, so the
+        update "succeeds", the queue drains, reads leave the snapshot, and the
+        person and everything added to them disappear. Anything that gives up
+        on a mutation has to give up on its dependents too.
+      - Whatever is set aside needs somewhere to go: a list the user can see,
+        retry, or export. Without that it is deletion with extra steps.
+
+- [ ] **Unparseable queue JSON is dropped silently.** `getOfflineQueue` answers
+      a `JSON.parse` failure with `[]`, so everything written offline is gone
+      and the banner then reports nothing pending — which reads as "saved".
+      Stashing the raw blob under a second key was tried and reverted too: it
+      made a read into a write, racing the mutex the queue is otherwise guarded
+      by, and nothing ever read the stash back. The fix needs a real recovery
+      path, not a quieter way to lose it.
+
 ## P1 — UX that users tripped on
 
 - [x] **Person picker does not scale.** Replaced the dropdown with a ranked

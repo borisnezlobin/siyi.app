@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "visibility": "tsx scripts/ai-visibility/run.ts",
     "postinstall": "node scripts/link-expo-router-to-root.mjs && node scripts/widen-expo-widgets-watch-folders.mjs",
     "mobile:start": "npm run start --workspace=apps/mobile",
     "mobile:start:device": "npm run start:device --workspace=apps/mobile",
@@ -48,6 +49,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
@@ -63,6 +65,7 @@
     "eslint-plugin-import": "^2.32.0",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5",
     "vitest": "^4.1.10"
   },

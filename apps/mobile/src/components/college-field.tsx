@@ -1,10 +1,13 @@
 import { X } from "phosphor-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { FormField } from "@/components/form-field";
 import { colors, radii } from "@/constants/theme";
-import { normalizeCollegeText, searchColleges } from "@/lib/colleges";
+import { normalizeCollegeText, searchColleges, warmColleges } from "@/lib/colleges";
+
+/** Long enough to swallow a burst of typing, short enough not to feel waited on. */
+const suggestionDelayMs = 140;
 
 /**
  * A university field that suggests schools as you type, so "cmu" or "uc berkeley"
@@ -23,16 +26,43 @@ export function CollegeField({
   [key: string]: unknown;
 }) {
   const [focused, setFocused] = useState(false);
+  const [query, setQuery] = useState(value);
+
+  /**
+   * Searching is a linear scan of about twenty-five thousand schools, and it
+   * used to run on the JS thread for every keystroke, which is felt as the
+   * keyboard falling behind the typing. It runs on a pause instead.
+   */
+  useEffect(() => {
+    // Unfocused, the text can still change — choosing a suggestion, or the X
+    // clearing the field — and there is no typing to wait out. Catching up at
+    // once stops the list flashing matches for the old fragment the next time
+    // the field is focused.
+    if (!focused) {
+      setQuery(value);
+      return;
+    }
+    const timer = setTimeout(() => setQuery(value), suggestionDelayMs);
+    return () => clearTimeout(timer);
+  }, [focused, value]);
+
+  // And the very first scan also parses the table, so that is done while the
+  // keyboard is still opening rather than on the first letter.
+  useEffect(() => {
+    if (!focused) return;
+    const task = InteractionManager.runAfterInteractions(warmColleges);
+    return () => task.cancel();
+  }, [focused]);
 
   const suggestions = useMemo(() => {
     if (!focused) return [];
-    const matches = searchColleges(value, 6);
+    const matches = searchColleges(query, 6);
     // Nothing to offer once they have typed the name exactly.
-    if (matches.length === 1 && normalizeCollegeText(matches[0].name) === normalizeCollegeText(value)) {
+    if (matches.length === 1 && normalizeCollegeText(matches[0].name) === normalizeCollegeText(query)) {
       return [];
     }
     return matches;
-  }, [focused, value]);
+  }, [focused, query]);
 
   return (
     <View>

@@ -1885,6 +1885,9 @@ export async function saveMarketingOptIn(userId: string, optIn: boolean) {
     .update({
       marketing_opt_in: optIn,
       marketing_opt_in_at: optIn ? new Date().toISOString() : null,
+      // Recorded whichever way they answered: an unanswered question and a
+      // declined one look the same otherwise, and the prompt would come back.
+      marketing_prompted_at: new Date().toISOString(),
     })
     .eq("auth_user_id", userId);
   if (error) throw error;
@@ -3093,4 +3096,48 @@ export async function saveCalendarToken(
     .update({ calendar_token: token })
     .eq("auth_user_id", userId);
   if (error) throw error;
+}
+
+/**
+ * The caller's referral code, generated on first ask — the same lazy write the
+ * web does, against the same column, so a code created on either one is the
+ * code both show.
+ */
+export async function getReferralCode(userId: string) {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("referral_code")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.referral_code as string | null) ?? null;
+}
+
+/**
+ * Claims a generated code. The `is null` guard is what makes two devices asking
+ * at once resolve to one code rather than overwriting each other.
+ */
+export async function saveReferralCode(userId: string, code: string) {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .update({ referral_code: code })
+    .eq("auth_user_id", userId)
+    .is("referral_code", null)
+    .select("referral_code")
+    .maybeSingle();
+  if (error) throw error;
+  if (data?.referral_code) return data.referral_code as string;
+  // Someone else won the race; theirs is the code.
+  return getReferralCode(userId);
+}
+
+/**
+ * How many people joined on the caller's code. Through the database function
+ * because row-level security limits a profile read to your own row, so the rows
+ * that point at you are not readable directly.
+ */
+export async function getReferralCount() {
+  const { data, error } = await supabase.rpc("referral_count");
+  if (error) throw error;
+  return typeof data === "number" ? data : 0;
 }

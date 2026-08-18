@@ -293,7 +293,7 @@ export const getQuickPeople = cache(loadQuickPeople);
  * resolves inside the account that owns it and two accounts may hold the same
  * slug without meeting.
  */
-export async function getPerson(identifier: string): Promise<Person> {
+async function loadPerson(identifier: string): Promise<Person> {
   const lookupColumn = looksLikeUuid(identifier) ? "id" : "slug";
 
   if (!isSupabaseConfigured()) {
@@ -333,6 +333,14 @@ export async function getPerson(identifier: string): Promise<Person> {
     contactMethods,
   );
 }
+
+/**
+ * Deduplicated per request, like `getPeople`. A profile asks for the same row
+ * twice — once for the page title and once for the page — and each ask was
+ * three round trips: the person, their signed avatar url and their contact
+ * methods.
+ */
+export const getPerson = cache(loadPerson);
 
 /** One person's contact rows, degrading to unavailable before migration 0013. */
 async function loadPersonContactMethods(

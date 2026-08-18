@@ -1,4 +1,4 @@
-import { AppleLogo, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
+import { EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -8,6 +8,7 @@ import {
   signInWithPassword,
   signUpWithPassword,
 } from "@/app/auth/actions";
+import { AppleMark } from "@/components/provider-marks";
 import {
   AuthProviderButton,
   AuthSecondaryButton,
@@ -236,9 +237,9 @@ export default async function AuthPage({
           <button
             type="button"
             disabled
-            className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-mist px-5 text-sm font-semibold text-ink opacity-50"
+            className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-2xl bg-black px-5 text-sm font-semibold text-white opacity-40"
           >
-            <AppleLogo size={19} weight="fill" aria-hidden="true" />
+            <AppleMark size={18} />
             Continue with Apple
           </button>
           <form action={signInWithGoogle}>

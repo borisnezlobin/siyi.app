@@ -18,6 +18,19 @@ const stats: AdminStats = {
   activeLast30: 9,
   idle: { quiet: 3, withoutContacts: 2, emailUnverified: 1 },
   marketingSubscribers: 5,
+  // Fewer than totalUsers on purpose: the funnel only counts accounts at least
+  // a day old, so a signup from this morning is outside it.
+  activation: {
+    signedUp: 11,
+    addedFirstPerson: 9,
+    addedThreePeople: 6,
+    returnedAfterFirstDay: 5,
+  },
+  retention: [
+    { weekStarting: "2026-08-03", signedUp: 3, activeAfter7: 2, activeAfter30: null },
+  ],
+  referrals: [{ code: "JQ7MNP2", joined: 4 }],
+  referredSignups: 4,
 };
 
 const segments = [

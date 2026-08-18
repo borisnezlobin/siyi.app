@@ -89,6 +89,7 @@ import {
 } from "@/lib/update-classifier";
 import { getClasses } from "@/lib/classes-data";
 import { contactDraftsOf, type ContactMethodDraft } from "@/lib/contact-methods";
+import { offerFoundPhoto } from "@/lib/found-photo-ui";
 import { onDeviceSortUpdate } from "@/lib/on-device-intelligence";
 import { mobileProposalClient } from "@/lib/update-proposal-client";
 import {
@@ -155,6 +156,7 @@ import {
   type Reminder,
   type Person,
 } from "@/lib/types";
+import { noteSuccessAndMaybeAskForReview } from "@/lib/review-prompt-store";
 import { useAuth } from "@/providers/auth-provider";
 
 type CapturePhase =
@@ -232,6 +234,7 @@ function PersonPicker({
   multiple = false,
   locked = false,
   label = "Who is this for?",
+  autoFocus = false,
 }: {
   people: Person[];
   selectedIds: string[];
@@ -239,6 +242,8 @@ function PersonPicker({
   multiple?: boolean;
   locked?: boolean;
   label?: string;
+  /** Choosing the person is the first step, so it holds the first keystroke. */
+  autoFocus?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const revealOnFocus = useRevealOnFocus();
@@ -288,6 +293,7 @@ function PersonPicker({
         <BottomSheetTextInput
           accessibilityLabel="Search people"
           autoCapitalize="words"
+          autoFocus={autoFocus}
           onChangeText={setQuery}
           onSubmitEditing={() => Keyboard.dismiss()}
           placeholder="Search…"
@@ -875,6 +881,10 @@ export function QuickCaptureProvider({
         await createInteraction(session.user.id, row);
       }
       await finishSaving();
+      // After the save has landed, not before: someone who just recorded seeing
+      // a person is the one moment the app has demonstrably done its job. Not
+      // awaited — the prompt is never allowed to hold up the sheet closing.
+      void noteSuccessAndMaybeAskForReview();
     } catch (saveError) {
       reportFailure(saveError, "That could not be saved.");
     } finally {

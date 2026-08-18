@@ -1,6 +1,12 @@
 import { Cake, CaretLeft, CaretRight } from "phosphor-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AppState,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { AppText } from "@/components/app-text";
 import { Avatar } from "@/components/avatar";
 import { colors, radii } from "@/constants/theme";
@@ -43,7 +49,16 @@ export function ReminderCalendar({
 }) {
   const [scope, setScope] = useState<CalendarScope>("month");
   const [anchor, setAnchor] = useState(() => new Date());
-  const now = useMemo(() => new Date(), []);
+  // Recomputed when the app comes back rather than frozen at mount: a phone
+  // left open across midnight went on drawing yesterday as today.
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") setNow(new Date());
+    });
+    return () => subscription.remove();
+  }, []);
   const { width } = useWindowDimensions();
   // Seven across whatever the screen, minus the page's own margins.
   const cellSize = Math.floor((width - 40 - 6 * 3) / 7);

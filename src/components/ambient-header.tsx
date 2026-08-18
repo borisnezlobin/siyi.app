@@ -22,7 +22,12 @@ export function AmbientHeader({
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-screen -translate-x-1/2 overflow-hidden"
+      // Behind everything, explicitly. An absolutely positioned element paints
+      // over its static siblings whatever the source order, so without this the
+      // opaque bottom of the fade sat on top of the contact buttons and sliced
+      // their tops off — and would do it again to whatever else lands within
+      // 360px of the top.
+      className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[360px] w-screen -translate-x-1/2 overflow-hidden"
     >
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

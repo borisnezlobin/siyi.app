@@ -87,7 +87,14 @@ export function AppTabBar({
                   void Haptics.selectionAsync();
                 }
               }}
-              style={[styles.tab, index === 1 && styles.leftTabGap, index === 2 && styles.rightTabGap]}
+              style={({ pressed }) => [
+                styles.tab,
+                index === 1 && styles.leftTabGap,
+                index === 2 && styles.rightTabGap,
+                // The add button beside these has had a down-state all along,
+                // so the tabs read as the dead half of the same bar without one.
+                pressed && !selected && styles.tabPressed,
+              ]}
             >
               <IconComponent
                 color={selected ? colors.ink : colors.inkMuted}
@@ -187,6 +194,10 @@ const styles = StyleSheet.create({
     height: 58,
     justifyContent: "center",
     width: 58,
+  },
+  tabPressed: {
+    opacity: 0.55,
+    transform: [{ scale: 0.94 }],
   },
   actionPressed: {
     backgroundColor: colors.coralStrong,

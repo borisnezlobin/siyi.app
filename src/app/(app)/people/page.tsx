@@ -17,7 +17,14 @@ export default async function PeoplePage({
 }: {
   searchParams: Promise<{ filter?: string; added?: string }>;
 }) {
-  const [people, parameters] = await Promise.all([getPeople(), searchParams]);
+  // Started together. Awaiting the classes further down, inside the markup,
+  // read as free but meant the second round trip only began once the first had
+  // come back — two waits on a phone where there had to be one.
+  const [people, classesByPerson, parameters] = await Promise.all([
+    getPeople(),
+    getClassesByPerson(),
+    searchParams,
+  ]);
   const initialFilter =
     parameters.filter === "overdue" || parameters.filter === "recent"
       ? parameters.filter
@@ -70,7 +77,7 @@ export default async function PeoplePage({
         </p>
       ) : null}
       <PeopleDirectory
-        classesByPerson={Object.fromEntries(await getClassesByPerson())}
+        classesByPerson={Object.fromEntries(classesByPerson)}
         people={people}
         initialFilter={initialFilter}
       />

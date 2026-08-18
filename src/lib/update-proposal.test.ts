@@ -460,3 +460,94 @@ describe("classes", () => {
     expect(items[0]).toMatchObject({ kind: "class", course: "CHEM 4A" });
   });
 });
+
+describe("a value the parser cannot read", () => {
+  it("keeps it as words instead of dropping it silently", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        // No year, so it cannot become a date column value.
+        fields: [{ field: "birthday", value: "june 3" }],
+      },
+      person,
+      sections: [],
+      now,
+    });
+
+    expect(items).toEqual([
+      expect.objectContaining({ kind: "note", text: "Birthday: june 3" }),
+    ]);
+  });
+
+  it("files it under a heading the person already has", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        fields: [{ field: "graduationYear", value: "sometime soon" }],
+      },
+      person,
+      sections: [{ id: "s-1", heading: "Facts", body: "" }],
+      now,
+    });
+
+    expect(items[0]).toMatchObject({
+      kind: "note",
+      heading: "Facts",
+      noteId: "s-1",
+      text: "Graduation year: sometime soon",
+    });
+  });
+
+  it("still writes a value it can read", () => {
+    const items = buildProposalItems({
+      proposal: {
+        ...emptyProposal,
+        fields: [{ field: "birthday", value: "2007-12-29" }],
+      },
+      person,
+      sections: [],
+      now,
+    });
+
+    expect(items).toEqual([
+      expect.objectContaining({ kind: "field", value: "2007-12-29" }),
+    ]);
+  });
+});
+
+describe("several days of the same errand", () => {
+  it("keeps every day rather than cutting the list short", () => {
+    const proposal = {
+      ...emptyProposal,
+      reminders: [
+        { text: "feed her cat", dueInDays: 0, dueOn: "2026-08-09" },
+        { text: "feed her cat", dueInDays: 0, dueOn: "2026-08-10" },
+        { text: "feed her cat", dueInDays: 0, dueOn: "2026-08-11" },
+        { text: "feed her cat", dueInDays: 0, dueOn: "2026-08-12" },
+        { text: "dance recital", dueInDays: 0, dueOn: "2026-08-14" },
+      ],
+    };
+    const items = buildProposalItems({
+      proposal,
+      person,
+      sections: [],
+      now,
+    });
+
+    expect(items.filter((item) => item.kind === "reminder")).toHaveLength(5);
+  });
+
+  it("survives normalisation, which used to cut it to four", () => {
+    const raw = {
+      notes: [],
+      fields: [],
+      classes: [],
+      leftover: "",
+      reminders: Array.from({ length: 6 }, (unused, day) => ({
+        text: "feed her cat",
+        dueInDays: day,
+      })),
+    };
+    expect(normalizeProposal(raw)?.reminders).toHaveLength(6);
+  });
+});

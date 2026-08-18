@@ -59,7 +59,8 @@ export const proposalFieldHints: Record<ProposalFieldName, string> = {
   university: "the university or college they attend",
   major: "what they study",
   graduationYear: "the year they graduate",
-  birthday: "the day they were born",
+  birthday:
+    "the day they were born, including when the note gives the day they turn an age",
   dormOrResidence: "where they live now, such as a dorm or a neighbourhood",
   firstMetLocation: "where you first met them",
   relationshipLabel: "how you know them, such as a classmate or a cousin",
@@ -94,7 +95,9 @@ export type UpdateProposal = {
 
 const maxNotes = 6;
 const maxFields = 8;
-const maxReminders = 4;
+// A four-day span is four reminders on its own, so a ceiling of four meant one
+// ordinary sentence used the whole allowance and anything after it was cut.
+const maxReminders = 12;
 
 function cleanText(value: unknown, limit: number): string | null {
   if (typeof value !== "string") return null;
@@ -202,8 +205,6 @@ export function coerceFieldValue(
       const date = new Date(`${trimmed}T00:00:00Z`);
       return Number.isNaN(date.getTime()) ? { ok: false } : { ok: true, value: trimmed };
     }
-    // A date with no year is not a birthday this app can store, and inventing
-    // one would put a wrong age on the profile forever.
     const parsed = Date.parse(trimmed);
     if (Number.isNaN(parsed) || !yearPattern.test(trimmed)) return { ok: false };
     // Written out from the local parts. Going through toISOString would move
@@ -406,6 +407,9 @@ export function proposalInstructions(): string {
     "Do not repeat something as a note if you already made it a field or a reminder.",
     "Do not propose a field the person already has a value for unless the note plainly corrects it.",
     "Only make a reminder for something with a date or a deadline in the future.",
+    // A date column will not take "last July", and today's date is already at
+    // the top of the context.
+    "A date in a field must be a complete calendar date as yyyy-mm-dd.",
     // Counting days is arithmetic, and getting it wrong by one puts the
     // reminder on the wrong day. Repeating the date is not.
     "When the note names a date, copy it into dueOn exactly as written and set dueInDays to 0.",
@@ -493,11 +497,21 @@ export function buildProposalItems({
     });
   });
 
+  // Anything the parser cannot read is kept as words rather than thrown away.
+  // A value that fits no column is still something the person told us, and a
+  // fact that vanishes with nothing on screen to show for it is worse than a
+  // fact filed in the wrong place — one can be corrected, the other cannot.
+  const unreadableFields: UpdateProposal["fields"] = [];
+
   proposal.fields.forEach((entry, index) => {
     const coerced = coerceFieldValue(entry.field, entry.value);
-    if (!coerced.ok) return;
+    if (!coerced.ok) {
+      unreadableFields.push(entry);
+      return;
+    }
 
-    const display = String(coerced.value);
+    const value = coerced.value;
+    const display = String(value);
 
     // A contact is added to the ones they already have, so the only reason to
     // say nothing is that they already have this exact one. Nothing is being
@@ -510,7 +524,7 @@ export function buildProposalItems({
         id: `field:${entry.field}:${index}`,
         kind: "field",
         field: entry.field,
-        value: coerced.value,
+        value,
         display,
         current: null,
         conflict: false,
@@ -526,7 +540,7 @@ export function buildProposalItems({
       id: `field:${entry.field}`,
       kind: "field",
       field: entry.field,
-      value: coerced.value,
+      value,
       display,
       current,
       conflict: current !== null,
@@ -539,6 +553,17 @@ export function buildProposalItems({
     // Already on their list: "math 53" and "MATH53" are the same course.
     if (classes.some((held) => courseCodeKey(held) === courseCodeKey(code))) return;
     items.push({ id: `class:${index}`, kind: "class", course: code });
+  });
+
+  unreadableFields.forEach((entry, index) => {
+    const heading = sections[0]?.heading ?? defaultNoteHeadings[1];
+    items.push({
+      id: `unreadable:${entry.field}:${index}`,
+      kind: "note",
+      heading,
+      text: `${proposalFieldLabels[entry.field]}: ${entry.value}`,
+      noteId: sections[0]?.id ?? null,
+    });
   });
 
   proposal.reminders.forEach((entry, index) => {
