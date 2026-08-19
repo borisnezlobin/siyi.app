@@ -83,11 +83,57 @@ describe("checkInCandidates", () => {
     ]);
   });
 
-  it("caps how many it asks about", () => {
+  it("offers everyone, because a hidden cap is what broke this screen", () => {
     const many = Array.from({ length: 30 }, (_, index) =>
       person(String(index), `Person ${index}`, daysAgo(index + 1)),
     );
-    expect(checkInCandidates(many, today)).toHaveLength(12);
+    expect(checkInCandidates(many, today)).toHaveLength(30);
+  });
+});
+
+/**
+ * The three things that were reported, as three tests. All of them were the one
+ * cap: it was applied after the "not logged today" filter, and ticking somebody
+ * changes which side of that filter they are on.
+ */
+describe("the roster does not move while you are reading it", () => {
+  const many = Array.from({ length: 30 }, (_, index) =>
+    person(String(index), `Person ${index}`, daysAgo(index + 1)),
+  );
+  const roster = (people: ReturnType<typeof person>[]) =>
+    checkInCandidates(people, today).map((entry) => entry.id);
+  const tick = (people: ReturnType<typeof person>[], ids: string[]) =>
+    people.map((entry) =>
+      ids.includes(entry.id)
+        ? { ...entry, lastInteractionAt: today.toISOString() }
+        : entry,
+    );
+
+  it("shows nobody new when you tick somebody", () => {
+    // Ticking used to move a person out of the capped group, free a place, and
+    // admit a stranger who had never been on the page.
+    expect(roster(tick(many, ["5"])).sort()).toEqual(roster(many).sort());
+  });
+
+  it("takes nobody away when you tick and then untick", () => {
+    const ticked = roster(tick(many, ["5"]));
+    const untickedAgain = roster(many);
+    expect(untickedAgain.sort()).toEqual(ticked.sort());
+  });
+
+  it("keeps everybody when somebody is seen from another screen", () => {
+    // A last-seen changing elsewhere used to push whoever sat at the bottom off
+    // the list, and everything below them jumped up.
+    const seenElsewhere = many.map((entry) =>
+      entry.id === "29" ? { ...entry, lastInteractionAt: daysAgo(0.5) } : entry,
+    );
+    expect(roster(seenElsewhere).sort()).toEqual(roster(many).sort());
+  });
+
+  it("holds the opening order even after somebody is ticked", () => {
+    const opening = roster(many);
+    const after = keepCheckInOrder(checkInCandidates(tick(many, ["5"]), today), opening);
+    expect(after.map((entry) => entry.id)).toEqual(opening);
   });
 });
 
