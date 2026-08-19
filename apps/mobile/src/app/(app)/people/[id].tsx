@@ -72,6 +72,7 @@ import { useCachedData } from "@/hooks/use-cached-data";
 import { personCacheKey } from "@/lib/query-cache";
 import { useRefreshableData } from "@/hooks/use-refreshable-data";
 import { useAuth } from "@/providers/auth-provider";
+import { AmeliaCard } from "@/components/amelia-card";
 import { PersonClasses } from "@/components/person-classes";
 import { getClasses } from "@/lib/classes-data";
 import { useQuickCapture } from "@/providers/quick-capture-provider";
@@ -412,6 +413,12 @@ export default function PersonDetailScreen() {
             </Card>
           </View>
         ) : null}
+
+        <AmeliaCard
+          onImported={() => void personData.reload()}
+          personId={person.id}
+          personName={person.preferredName || person.fullName}
+        />
 
         <View style={styles.section}>
           <SectionHeading
