@@ -27,6 +27,7 @@ import { Avatar } from "@/components/avatar";
 import { QuickCaptureTrigger } from "@/components/quick-capture-hub";
 import { CustomTypeIcon } from "@/components/custom-type-icon";
 import { UpdateSheet } from "@/components/update-sheet";
+import { AmeliaCard } from "@/components/amelia-card";
 import { ageOnDate } from "@/lib/birthday-age";
 import { buildPersonTimeline } from "@/lib/person-timeline";
 import { contactDraftsOf } from "@/lib/contact-methods";
@@ -349,6 +350,8 @@ export default async function PersonDetailPage({
           ))}
         </section>
       ) : null}
+
+      <AmeliaCard personId={person.id} personName={displayName} />
 
       <section className="mt-8">
         <div className={sectionHeaderClassName}>
