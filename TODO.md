@@ -257,9 +257,13 @@ Migration numbers are reserved per agent so they cannot collide:
 - `0012_person_slugs.sql` — always-suffixed person slugs, uuid keeps resolving.
 - `0014_person_coordinates.sql` — hometown map, offline dataset only, no new
   dependency and no external requests.
-- `0028_amelia_links.sql` — `siyi-amelia` branch. Links siyi people to Amelia
+- `0031_amelia_links.sql` — `siyi-amelia` branch. Links siyi people to Amelia
   speakers and records imported conversations. Ships on web and phone. The
   migration has not been applied to production.
+  Renumbered from 0028: main already had a different `0028_calendar_feed.sql`,
+  and two files sharing a number is how one of them gets skipped — by a person
+  reading the list, or by `supabase db push`, which records what it has applied
+  by that prefix and would treat this one as already done.
 
 Queued, NOT started — it rewrites the same contact fields agent 0010 is
 restructuring, so it must run after that lands:
