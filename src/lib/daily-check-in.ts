@@ -44,15 +44,28 @@ export function loggedToday(person: CheckInPerson, today = new Date()) {
 /**
  * Who to offer in "who did you talk to today?", best guess first.
  *
- * The people you actually see are the ones you saw recently, so recency leads.
- * Anyone already logged today drops out — the point of the question is what is
- * still missing. Someone brand new with no history sorts by when you met them,
- * which is the only signal they have.
+ * Everyone, in an order that puts the likely answers at the top: the people you
+ * actually see are the ones you saw recently, so recency leads. Someone brand
+ * new with no history sorts by when you met them, which is the only signal they
+ * have.
+ *
+ * There is deliberately no cap, and taking one out is what fixed this screen.
+ * The list used to be the top two dozen of whoever was NOT yet logged today —
+ * a limit applied after a filter that the reader's own taps change. So ticking
+ * somebody moved them out of that group, freed a place, and admitted a
+ * stranger who had never been on the page; unticking threw that stranger back
+ * off; and anybody whose last-seen changed somewhere else pushed the person at
+ * the bottom out of the list entirely. Rows appeared, vanished and shifted
+ * under the finger, and none of it was the sort order, which is why fixing the
+ * sort twice did not help.
+ *
+ * A roster that cannot change while you read it is worth more here than a short
+ * one. There is a search box for a long circle, and nobody is hidden behind a
+ * number they cannot see.
  */
 export function checkInCandidates<T extends CheckInPerson>(
   people: T[],
-  today = new Date(),
-  limit = 12
+  today = new Date()
 ): T[] {
   // Anyone already logged today stays on the list, ticked. Coming back at 9pm
   // should show the three people from lunch still selected, not an empty page
@@ -67,8 +80,7 @@ export function checkInCandidates<T extends CheckInPerson>(
       const gap = lastSeenAt(right) - lastSeenAt(left);
       if (gap !== 0) return gap;
       return displayNameOf(left).localeCompare(displayNameOf(right));
-    })
-    .slice(0, limit);
+    });
 
   return [
     ...alreadyLogged.sort((left, right) =>
