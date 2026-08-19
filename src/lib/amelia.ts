@@ -4,6 +4,12 @@
  * siyi talks to its HTTP API rather than importing any of it. Types mirror
  * Amelia's shared/contracts.ts. Server-side only: AMELIA_API_URL must never
  * reach the browser.
+ *
+ * One Amelia instance belongs to one siyi user. Amelia has no tenant concept —
+ * its /people and /conversations are the whole database — so pointing several
+ * siyi accounts at the same instance would let each of them read all of it.
+ * AMELIA_API_KEY, when set, is sent as a bearer token for the day Amelia
+ * checks one.
  */
 
 const AMELIA_TIMEOUT_MS = 10_000;
@@ -50,9 +56,14 @@ async function ameliaRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const baseUrl = process.env.AMELIA_API_URL;
   if (!baseUrl) throw new Error("Amelia is not configured.");
 
+  const apiKey = process.env.AMELIA_API_KEY;
   const response = await fetch(new URL(path, baseUrl), {
     ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
+    headers: {
+      "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+      ...init?.headers,
+    },
     signal: AbortSignal.timeout(AMELIA_TIMEOUT_MS),
     cache: "no-store",
   });
@@ -113,5 +124,10 @@ export function buildConversationUpdateText(
 
   const full = lines.join("\n");
   if (full.length <= UPDATE_TEXT_LIMIT) return full;
-  return `${full.slice(0, UPDATE_TEXT_LIMIT - 1)}…`;
+  // Cutting between the halves of a surrogate pair would store a lone
+  // surrogate, so the cut moves in front of the pair.
+  let cut = UPDATE_TEXT_LIMIT - 1;
+  const beforeCut = full.charCodeAt(cut - 1);
+  if (beforeCut >= 0xd800 && beforeCut <= 0xdbff) cut -= 1;
+  return `${full.slice(0, cut)}…`;
 }

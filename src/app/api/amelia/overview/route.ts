@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
 import {
@@ -20,8 +21,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ configured: false });
     }
 
-    const personId = request.nextUrl.searchParams.get("personId");
-    if (!personId) return apiError("personId is required.");
+    const personIdValidation = z
+      .string()
+      .uuid()
+      .safeParse(request.nextUrl.searchParams.get("personId"));
+    if (!personIdValidation.success) {
+      return apiError("personId must be a person id.");
+    }
+    const personId = personIdValidation.data;
 
     const [linksResult, importsResult] = await Promise.all([
       supabase
@@ -31,8 +38,13 @@ export async function GET(request: NextRequest) {
         .from("amelia_conversation_imports")
         .select("amelia_conversation_id"),
     ]);
-    if (linksResult.error) return apiError(linksResult.error.message);
-    if (importsResult.error) return apiError(importsResult.error.message);
+    if (linksResult.error || importsResult.error) {
+      console.error(
+        "Amelia overview read failed",
+        linksResult.error ?? importsResult.error,
+      );
+      return apiError("Loading Amelia data failed. Try again.", 500);
+    }
 
     let people;
     let conversations;
@@ -41,9 +53,10 @@ export async function GET(request: NextRequest) {
         getAmeliaPeople(),
         getAmeliaConversations(),
       ]);
-    } catch {
+    } catch (ameliaError) {
       // Amelia being down should read as a quiet state on the person page,
       // not an error toast — the link data is still real.
+      console.error("Amelia overview fetch failed", ameliaError);
       return NextResponse.json({ configured: true, reachable: false });
     }
 

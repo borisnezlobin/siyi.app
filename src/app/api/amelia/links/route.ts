@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, errorMessage } from "@/lib/api";
 import { requireAuthenticatedRequest } from "@/lib/api-auth";
-import { ameliaConfigured, nameAmeliaPerson } from "@/lib/amelia";
+import {
+  ameliaConfigured,
+  getAmeliaPeople,
+  nameAmeliaPerson,
+} from "@/lib/amelia";
 
 const linkInputSchema = z.object({
   personId: z.string().uuid(),
@@ -18,7 +22,8 @@ export async function POST(request: NextRequest) {
     const { user, supabase } = await requireAuthenticatedRequest(request);
     if (!ameliaConfigured()) return apiError("Amelia is not configured.", 503);
 
-    const validation = linkInputSchema.safeParse(await request.json());
+    const body = await request.json().catch(() => null);
+    const validation = linkInputSchema.safeParse(body);
     if (!validation.success) {
       return apiError(validation.error.issues[0]?.message ?? "Invalid link.");
     }
@@ -31,6 +36,20 @@ export async function POST(request: NextRequest) {
       .single();
     if (personError || !person) return apiError("Person not found.", 404);
 
+    // The id has to be a speaker Amelia actually knows, and never the owner:
+    // linking the owner would rename them and re-file their utterances.
+    let speaker;
+    try {
+      const speakers = await getAmeliaPeople();
+      speaker = speakers.find((candidate) => candidate._id === ameliaPersonId);
+    } catch (ameliaError) {
+      console.error("Amelia people fetch failed", ameliaError);
+      return apiError("Amelia is unreachable.", 502);
+    }
+    if (!speaker || speaker.is_owner) {
+      return apiError("That Amelia speaker does not exist.", 404);
+    }
+
     const { error } = await supabase
       .from("person_amelia_links")
       .upsert(
@@ -38,11 +57,11 @@ export async function POST(request: NextRequest) {
         { onConflict: "person_id" },
       );
     if (error) {
-      return apiError(
-        error.code === "23505"
-          ? "That Amelia speaker is already linked to someone else."
-          : error.message,
-      );
+      if (error.code === "23505") {
+        return apiError("That Amelia speaker is already linked to someone else.");
+      }
+      console.error("Amelia link write failed", error);
+      return apiError("Linking failed. Try again.", 500);
     }
 
     // Amelia re-files the speaker's past utterances under this name, so the
@@ -53,7 +72,8 @@ export async function POST(request: NextRequest) {
         ameliaPersonId,
         person.preferred_name ?? person.full_name,
       );
-    } catch {
+    } catch (nameError) {
+      console.error("Amelia name sync failed", nameError);
       nameSynced = false;
     }
 
@@ -67,7 +87,8 @@ export async function DELETE(request: NextRequest) {
   try {
     const { supabase } = await requireAuthenticatedRequest(request);
 
-    const validation = unlinkInputSchema.safeParse(await request.json());
+    const body = await request.json().catch(() => null);
+    const validation = unlinkInputSchema.safeParse(body);
     if (!validation.success) {
       return apiError(validation.error.issues[0]?.message ?? "Invalid unlink.");
     }
@@ -76,7 +97,10 @@ export async function DELETE(request: NextRequest) {
       .from("person_amelia_links")
       .delete()
       .eq("person_id", validation.data.personId);
-    if (error) return apiError(error.message);
+    if (error) {
+      console.error("Amelia unlink failed", error);
+      return apiError("Unlinking failed. Try again.", 500);
+    }
 
     return NextResponse.json({ linked: false });
   } catch (error) {
