@@ -28,10 +28,10 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
   const router = useRouter();
   // Fixed when the page opens, so saving a tick cannot rearrange the list.
   const [order] = useState(() =>
-    checkInCandidates(people, new Date(), 24).map((person) => person.id),
+    checkInCandidates(people, new Date()).map((person) => person.id),
   );
   const candidates = useMemo(
-    () => keepCheckInOrder(checkInCandidates(people, new Date(), 24), order),
+    () => keepCheckInOrder(checkInCandidates(people, new Date()), order),
     [people, order],
   );
   const [selected, setSelected] = useState<string[]>(() =>
@@ -42,10 +42,9 @@ export function DailyCheckIn({ people }: { people: Person[] }) {
   const [query, setQuery] = useState("");
 
   /**
-   * Searching looks at everyone, not at the two dozen already on screen.
-   * Filtering the suggestions alone means the person you are hunting for is
-   * exactly the person a search cannot find — they are not suggested because
-   * you have not seen them lately, which is usually why you are looking.
+   * Searching looks at everyone, including anyone archived out of the roster
+   * below. Filtering the list alone would mean the person you are hunting for
+   * is exactly the person a search cannot find.
    */
   const visible = useMemo(() => {
     const trimmed = query.trim();

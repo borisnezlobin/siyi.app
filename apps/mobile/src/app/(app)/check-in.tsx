@@ -43,13 +43,13 @@ export default function CheckInScreen() {
   // Fixed when the screen opens, so saving a tick cannot rearrange the list.
   const [order, setOrder] = useState<string[]>([]);
   const candidates = useMemo(
-    () => keepCheckInOrder(checkInCandidates(people, new Date(), 24), order),
+    () => keepCheckInOrder(checkInCandidates(people, new Date()), order),
     [people, order],
   );
   // Filtered, never reordered: the same matcher the people tab uses, so
   // searching means the same thing in both places.
   //
-  // Searching looks at everyone rather than at the two dozen suggestions.
+  // Searching looks at everyone, including anyone archived out of the roster.
   // Filtering the suggestions alone means the person you are hunting for is
   // exactly the person a search cannot find — they are not suggested because
   // you have not seen them lately, which is usually why you are looking.
@@ -61,7 +61,7 @@ export default function CheckInScreen() {
 
   useEffect(() => {
     if (order.length > 0 || people.length === 0) return;
-    setOrder(checkInCandidates(people, new Date(), 24).map((person) => person.id));
+    setOrder(checkInCandidates(people, new Date()).map((person) => person.id));
   }, [order.length, people]);
   const loggedAlready = useMemo(
     () => alreadyLoggedIds(people, new Date()),
