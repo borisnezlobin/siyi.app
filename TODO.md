@@ -257,6 +257,9 @@ Migration numbers are reserved per agent so they cannot collide:
 - `0012_person_slugs.sql` — always-suffixed person slugs, uuid keeps resolving.
 - `0014_person_coordinates.sql` — hometown map, offline dataset only, no new
   dependency and no external requests.
+- `0028_amelia_links.sql` — `siyi-amelia` branch. Links siyi people to Amelia
+  speakers and records imported conversations. Web only for now; the mobile
+  half (Amelia card on the person screen) is owed before this branch merges.
 
 Queued, NOT started — it rewrites the same contact fields agent 0010 is
 restructuring, so it must run after that lands:
