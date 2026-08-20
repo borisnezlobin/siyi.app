@@ -29,7 +29,6 @@ export type UserProfile = {
   timezone: string;
   locale: string;
   onboardingCompletedAt: string | null;
-  marketingPromptedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

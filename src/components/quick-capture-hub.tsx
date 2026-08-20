@@ -25,8 +25,6 @@ import { defaultReminderTimeValue } from "@/lib/reminder-due";
 import { PersonMultiPicker } from "@/components/person-multi-picker";
 import { PersonPicker } from "@/components/person-picker";
 import { isPreviewOnly, logInteraction, saveUpdate } from "@/lib/capture-client";
-import { FoundPhotoDialog } from "@/components/found-photo-dialog";
-import { findInstagramPhoto, saveFoundPhoto } from "@/lib/found-photo-client";
 import { UpdateProposalReview } from "@/components/update-proposal-review";
 import { applyResultMessage, applyUpdateProposal } from "@/lib/update-proposal-apply";
 import { webProposalClient } from "@/lib/update-proposal-client";
@@ -154,11 +152,6 @@ export function QuickCaptureHub({
   );
   const [updateText, setUpdateText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [foundPhoto, setFoundPhoto] = useState<{
-    personId: string;
-    photo: Blob;
-  } | null>(null);
-  const [savingFoundPhoto, setSavingFoundPhoto] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   // Set once a model has sorted the update: what it wants to write, waiting to
@@ -407,29 +400,7 @@ export function QuickCaptureHub({
       return;
     }
 
-    // An update that just filled in their Instagram is the other moment worth
-    // looking for a picture. Whoever it is about already has one, or the
-    // lookup finds nothing, and this says nothing at all.
-    const handle = plan.contacts.find(
-      (contact) => contact.kind === "instagram",
-    )?.value;
-    const subject = people.find((person) => person.id === personId);
-    if (handle && subject && !subject.profilePhotoUrl) {
-      void findInstagramPhoto(handle).then((photo) => {
-        if (photo) setFoundPhoto({ personId, photo });
-      });
-    }
-
     finish();
-  }
-
-  async function keepFoundPhoto() {
-    if (!foundPhoto) return;
-    setSavingFoundPhoto(true);
-    await saveFoundPhoto(foundPhoto.personId, foundPhoto.photo);
-    setSavingFoundPhoto(false);
-    setFoundPhoto(null);
-    router.refresh();
   }
 
   const copy = modeCopy[mode ?? "interaction"];
@@ -444,12 +415,6 @@ export function QuickCaptureHub({
 
   return (
     <>
-      <FoundPhotoDialog
-        onDismiss={() => setFoundPhoto(null)}
-        onUse={() => void keepFoundPhoto()}
-        photoUrl={foundPhoto ? URL.createObjectURL(foundPhoto.photo) : null}
-        saving={savingFoundPhoto}
-      />
       {menuOpen ? (
         <button
           type="button"
