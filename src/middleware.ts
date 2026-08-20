@@ -62,9 +62,33 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /**
+   * Never allowed to throw.
+   *
+   * This ran on every signed-in request, and an unhandled rejection here is a
+   * 500 on whatever the reader was opening — the whole app, not one screen.
+   * Production caught it doing exactly that: `Error: JWT issued at future` on
+   * `GET /today`, which is Supabase refusing a token it had just minted because
+   * the issuing clock was a moment ahead of the validating one. That only
+   * happens when a token is refreshed, and a token is only refreshed after the
+   * old one has expired — so it lands on somebody opening the app after hours
+   * away, which is the worst possible moment to show them a broken screen.
+   *
+   * There is nothing here worth failing a request over. Refreshing the cookie
+   * is a courtesy, and hiding /admin degrades safely: `requireAdminPageUser()`
+   * is the actual authorisation and runs regardless. So a bad answer means
+   * "carry on without a user" — the page's own `getAuthenticatedUser()` decides
+   * what an absent session means, and it can send them to sign in, which is a
+   * far better outcome than an error screen.
+   */
+  let user: User | null = null;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch (error) {
+    console.error("[siyi] middleware could not read the session", error);
+  }
 
   // The page still calls requireAdminPageUser(): this is the status code, not
   // the authorisation, and the page must not depend on middleware having run.
