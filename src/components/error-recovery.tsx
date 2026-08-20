@@ -24,6 +24,24 @@ function isStaleBuildError(error: Error) {
   );
 }
 
+/**
+ * Whether this is the installed app rather than a browser tab. Wrapped, because
+ * everything in this file runs inside the last error boundary there is: a
+ * browser without `matchMedia` would otherwise throw while rendering the screen
+ * that exists to survive a throw.
+ */
+function isStandalone() {
+  try {
+    return (
+      window.matchMedia?.("(display-mode: standalone)").matches === true ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+        true
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Survives the reload, which is the whole point: it is what stops a second one. */
 export const recoveryAttemptKey = "siyi.stale-build-recovered";
 
@@ -84,13 +102,39 @@ export function ErrorRecovery({
   const staleBuild = isStaleBuildError(error) && !alreadyRecovered;
 
   useEffect(() => {
-    // The only record this failure leaves. Without it the screen is a dead end
-    // for whoever has to explain it as well as for the person looking at it.
     console.error("[siyi] render failed", {
       name: error.name,
       message: error.message,
       digest: error.digest,
       stack: error.stack,
+    });
+
+    /**
+     * And sent somewhere it can actually be read. A console on a phone in a
+     * home screen app is not somewhere anybody can look, so a failure there
+     * used to leave no trace at all — the server logged nothing, because the
+     * server was never the thing that broke.
+     *
+     * `build` is the point of it: the browser says which build it is running,
+     * and the reply comes from whichever build is current. Those disagreeing is
+     * the difference between "this app is stale" and "this app is broken", and
+     * guessing between the two is what has made this hard to pin down.
+     */
+    void fetch("/api/client-error", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        name: error.name,
+        message: error.message,
+        digest: error.digest,
+        stack: error.stack,
+        at: typeof window === "undefined" ? null : window.location.pathname,
+        build: process.env.NEXT_PUBLIC_BUILD_ID ?? null,
+        standalone: isStandalone(),
+      }),
+    }).catch(() => {
+      // A report that cannot be sent is not worth a second error screen.
     });
   }, [error]);
 
