@@ -15,6 +15,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/avatar";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AppText } from "@/components/app-text";
+import { CircleOverTimeSection } from "@/components/circle-over-time-section";
 import { Button } from "@/components/button";
 import { ErrorState, LoadingState } from "@/components/load-state";
 import { Screen } from "@/components/screen";
@@ -297,6 +298,16 @@ export default function TodayScreen() {
           />
         </Card>
       ) : null}
+
+      {/* Below the reminders, never above them: this is a look back, and it
+          must not push the thing that actually needs doing down the screen. */}
+      <View style={styles.section}>
+        <SectionHeading
+          subtitle="Who you have been meeting, month by month."
+          title="Your circle"
+        />
+        <CircleOverTimeSection now={now} people={activePeople} />
+      </View>
 
       {checkInPeople.length > 0 ? (
         <View style={styles.section}>
