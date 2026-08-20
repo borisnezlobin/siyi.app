@@ -84,6 +84,28 @@ describe("the error screen", () => {
     await vi.waitFor(() => expect(caches.delete).toHaveBeenCalledWith("old"));
   });
 
+  it("sends the failure somewhere it can be read", async () => {
+    const sent = vi.fn(async () => new Response("{}"));
+    vi.stubGlobal("fetch", sent);
+
+    render(
+      <ErrorRecovery
+        error={Object.assign(new Error("boom"), { digest: "abc123" })}
+        reset={vi.fn()}
+      />,
+    );
+
+    // A console on a phone in a home screen app is not somewhere anybody can
+    // look, and the server never saw the request that broke.
+    await vi.waitFor(() => expect(sent).toHaveBeenCalled());
+    const [url, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/client-error");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      message: "boom",
+      digest: "abc123",
+    });
+  });
+
   it("only reloads its way out once, so a broken build cannot loop", () => {
     window.sessionStorage.setItem("siyi.stale-build-recovered", "true");
     const reload = vi.fn();
