@@ -195,15 +195,20 @@ Fixed in code:
 
 Left, and blocking:
 
-- [ ] **An Apple Developer account.** Everything below waits on it, and it is
-      the one thing here nobody in the repo can do — see the age note in Ops.
-- [ ] **Screenshots.** None exist. At least one 6.9" iPhone set (1320×2868) is
-      required; `supportsTablet: false`, so no iPad set is owed. This needs the
-      app running on a device or simulator, which has never happened — the
-      mobile UI is covered by @testing-library/react-native and nothing else.
-- [ ] **A review account, seeded.** The app is entirely behind a login, so
-      review is blocked without one. Set `APP_REVIEW_EMAIL` and
-      `APP_REVIEW_PASSWORD` and preload fictional people. No real person data.
+- [x] **An Apple Developer account.** There is one now. What it still owes the
+      repo is the 10-character Team ID, the Apple ID the submit profile signs
+      in as, and an App Store Connect record on bundle `app.siyi.mobile` so
+      there is an `ascAppId` to point at.
+- [x] **Screenshots.** Four 6.9" shots (1320×2868) are in
+      `store/app-store/screenshots/6.9-inch`, taken on a device against the
+      seeded cast. `supportsTablet: false`, so no iPad set is owed. Re-take
+      them if the Today screen changes shape.
+- [ ] **A review account, seeded.** `scripts/seed-review-account.mjs` creates
+      it, confirms the address so a reviewer can sign in without our inbox,
+      marks onboarding finished, and loads the five fictional people the
+      screenshots show. Still needs `APP_REVIEW_EMAIL` and
+      `APP_REVIEW_PASSWORD` set, and the script actually run against
+      production. Dates are relative, so re-run it if the queue goes long.
 - [ ] **Age rating questionnaire.** Unanswered anywhere. 4+ looks right: no
       feed, no messaging between users, and the only published content is a
       card you write about yourself.
@@ -214,8 +219,9 @@ Left, and blocking:
       profile, which reads them from the environment now.
 - [ ] `EXPO_PUBLIC_LEGAL_ENTITY_NAME` is empty, so the legal pages name
       "Siyi.app" as the operator and the store copyright has nothing in it.
-- [ ] Run the app on a real device once before submitting. None of this has
-      ever been seen running.
+- [x] Run the app on a real device once before submitting. Done — the store
+      screenshots are the evidence. Worth repeating against a production build
+      rather than the dev client before the final submit.
 
 ## Ops / not code
 
@@ -226,7 +232,7 @@ Left, and blocking:
 - [ ] Enable the Apple provider. Google is live on web and phone.
 - [ ] Set `APPLE_TEAM_ID` so universal links resolve.
 - [ ] Resend: verify a sending subdomain for marketing mail.
-- [ ] iOS build needs an Apple Developer account (18+). Blocked.
+- [x] iOS build needs an Apple Developer account (18+). There is one.
 
 ## Applied migrations
 
