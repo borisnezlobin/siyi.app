@@ -58,16 +58,6 @@ function birthdayIn(days, age) {
   return when.toISOString().slice(0, 10);
 }
 
-// Columns a migration may not have reached yet. Writing them is an improvement,
-// failing on them is not: the deploy rule in TODO.md is that code which writes
-// pending schema retries without it rather than breaking.
-const pendingPersonColumns = [
-  "slug",
-  "relationship_label",
-  "reminders_enabled",
-  "university",
-];
-
 function buildCast() {
   return [
     {
@@ -253,53 +243,39 @@ async function upsertReviewUser(admin, email, password) {
 }
 
 async function insertPerson(admin, userId, person) {
-  const core = {
-    user_id: userId,
-    full_name: person.full_name,
-    preferred_name: person.preferred_name,
-    instagram_username: person.instagram_username,
-    phone_number: person.phone_number,
-    email: person.email,
-    birthday: person.birthday,
-    hometown: person.hometown,
-    dorm_or_residence: person.dorm_or_residence,
-    major: person.major,
-    graduation_year: person.graduation_year,
-    relationship_strength: person.relationship_strength,
-    status: "active",
-    first_met_at: daysFromNow(-person.first_met_days_ago).toISOString(),
-    first_met_location: person.first_met_location,
-    general_notes: person.general_notes,
-  };
-
-  const optional = {};
-  for (const column of pendingPersonColumns) {
-    if (person[column] !== undefined) optional[column] = person[column];
-  }
-
-  const attempt = await admin
+  // Every column here exists once the migrations are applied, which is the
+  // state this runs against. An undefined-column error means the project is
+  // behind on migrations, and it should say so rather than quietly seeding a
+  // thinner person than the screenshots show.
+  const { data, error } = await admin
     .from("people")
-    .insert({ ...core, ...optional })
+    .insert({
+      user_id: userId,
+      full_name: person.full_name,
+      preferred_name: person.preferred_name,
+      slug: person.slug,
+      instagram_username: person.instagram_username,
+      phone_number: person.phone_number,
+      email: person.email,
+      birthday: person.birthday,
+      hometown: person.hometown,
+      dorm_or_residence: person.dorm_or_residence,
+      university: person.university,
+      major: person.major,
+      graduation_year: person.graduation_year,
+      relationship_strength: person.relationship_strength,
+      relationship_label: person.relationship_label,
+      reminders_enabled: person.reminders_enabled,
+      status: "active",
+      first_met_at: daysFromNow(-person.first_met_days_ago).toISOString(),
+      first_met_location: person.first_met_location,
+      general_notes: person.general_notes,
+    })
     .select("id")
     .single();
 
-  if (!attempt.error) return attempt.data.id;
-
-  // Undefined column means the migration adding it has not run on this project.
-  // The person is still worth having; the extra field is not worth failing on.
-  if (attempt.error.code !== "42703") throw attempt.error;
-
-  console.warn(
-    `  ${person.full_name}: schema is missing ${Object.keys(optional).join(", ")}, inserting without`,
-  );
-
-  const retry = await admin
-    .from("people")
-    .insert(core)
-    .select("id")
-    .single();
-  if (retry.error) throw retry.error;
-  return retry.data.id;
+  if (error) throw error;
+  return data.id;
 }
 
 async function seedPeople(admin, userId, cast) {
