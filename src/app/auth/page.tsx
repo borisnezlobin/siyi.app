@@ -1,4 +1,5 @@
-import { AppleLogo, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
+import { EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
+import { AppleMark } from "@/components/brand-marks";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -238,7 +239,7 @@ export default async function AuthPage({
             disabled
             className="flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-mist px-5 text-sm font-semibold text-ink opacity-50"
           >
-            <AppleLogo size={19} weight="fill" aria-hidden="true" />
+            <AppleMark size={19} />
             Continue with Apple
           </button>
           <form action={signInWithGoogle}>

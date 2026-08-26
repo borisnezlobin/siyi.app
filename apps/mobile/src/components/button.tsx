@@ -6,7 +6,8 @@ import {
   type PressableProps,
   type ViewStyle,
 } from "react-native";
-import type { Icon } from "phosphor-react-native";
+import type { IconWeight } from "phosphor-react-native";
+import type { ComponentType } from "react";
 import { AppText } from "@/components/app-text";
 import {
   colors,
@@ -47,9 +48,19 @@ const variantStyles: Record<
   },
 };
 
+// Wide enough for both the icon set and the brand marks in `brand-marks`.
+// Phosphor icons take a stroke weight; fixed artwork like the Google mark does
+// not, so it accepts the prop and ignores it rather than the slot being closed
+// to anything that is not an icon.
+type ButtonIcon = ComponentType<{
+  color?: string;
+  size?: number;
+  weight?: IconWeight;
+}>;
+
 type ButtonProps = PressableProps & {
   label: string;
-  icon?: Icon;
+  icon?: ButtonIcon;
   variant?: ButtonVariant;
   loading?: boolean;
   compact?: boolean;

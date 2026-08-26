@@ -1,16 +1,15 @@
 import {
-  AppleLogo,
   CheckSquare,
   EnvelopeSimple,
   Eye,
   EyeSlash,
-  GoogleLogo,
   Square,
 } from "phosphor-react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/app-text";
+import { AppleMark, GoogleMark } from "@/components/brand-marks";
 import { Button } from "@/components/button";
 import { FormField } from "@/components/form-field";
 import {
@@ -374,7 +373,7 @@ export default function AuthScreen() {
       <View style={styles.providers}>
         {Platform.OS === "ios" ? (
           <Button
-            icon={AppleLogo}
+            icon={AppleMark}
             label="Continue with Apple"
             loading={loadingAction === "apple"}
             onPress={() =>
@@ -391,7 +390,7 @@ export default function AuthScreen() {
           />
         ) : null}
         <Button
-          icon={GoogleLogo}
+          icon={GoogleMark}
           label="Continue with Google"
           loading={loadingAction === "google"}
           onPress={() =>
