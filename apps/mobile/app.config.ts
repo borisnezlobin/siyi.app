@@ -1,5 +1,72 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
+const buildingForTheStore = process.env.EAS_BUILD_PROFILE === "production";
+
+const requiredProductionEnvironment = [
+  "EXPO_PUBLIC_APP_DOMAIN",
+  "EXPO_PUBLIC_WEB_URL",
+  "EXPO_PUBLIC_SUPPORT_EMAIL",
+  "EXPO_PUBLIC_LEGAL_ENTITY_NAME",
+  "EXPO_PUBLIC_SUPABASE_URL",
+  "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+] as const;
+
+if (buildingForTheStore) {
+  const missing = requiredProductionEnvironment.filter(
+    (name) => !process.env[name]?.trim(),
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Production build is missing required environment variables: ${missing.join(
+        ", ",
+      )}`,
+    );
+  }
+
+  if (process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES === "false") {
+    throw new Error(
+      "Production builds require EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES=true.",
+    );
+  }
+
+  const domain = process.env.EXPO_PUBLIC_APP_DOMAIN!.trim();
+  if (domain.includes("://") || domain.includes("/") || !domain.includes(".")) {
+    throw new Error(
+      "EXPO_PUBLIC_APP_DOMAIN must be a hostname without a scheme or path.",
+    );
+  }
+
+  const requireHttpsUrl = (name: string, value: string) => {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:") throw new Error();
+      return url;
+    } catch {
+      throw new Error(`${name} must be a valid https URL.`);
+    }
+  };
+
+  const webUrl = requireHttpsUrl(
+    "EXPO_PUBLIC_WEB_URL",
+    process.env.EXPO_PUBLIC_WEB_URL!.trim(),
+  );
+  if (webUrl.hostname !== domain) {
+    throw new Error(
+      "EXPO_PUBLIC_WEB_URL must use the EXPO_PUBLIC_APP_DOMAIN hostname.",
+    );
+  }
+
+  requireHttpsUrl(
+    "EXPO_PUBLIC_SUPABASE_URL",
+    process.env.EXPO_PUBLIC_SUPABASE_URL!.trim(),
+  );
+
+  if (!/^\S+@\S+\.\S+$/.test(process.env.EXPO_PUBLIC_SUPPORT_EMAIL!.trim())) {
+    throw new Error("EXPO_PUBLIC_SUPPORT_EMAIL must be a valid email address.");
+  }
+}
+
 const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Siyi.app";
 const appSlug = process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app";
 const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi";
@@ -15,7 +82,6 @@ const easProjectId =
   "2a6e2096-32c9-46c1-af86-9391fa5b48fb";
 const iosProtectedCapabilitiesEnabled =
   process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false";
-const buildingForTheStore = process.env.EAS_BUILD_PROFILE === "production";
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -112,6 +178,8 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
         microphonePermission: false,
       },
     ],
+    "expo-image",
+    "expo-sharing",
     ...(iosProtectedCapabilitiesEnabled
       ? ([
           [
