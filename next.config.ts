@@ -17,6 +17,8 @@ const buildId =
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: { root: process.cwd() },
+  outputFileTracingRoot: process.cwd(),
   env: { NEXT_PUBLIC_BUILD_ID: buildId },
   poweredByHeader: false,
   devIndicators: false,

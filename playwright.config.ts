@@ -43,6 +43,8 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
       SUPABASE_SECRET_KEY: "",
       SUPABASE_SERVICE_ROLE_KEY: "",
+      APPLE_TEAM_ID: "A1B2C3D4E5",
+      APPLE_CLIENT_ID: "app.siyi.mobile",
       NEXT_DIST_DIR: `.next-e2e-${port}`,
     },
     // Never reuse. Agent worktrees all ran on one fixed port, so a suite could

@@ -180,7 +180,9 @@ export function ReminderBoard({
     // Today went on counting a reminder that was already done. The local update
     // above is what keeps the row in place, so this only corrects the pages that
     // are not looking at this list.
-    router.refresh();
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      router.refresh();
+    }
   }
 
   const shownBuckets = focusedBucket ? [focusedBucket] : reminderBucketOrder;

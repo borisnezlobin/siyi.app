@@ -1,5 +1,27 @@
 import { expect, test } from "@playwright/test";
 
+test("signed-in routes are associated with the iPhone app", async ({ request }) => {
+  const response = await request.get("/.well-known/apple-app-site-association");
+
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toContain("application/json");
+  expect(await response.json()).toMatchObject({
+    applinks: {
+      details: [
+        {
+          appIDs: ["A1B2C3D4E5.app.siyi.mobile"],
+          components: [
+            { "/": "/people*" },
+            { "/": "/reminders*" },
+            { "/": "/today*" },
+            { "/": "/auth/callback*" },
+          ],
+        },
+      ],
+    },
+  });
+});
+
 test("the public homepage explains the product and offers clear entry points", async ({
   page,
 }) => {
@@ -7,7 +29,7 @@ test("the public homepage explains the product and offers clear entry points", a
 
   await expect(
     page.getByRole("heading", {
-      name: "You met them once. Siyi makes sure it wasn’t the last time.",
+      name: "Stay close to the people you just met.",
     }),
   ).toBeVisible();
   await expect(page.getByText("Siyi.app", { exact: true }).first()).toBeVisible();
@@ -20,7 +42,7 @@ test("the public homepage explains the product and offers clear entry points", a
   // What the hero demo argues has to survive without the animation, so the
   // point it makes is asserted as text rather than as a frame of the loop.
   await expect(
-    page.getByText("You did not open the app again", { exact: false }),
+    page.getByText("without you opening the app again", { exact: false }),
   ).toBeVisible();
 });
 
@@ -365,7 +387,10 @@ test("authentication offers magic links without forcing a password", async ({
 
   await page.getByLabel("Email").fill("alex@example.edu");
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
-  await expect(page.getByText(/We sent a sign-in link to/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  await expect(
+    page.getByText(/Your sign-in link is on its way to alex@example\.edu/),
+  ).toBeVisible();
 });
 
 test("legal pages contain launch-ready policies", async ({ page }) => {
