@@ -1,36 +1,20 @@
 import { NextResponse } from "next/server";
+import { appleAppSiteAssociation } from "@/lib/apple-app-site-association";
 
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  const teamId = process.env.APPLE_TEAM_ID?.trim();
-  const bundleIdentifier =
-    process.env.APPLE_CLIENT_ID?.trim() || "app.siyi.mobile";
-
-  return NextResponse.json(
-    {
-      applinks: {
-        apps: [],
-        details: teamId
-          ? [
-              {
-                appIDs: [`${teamId}.${bundleIdentifier}`],
-                components: [
-                  { "/": "/people/*" },
-                  { "/": "/reminders*" },
-                  { "/": "/today*" },
-                  { "/": "/auth/callback*" },
-                ],
-              },
-            ]
-          : [],
-      },
-    },
-    {
+  try {
+    return NextResponse.json(appleAppSiteAssociation(), {
       headers: {
-        "Cache-Control": "public, max-age=3600",
-        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=3600, must-revalidate",
       },
-    },
-  );
+    });
+  } catch (error) {
+    console.error("[siyi] Apple app-site association is not configured", error);
+    return NextResponse.json(
+      { error: "Apple app-site association is not configured." },
+      { status: 503 },
+    );
+  }
 }
