@@ -28,7 +28,7 @@
     "mobile:lint": "npm run lint --workspace=apps/mobile",
     "mobile:typecheck": "npm run typecheck --workspace=apps/mobile",
     "mobile:test": "npm run test --workspace=apps/mobile",
-    "mobile:store:metadata": "npm run store:metadata --workspace=apps/mobile",
+    "mobile:store:metadata": "npm run store:metadata --workspace=apps/mobile --",
     "check": "npm run lint && npm run typecheck && npm run test && npm run mobile:lint && npm run mobile:typecheck && npm run mobile:test && npm run build && npm run test:e2e && npm run test:e2e:auth",
     "test:e2e:auth": "playwright test --config playwright.auth.config.ts"
   },
@@ -43,14 +43,15 @@
     "expo-server-sdk": "^7.0.0",
     "next": "15.5.22",
     "qrcode": "^1.5.4",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.62.1",
+    "@react-native/metro-config": "0.86.2",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
@@ -68,6 +69,12 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
+    "@react-native/metro-config": "0.86.2",
+    "expo-web-browser": "57.0.2",
+    "react-native-gesture-handler": "2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-screens": "4.26.2",
+    "react-native-worklets": "0.10.1",
     "postcss": "8.5.25",
     "sharp": "0.35.3"
   }
