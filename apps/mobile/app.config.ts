@@ -76,6 +76,13 @@ const bundleIdentifier =
 const androidPackage =
   process.env.EXPO_PUBLIC_ANDROID_PACKAGE?.trim() ||
   "app.siyi.mobile";
+// The app and its widgets share data through this group. It follows the bundle
+// identifier by default, but App Groups are their own global namespace on
+// Apple's side: a team can hold the bundle identifier and still be refused
+// `group.<bundle>` because another team registered it first. Naming the group
+// separately is the way out of that, and changes nothing when it is unset.
+const appGroupIdentifier =
+  process.env.EXPO_PUBLIC_IOS_APP_GROUP?.trim() || `group.${bundleIdentifier}`;
 const appDomain = process.env.EXPO_PUBLIC_APP_DOMAIN?.trim();
 const easProjectId =
   process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() ||
@@ -201,7 +208,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
             "expo-widgets",
             {
               bundleIdentifier: `${bundleIdentifier}.widgets`,
-              groupIdentifier: `group.${bundleIdentifier}`,
+              groupIdentifier: appGroupIdentifier,
               widgets: [
                 {
                   name: "SiyiTodayWidget",
