@@ -85,7 +85,7 @@ function buildCast() {
         { type: "coffee", days_ago: 25, note: "Walked through the episode outline." },
         { type: "texted", days_ago: 4, note: "Sent over the mic recommendation." },
       ],
-      follow_ups: [
+      reminders: [
         { text: "Ask Jordan how the first interview went", due_in_days: 0 },
       ],
     },
@@ -113,7 +113,7 @@ function buildCast() {
       interactions: [
         { type: "meal", days_ago: 52, note: "Dinner before he moved." },
       ],
-      follow_ups: [
+      reminders: [
         { text: "Check in with Liam about the new role", due_in_days: 12 },
       ],
     },
@@ -142,7 +142,7 @@ function buildCast() {
         { type: "class", days_ago: 19, note: "Critique session ran long, in a good way." },
         { type: "party", days_ago: 8, note: "Introduced me to her ceramics cohort." },
       ],
-      follow_ups: [
+      reminders: [
         { text: "Send Maya the ceramics studio link", due_in_days: -1 },
       ],
     },
@@ -170,7 +170,7 @@ function buildCast() {
       interactions: [
         { type: "event", days_ago: 11, note: "Volunteered at the pantry launch." },
       ],
-      follow_ups: [
+      reminders: [
         { text: "Wish Priya luck before the half marathon", due_in_days: 7 },
       ],
     },
@@ -198,7 +198,7 @@ function buildCast() {
       interactions: [
         { type: "class", days_ago: 33, note: "Swapped problem set notes." },
       ],
-      follow_ups: [],
+      reminders: [],
     },
   ];
 }
@@ -279,10 +279,19 @@ async function insertPerson(admin, userId, person) {
 }
 
 async function seedPeople(admin, userId, cast) {
-  // Clearing first keeps the script re-runnable. person_tags, interactions and
-  // follow_ups all cascade from people, so this is one delete, not four.
+  // Clearing first keeps the script re-runnable. person_tags and interactions
+  // cascade from people, so deleting people covers them.
   const cleared = await admin.from("people").delete().eq("user_id", userId);
   if (cleared.error) throw cleared.error;
+
+  // Reminders do not. Since 0027 a reminder belongs to the user rather than to
+  // one person, so deleting people cascades reminder_people and leaves the
+  // reminders themselves behind — a re-run would stack a second set on top.
+  const clearedReminders = await admin
+    .from("reminders")
+    .delete()
+    .eq("user_id", userId);
+  if (clearedReminders.error) throw clearedReminders.error;
 
   const tagNames = [...new Set(cast.flatMap((person) => person.tags))];
   const tagIds = new Map();
@@ -320,16 +329,25 @@ async function seedPeople(admin, userId, cast) {
       if (error) throw error;
     }
 
-    if (person.follow_ups.length > 0) {
-      const { error } = await admin.from("follow_ups").insert(
-        person.follow_ups.map((followUp) => ({
-          person_id: personId,
-          user_id: userId,
-          text: followUp.text,
-          due_at: daysFromNow(followUp.due_in_days).toISOString(),
-        })),
-      );
+    if (person.reminders.length > 0) {
+      // A reminder no longer names anyone directly — 0027 moved that to
+      // reminder_people so one reminder can be about two people at once.
+      const { data: written, error } = await admin
+        .from("reminders")
+        .insert(
+          person.reminders.map((reminder) => ({
+            user_id: userId,
+            text: reminder.text,
+            due_at: daysFromNow(reminder.due_in_days).toISOString(),
+          })),
+        )
+        .select("id");
       if (error) throw error;
+
+      const linked = await admin
+        .from("reminder_people")
+        .insert(written.map((row) => ({ reminder_id: row.id, person_id: personId })));
+      if (linked.error) throw linked.error;
     }
 
     console.log(`  ${person.full_name}`);
@@ -362,9 +380,9 @@ async function main() {
   if (dryRun) {
     console.log(`Would seed ${email} on ${url} with ${cast.length} fictional people:`);
     for (const person of cast) {
-      const followUps = person.follow_ups.length;
+      const reminders = person.reminders.length;
       console.log(
-        `  ${person.full_name} — ${person.interactions.length} interaction(s), ${followUps} follow-up(s), birthday ${person.birthday}`,
+        `  ${person.full_name} — ${person.interactions.length} interaction(s), ${reminders} reminder(s), birthday ${person.birthday}`,
       );
     }
     console.log("Nothing was written. Re-run without --dry-run to apply.");
