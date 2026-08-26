@@ -52,6 +52,17 @@ type PreferenceDraft = Omit<
   "id" | "userId" | "createdAt" | "updatedAt"
 >;
 
+function toDraft(preference: NotificationPreference): PreferenceDraft {
+  return {
+    pushEnabled: preference.pushEnabled,
+    overdueContactEnabled: preference.overdueContactEnabled,
+    birthdayEnabled: preference.birthdayEnabled,
+    reminderEnabled: preference.reminderEnabled,
+    reminderHourLocal: preference.reminderHourLocal,
+    reminderDaysOfWeek: preference.reminderDaysOfWeek,
+  };
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const auth = useAuth();
@@ -71,15 +82,7 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     if (!draft && accountData.data) {
-      const preference = accountData.data.notificationPreference;
-      setDraft({
-        pushEnabled: preference.pushEnabled,
-        overdueContactEnabled: preference.overdueContactEnabled,
-        birthdayEnabled: preference.birthdayEnabled,
-        reminderEnabled: preference.reminderEnabled,
-        reminderHourLocal: preference.reminderHourLocal,
-        reminderDaysOfWeek: preference.reminderDaysOfWeek,
-      });
+      setDraft(toDraft(accountData.data.notificationPreference));
     }
   }, [accountData.data, draft]);
 
@@ -95,7 +98,16 @@ export default function NotificationsScreen() {
     );
   }
 
-  const preferences = draft!;
+  // The effect above fills the draft, and effects run after the render that
+  // follows the load — so on that one render there is no draft yet. `draft!`
+  // asserted otherwise and threw "Cannot read property 'pushEnabled' of null",
+  // which is what a tap on "Set up notifications" landed on. Until the draft
+  // exists, the loaded preference is what to show.
+  if (!accountData.data) {
+    return <LoadingState label="Checking notification settings…" />;
+  }
+  const preferences: PreferenceDraft =
+    draft ?? toDraft(accountData.data.notificationPreference);
   const permissionCopy: Record<
     PushPermissionState,
     { title: string; body: string }

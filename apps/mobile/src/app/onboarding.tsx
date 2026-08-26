@@ -25,7 +25,14 @@ export default function OnboardingScreen() {
   // Signup already asked for a name, so the field only appears for the accounts
   // that arrived without one — a provider sign-in that handed over no profile.
   const knownName = (auth.profile?.displayName || "").trim();
-  const [displayName, setDisplayName] = useState(knownName);
+  // Seeding state from knownName captured an empty string: the profile is
+  // still null on the first render, and the `auth.loading` return below does
+  // not stop this hook from initialising. Once the profile arrived the field
+  // was hidden, so nothing could ever fill that empty value, and both footer
+  // buttons failed a name check whose error had nowhere to appear. Deriving it
+  // instead means a late profile is picked up without the state going stale.
+  const [typedName, setTypedName] = useState("");
+  const displayName = typedName || knownName;
   const [timezone, setTimezone] = useState(detectedTimezone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +115,7 @@ export default function OnboardingScreen() {
           error={nameError ?? undefined}
           label="Your name"
           onChangeText={(value) => {
-            setDisplayName(value);
+            setTypedName(value);
             if (nameError) setNameError(null);
           }}
           placeholder="What should we call you?"
