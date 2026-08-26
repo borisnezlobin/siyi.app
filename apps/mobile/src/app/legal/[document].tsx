@@ -37,7 +37,8 @@ const privacySections: LegalSection[] = [
     title: "How we use it",
     paragraphs: [
       "We use your information to provide the app, keep your data synchronized, calculate reminders in your timezone, send the notifications you enable, secure accounts, respond to support, and improve reliability.",
-      "We do not sell personal information, serve targeted advertising, scrape social networks, or use contact records to build advertising profiles.",
+      "We do not sell personal information, serve targeted advertising, or use contact records to build advertising profiles.",
+      "When you save someone with an Instagram username, we ask Instagram for that profile's public picture and offer it to you as their photo. It is fetched only for a username you entered, only at the moment you save that person, and nothing is posted or read beyond the picture. Leaving the username blank skips it, and you can decline or replace the photo at any time.",
     ],
   },
   {

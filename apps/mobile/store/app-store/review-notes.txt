@@ -1,4 +1,7 @@
-siyi.app is a private people-and-follow-up organizer. It does not scrape Instagram or any other social network.
+siyi.app is a private people-and-follow-up organizer.
+
+Instagram profile pictures
+When the user saves someone and has entered that person's Instagram username, the app requests that profile's public picture from Instagram and offers it as the saved person's photo. The request is made only for a username the user typed, only at the moment they save that person, and only the picture is read. No Instagram account is required, nothing is posted, and leaving the username blank skips the lookup entirely. The user can decline the offered picture or replace it later.
 
 Review account
 Email: ${APP_REVIEW_EMAIL}
