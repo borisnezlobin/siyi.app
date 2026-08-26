@@ -1,6 +1,7 @@
 "use client";
 
-import { AppleLogo, GoogleLogo, SpinnerGap } from "@phosphor-icons/react";
+import { SpinnerGap } from "@phosphor-icons/react";
+import { AppleMark, GoogleMark } from "@/components/brand-marks";
 import { useFormStatus } from "react-dom";
 
 /**
@@ -39,7 +40,7 @@ export function AuthSubmitButton({
   );
 }
 
-const providerLogos = { google: GoogleLogo, apple: AppleLogo };
+const providerLogos = { google: GoogleMark, apple: AppleMark };
 
 /**
  * Each provider sits in its own single-button form, so its pending state is its
@@ -72,7 +73,7 @@ export function AuthProviderButton({
       {pending ? (
         <SpinnerGap size={19} weight="bold" className="animate-spin" aria-hidden="true" />
       ) : (
-        <Icon size={19} weight="bold" aria-hidden="true" />
+        <Icon size={19} />
       )}
       {pending ? pendingLabel : label}
     </button>
