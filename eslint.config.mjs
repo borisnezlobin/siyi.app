@@ -15,6 +15,9 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".claude/worktrees/**",
+      // Vendored agent skills, not this project's code. Installing a few turns
+      // `npm run check` into a hundred errors nobody here can act on.
+      ".claude/skills/**",
       // Any build output, however the dist directory was named.
       ".next*/**",
       "out/**",
