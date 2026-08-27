@@ -89,7 +89,6 @@ const easProjectId =
   "2a6e2096-32c9-46c1-af86-9391fa5b48fb";
 const iosProtectedCapabilitiesEnabled =
   process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false";
-const buildingForTheStore = process.env.EAS_BUILD_PROFILE === "production";
 
 const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
