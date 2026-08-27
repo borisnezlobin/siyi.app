@@ -1,7 +1,7 @@
 import { Check } from "@phosphor-icons/react/dist/ssr";
 
 /**
- * Six things Siyi does, told as one year with one person rather than a list.
+ * Six things siyi does, told as one year with one person rather than a list.
  *
  * A feature grid asks the reader to imagine when each thing would matter. A
  * dated sequence answers that instead, so every visual below is built for its
@@ -71,7 +71,7 @@ export function YearOfKnowing() {
         <Stop
           when="Next morning"
           title="She’s already in your phone"
-          copy="Siyi writes your people into your contacts, so when she texts you first you get a name instead of a number you have to guess at."
+          copy="siyi writes your people into your contacts, so when she texts you first you get a name instead of a number you have to guess at."
         >
           <div className="rounded-[1.75rem] bg-white p-2 shadow-card">
             <div className="rounded-[1.4rem] bg-porcelain px-5 py-6 text-center">
@@ -101,7 +101,7 @@ export function YearOfKnowing() {
         <Stop
           when="Tuesday night"
           title="Say who you saw, in four taps"
-          copy="Siyi guesses at who you probably ran into and asks once a day. Tapping a name is the whole interaction, and it is how everything else knows when you last spoke."
+          copy="siyi guesses at who you probably ran into and asks once a day. Tapping a name is the whole interaction, and it is how everything else knows when you last spoke."
         >
           <div className="rounded-[1.75rem] bg-white p-5 shadow-card sm:p-6">
             <p className="text-sm font-bold">Who did you see today?</p>
@@ -137,7 +137,7 @@ export function YearOfKnowing() {
         <Stop
           when="Three weeks in"
           title="A nudge before it gets awkward"
-          copy="Most friendships go quiet long before they end, and the longer the quiet runs the harder it is to break. Siyi keeps count and says something early, while a text is still just a text."
+          copy="Most friendships go quiet long before they end, and the longer the quiet runs the harder it is to break. siyi keeps count and says something early, while a text is still just a text."
         >
           <div className="rounded-[1.75rem] bg-white p-5 shadow-card sm:p-7">
             <div className="flex items-end gap-1" aria-hidden="true">
@@ -231,7 +231,7 @@ export function YearOfKnowing() {
         <Stop
           when="Every time"
           title="You get the last word"
-          copy="Siyi shows you what it worked out from your sentence and waits. Keep the parts that are right, throw out the parts that aren’t, and nothing else is saved."
+          copy="siyi shows you what it worked out from your sentence and waits. Keep the parts that are right, throw out the parts that aren’t, and nothing else is saved."
         >
           <div className="rounded-[1.75rem] bg-white p-5 shadow-card sm:p-6">
             <p className="font-display text-xl">Here is what I found</p>

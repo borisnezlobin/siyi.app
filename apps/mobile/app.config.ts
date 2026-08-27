@@ -67,7 +67,7 @@ if (buildingForTheStore) {
   }
 }
 
-const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Siyi.app";
+const appName = process.env.EXPO_PUBLIC_APP_NAME?.trim() || "siyi.app";
 const appSlug = process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app";
 const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi";
 const bundleIdentifier =
@@ -246,7 +246,7 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
       "expo-contacts",
       {
         contactsPermission:
-          "Allow Siyi to add the people you save to your contacts.",
+          "Allow siyi to add the people you save to your contacts.",
       },
     ],
     ...(iosProtectedCapabilitiesEnabled

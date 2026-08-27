@@ -46,7 +46,7 @@ test.describe("/admin over a real signed-in request", () => {
 
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
-    await expect(page.getByText("How Siyi is doing")).toBeVisible();
+    await expect(page.getByText("How siyi is doing")).toBeVisible();
 
     // Three profiles; 125 people between them; one live web subscription and
     // one revoked native one, so exactly one account counts as push-enabled.

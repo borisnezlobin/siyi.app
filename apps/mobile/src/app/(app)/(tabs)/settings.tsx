@@ -649,7 +649,7 @@ function DeviceContactsSection() {
         <Row style={styles.stackedRow}>
           <AppText style={styles.grow} variant="caption">
             Your phone is blocking contacts access, and it won&rsquo;t ask
-            again. Turn Contacts on for Siyi in your device settings.
+            again. Turn Contacts on for siyi in your device settings.
           </AppText>
           <TextAction
             label="Open Settings"

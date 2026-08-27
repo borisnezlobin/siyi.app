@@ -559,7 +559,7 @@ export function QuickCaptureHub({
                 }
               />
               <p className="mt-3 text-center text-[11px] text-ink-muted">
-                Sorted by Siyi
+                Sorted by siyi
               </p>
             </div>
           ) : !peopleLoaded || people.length ? (

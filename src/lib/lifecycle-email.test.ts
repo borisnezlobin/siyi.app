@@ -73,7 +73,7 @@ describe("the rendered email", () => {
     campaign: lifecycleCampaigns[0],
     appUrl: "https://siyi.app/",
     unsubscribeUrl: "https://siyi.app/api/unsubscribe?token=abc.def",
-    brandName: "Siyi.app",
+    brandName: "siyi.app",
     postalAddress: "Somewhere, Berkeley, CA",
   });
 
@@ -94,7 +94,7 @@ describe("the rendered email", () => {
       campaign: { ...lifecycleCampaigns[0], paragraphs: ["<script>hi</script>"] },
       appUrl: "https://siyi.app",
       unsubscribeUrl: "https://siyi.app/api/unsubscribe?token=abc",
-      brandName: "Siyi.app",
+      brandName: "siyi.app",
       postalAddress: "Somewhere",
     });
     expect(escaped.html).not.toContain("<script>");

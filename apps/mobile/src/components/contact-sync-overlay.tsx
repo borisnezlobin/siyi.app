@@ -52,21 +52,21 @@ export function ContactsAccessExplainer({
 }) {
   return (
     <Sheet onRequestClose={() => onAnswer?.(false)} visible={visible}>
-      <AppText variant="title">Save your Siyi people to Contacts</AppText>
+      <AppText variant="title">Save your siyi people to Contacts</AppText>
       <View style={styles.paragraphs}>
         <AppText style={styles.body}>
-          Siyi can put the people you keep here into your phone&rsquo;s Contacts
+          siyi can put the people you keep here into your phone&rsquo;s Contacts
           app — their name, phone numbers and email addresses — and keep them
           current as you edit them.
         </AppText>
         <AppText style={styles.body}>
-          To do that without making duplicates, Siyi reads your address book to
+          To do that without making duplicates, siyi reads your address book to
           find the person you already have. That happens entirely on this phone.
-          Your contacts are never uploaded and never leave the device; all Siyi
+          Your contacts are never uploaded and never leave the device; all siyi
           keeps is a note of which contact goes with which person.
         </AppText>
         <AppText style={styles.body}>
-          Siyi only adds details that aren&rsquo;t there yet. A number or address
+          siyi only adds details that aren&rsquo;t there yet. A number or address
           already saved on a contact is left exactly as it is, and you&rsquo;ll
           see a count of anything it left alone.
         </AppText>
@@ -92,13 +92,13 @@ function ContactsAccessBlockedNotice({ visible }: { visible: boolean }) {
       <AppText variant="title">Contacts access is off</AppText>
       <View style={styles.paragraphs}>
         <AppText style={styles.body}>
-          Your phone is set to keep Siyi out of Contacts, and it won&rsquo;t ask
+          Your phone is set to keep siyi out of Contacts, and it won&rsquo;t ask
           again. Nothing is written to your contacts and nothing is read from
           them.
         </AppText>
         <AppText style={styles.body}>
-          Everything else in Siyi works exactly as before. If you change your
-          mind, turn on Contacts for Siyi in your device settings.
+          Everything else in siyi works exactly as before. If you change your
+          mind, turn on Contacts for siyi in your device settings.
         </AppText>
       </View>
       <View style={styles.actions}>
@@ -146,7 +146,7 @@ export function ContactSyncRunDialog({
           />
         </View>
         <AppText style={styles.footnote} variant="caption">
-          You can leave this open. Siyi picks up where it left off if you switch
+          You can leave this open. siyi picks up where it left off if you switch
           away.
         </AppText>
       </Sheet>
@@ -169,7 +169,7 @@ export function ContactSyncRunDialog({
           <AppText style={styles.footnote} variant="caption">
             {summary.alreadyComplete}{" "}
             {summary.alreadyComplete === 1 ? "person" : "people"} already had
-            everything Siyi knows.
+            everything siyi knows.
           </AppText>
         ) : null}
         {summary.conflicts > 0 ? (
@@ -177,7 +177,7 @@ export function ContactSyncRunDialog({
             {summary.conflicts}{" "}
             {summary.conflicts === 1 ? "detail" : "details"} on{" "}
             {summary.keptDeviceValue > 0 ? summary.keptDeviceValue : "some"} of
-            your contacts differ from what Siyi has. Yours were kept.
+            your contacts differ from what siyi has. Yours were kept.
           </AppText>
         ) : null}
         {summary.failures.slice(0, 3).map((failure) => (

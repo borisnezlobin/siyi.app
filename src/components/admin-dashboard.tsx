@@ -217,7 +217,7 @@ export function AdminDashboard({
 
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" className="font-display text-2xl text-ink">
-          How Siyi is doing
+          How siyi is doing
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
           Aggregates only. Nobody&apos;s name, email, or contacts appear here.

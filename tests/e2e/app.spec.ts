@@ -32,7 +32,7 @@ test("the public homepage explains the product and offers clear entry points", a
       name: "Stay close to the people you just met.",
     }),
   ).toBeVisible();
-  await expect(page.getByText("Siyi.app", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("siyi.app", { exact: true }).first()).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Start with one person" }).first(),
   ).toBeVisible();
@@ -51,9 +51,9 @@ test("the footer credits the team and the team page invites contributions", asyn
 }) => {
   await page.goto("/");
 
-  await page.getByRole("link", { name: "team Siyi" }).click();
+  await page.getByRole("link", { name: "team siyi" }).click();
   await expect(page).toHaveURL(/\/team$/);
-  await expect(page.getByRole("heading", { name: "Team Siyi" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Team siyi" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: /See the code/ }),
   ).toBeVisible();
@@ -819,7 +819,7 @@ test("the admin route denies it exists rather than asking who you are", async ({
 
   expect(response?.status()).toBe(404);
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText("How Siyi is doing")).toHaveCount(0);
+  await expect(page.getByText("How siyi is doing")).toHaveCount(0);
   await expect(page.getByText("Send an announcement")).toHaveCount(0);
 
   // Indistinguishable from a URL that was never a route: same status, same

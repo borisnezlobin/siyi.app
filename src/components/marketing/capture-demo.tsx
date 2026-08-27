@@ -12,7 +12,7 @@ import {
 import { useEffect, useState } from "react";
 
 /**
- * Siyi's own Today screen, being interrupted by Siyi.
+ * siyi's own Today screen, being interrupted by siyi.
  *
  * An earlier version of this put the same three messages in a column of dated
  * bubbles and it read as a chat transcript, which is not what the app is or
@@ -68,7 +68,7 @@ const agenda = [
 /**
  * One banner at a time, the way a phone actually shows them. Stacking all three
  * buried the header and the coral prompt, which are the parts that make the
- * screen underneath recognisably Siyi rather than any list app.
+ * screen underneath recognisably siyi rather than any list app.
  */
 const tabs = [
   { icon: House, label: "Today", active: true },
@@ -147,7 +147,7 @@ export function CaptureDemo() {
   return (
     <div>
       <p className="sr-only">
-        A phone showing Siyi. Someone types “met amelia at design club —
+        A phone showing siyi. Someone types “met amelia at design club —
         oakland, product design, bday mar 3” and saves it. Over the following
         months three notifications arrive on the Today screen: that you and Amelia have gone quiet, that
         you promised her the housing list on Thursday, and that Amelia turns 21
@@ -308,7 +308,7 @@ export function CaptureDemo() {
                 <span className="grid size-5 shrink-0 place-items-center rounded-full bg-coral text-white">
                   <UsersThree size={11} weight="fill" />
                 </span>
-                <span className="text-[10px] font-bold">Siyi</span>
+                <span className="text-[10px] font-bold">siyi</span>
                 <span className="ml-auto text-[10px] text-ink-muted">
                   {notification.time}
                 </span>
