@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
+  AddressBook,
   ArrowLeft,
   Camera,
   CaretDown,
@@ -16,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { AppText } from "@/components/app-text";
 import { Button } from "@/components/button";
+import { ContactImportSheet } from "@/components/contact-import-sheet";
 import { ContactMethodField } from "@/components/contact-method-field";
 import { DateField } from "@/components/date-field";
 import { FormField } from "@/components/form-field";
@@ -34,6 +36,7 @@ import {
   type ContactMethodDraft,
 } from "@/lib/contact-methods";
 import { offerContactSyncAfterSave } from "@/lib/contact-sync-flow";
+import type { ImportableContact } from "@/lib/device-contacts";
 import {
   isFutureDateInput,
   parseDateInput,
@@ -145,6 +148,31 @@ export function PersonForm({
   );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [photo, setPhoto] = useState<PhotoAsset | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+
+  /**
+   * Fills the form from an address-book entry. Everything it writes is a field
+   * the user can still change, and it only ever fills a blank one — reopening
+   * the picker after typing a name should not throw that name away.
+   */
+  function applyImportedContact(contact: ImportableContact) {
+    if (!fullName.trim()) setFullName(contact.name);
+    if (!birthday && contact.birthday) setBirthday(contact.birthday);
+    if (!photo && contact.imageUri) {
+      setPhoto({ uri: contact.imageUri, fileName: `${contact.id}.jpg` });
+    }
+
+    const phone = contact.phoneNumbers[0];
+    const email = contact.emails[0];
+    setContactDrafts((drafts) =>
+      drafts.map((draft) => {
+        if (draft.value.trim()) return draft;
+        if (draft.kind === "phone" && phone) return { ...draft, value: phone };
+        if (draft.kind === "email" && email) return { ...draft, value: email };
+        return draft;
+      }),
+    );
+  }
   const [namedSectionCount, setNamedSectionCount] = useState(
     noteSections?.sections.length ?? 0,
   );
@@ -444,6 +472,15 @@ export function PersonForm({
 
   const nameFields = (
     <>
+      {person ? null : (
+        <Button
+          compact
+          icon={AddressBook}
+          label="Import from Contacts"
+          onPress={() => setImportOpen(true)}
+          variant="quiet"
+        />
+      )}
       <FormField
         autoCapitalize="words"
         autoComplete="name"
@@ -699,6 +736,7 @@ export function PersonForm({
   );
 
   return (
+    <>
     <KeyboardAwareForm
       contentStyle={styles.content}
       footer={
@@ -901,6 +939,14 @@ export function PersonForm({
         </View>
       ) : null}
     </KeyboardAwareForm>
+    {person ? null : (
+      <ContactImportSheet
+        onClose={() => setImportOpen(false)}
+        onPick={applyImportedContact}
+        visible={importOpen}
+      />
+    )}
+    </>
   );
 }
 

@@ -93,6 +93,73 @@ export async function readDeviceContacts(): Promise<DeviceContact[]> {
   }));
 }
 
+/**
+ * Someone in the address book, read for filling in a new person rather than
+ * for matching one that already exists. The sync path deliberately reads less:
+ * it only needs enough to recognise a contact, and asking for every picture
+ * would make it slower for no gain.
+ */
+export type ImportableContact = DeviceContact & {
+  imageUri: string | null;
+  /** yyyy-mm-dd, using the placeholder year when the contact carries no year. */
+  birthday: string | null;
+};
+
+const importFields = [
+  ContactField.FULL_NAME,
+  ContactField.GIVEN_NAME,
+  ContactField.FAMILY_NAME,
+  ContactField.PHONES,
+  ContactField.EMAILS,
+  ContactField.IMAGE,
+  ContactField.BIRTHDAY,
+] as const;
+
+/**
+ * Plenty of address-book birthdays are a day and a month with no year, which
+ * the column cannot hold. `birthday-age` already reads a year at or before 1900
+ * as "no year given", so that is what an undated one is written as — the date
+ * shows, the age does not, and no invented year turns into a wrong age.
+ */
+function importableBirthday(
+  birthday: { year?: number; month: number; day: number } | null | undefined,
+) {
+  if (!birthday) return null;
+  const { month, day } = birthday;
+  // Documented as 1-12 here. Earlier versions of this API were 0-indexed, so
+  // this is worth stating rather than leaving to memory.
+  if (!month || !day) return null;
+  const year = birthday.year && birthday.year > 1900 ? birthday.year : 1900;
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export async function readDeviceContactsForImport(): Promise<
+  ImportableContact[]
+> {
+  const details = await Contact.getAllDetails(importFields);
+  return details
+    .map((entry) => ({
+      id: entry.id,
+      name:
+        entry.fullName ||
+        [entry.givenName, entry.familyName].filter(Boolean).join(" "),
+      phoneNumbers: (entry.phones ?? [])
+        .map((phone) => phone.number ?? "")
+        .filter(Boolean),
+      emails: (entry.emails ?? [])
+        .map((email) => email.address ?? "")
+        .filter(Boolean),
+      imageUri: entry.image ?? null,
+      birthday: importableBirthday(entry.birthday),
+    }))
+    // A contact with no name has nothing to show in a list and nothing worth
+    // copying into the form.
+    .filter((contact) => contact.name.trim().length > 0)
+    .sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+    );
+}
+
 export type ContactSyncResult =
   | { status: "created"; contactId: string; skipped: ContactConflict[] }
   | { status: "updated"; contactId: string; skipped: ContactConflict[] }
