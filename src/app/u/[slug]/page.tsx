@@ -53,7 +53,10 @@ export default async function PublicProfilePage({
   const shown = ownCardFields.filter(
     (field) => profile.publicFields[field] && card[field],
   );
-  const displayName = card.preferredName || card.fullName || profile.displayName;
+  const displayName =
+    (profile.publicFields.preferredName && card.preferredName) ||
+    (profile.publicFields.fullName && card.fullName) ||
+    formatHandle(profile.handle, profile.tag);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-[560px] flex-col px-6 py-16">

@@ -21,6 +21,7 @@ import {
 import { clearQueryCache } from "@/lib/query-cache";
 import type { UserProfile } from "@/lib/types";
 import {
+  clearOfflineUserData,
   getOfflineSnapshot,
   isOnline,
   updateOfflineSnapshot,
@@ -352,12 +353,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user.id;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     // The screen cache lives outside React and outlives this component, so
     // without this the next account to sign in on this device would be shown
     // the previous one's people until each screen happened to refresh.
     clearQueryCache();
+    // The offline snapshot and queue hold other people's details; signing
+    // out on a shared device must not leave them behind. Unsent queued
+    // changes are dropped with it — same contract as account deletion.
+    if (userId) await clearOfflineUserData(userId);
   }
 
   const value = useMemo<AuthContextValue>(

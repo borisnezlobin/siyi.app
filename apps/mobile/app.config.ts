@@ -121,8 +121,6 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription:
         "Choose a profile photo for someone in your private circle.",
-      NSCameraUsageDescription:
-        "Take a profile photo for someone you want to remember.",
       // The app speaks to Supabase over https and nothing else. The Expo
       // template leaves this open, which is both untrue of the app and a
       // question the reviewer then has to be answered.
@@ -178,10 +176,9 @@ const createExpoConfig = ({ config }: ConfigContext): ExpoConfig => ({
       {
         photosPermission:
           "Choose a profile photo for someone in your private circle.",
-        cameraPermission:
-          "Take a profile photo for someone you want to remember.",
-        // Profile photos only. Left unset, the plugin adds a microphone
-        // string and Android RECORD_AUDIO for recording the app never does.
+        // Library-only. The app never opens the camera or records audio, so
+        // neither permission string may ship.
+        cameraPermission: false,
         microphonePermission: false,
       },
     ],
