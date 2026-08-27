@@ -12,8 +12,37 @@ jest.mock("expo-haptics", () => ({
   NotificationFeedbackType: { Success: "success", Error: "error" },
 }));
 
-jest.mock("@gorhom/bottom-sheet", () => ({
-  BottomSheetTextInput: jest.requireActual("react-native").TextInput,
+jest.mock("@gorhom/bottom-sheet", () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require("@/test-support/bottom-sheet").bottomSheetMock(),
+);
+
+// The form reaches contacts through the import picker. Nothing here exercises
+// the address book, so this only has to keep the native module from being
+// undefined at import.
+jest.mock("expo-contacts", () => ({
+  ContactField: {
+    FULL_NAME: "fullName",
+    GIVEN_NAME: "givenName",
+    FAMILY_NAME: "familyName",
+    PHONES: "phones",
+    EMAILS: "emails",
+    IMAGE: "image",
+    BIRTHDAY: "birthday",
+  },
+  getPermissionsAsync: jest.fn(async () => ({
+    granted: false,
+    canAskAgain: true,
+  })),
+  requestPermissionsAsync: jest.fn(async () => ({
+    granted: false,
+    canAskAgain: true,
+  })),
+  Contact: {
+    getAllDetails: jest.fn(async () => []),
+    getAll: jest.fn(async () => []),
+    create: jest.fn(async () => ({ id: "device-1" })),
+  },
 }));
 
 jest.mock("expo-image", () => ({
