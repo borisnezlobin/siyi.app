@@ -64,11 +64,24 @@ const sections = [
     ),
   },
   {
+    title: "Instagram profile pictures",
+    content: (
+      <p>
+        When you save someone with an Instagram username, we ask Instagram for
+        that profile&apos;s public picture and offer it to you as their photo.
+        It is fetched only for a username you entered, only at the moment you
+        save that person, and nothing is posted or read beyond the picture.
+        Leaving the username blank skips it, and you can decline or replace
+        the photo at any time.
+      </p>
+    ),
+  },
+  {
     title: "How we use information",
     content: (
       <ul>
         <li>Provide, synchronize, and secure your account.</li>
-        <li>Show your people, updates, reminders, and reminders.</li>
+        <li>Show your people, updates, and reminders.</li>
         <li>Send notifications only for the categories you enable.</li>
         <li>Respond to support requests and investigate technical problems.</li>
         <li>Prevent fraud, misuse, and unauthorized access.</li>
