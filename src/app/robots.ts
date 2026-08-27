@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/site-url";
+import { sitemapPaths } from "./sitemap";
 
 /**
  * Everything behind sign-in is private. Those routes already require a session,
@@ -8,7 +10,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/privacy", "/terms", "/support", "/team"],
+      // Derived, so a new public page is crawlable the moment it is added
+      // rather than the day someone notices it is not.
+      allow: sitemapPaths,
       disallow: [
         "/api/",
         "/auth/",
@@ -23,6 +27,6 @@ export default function robots(): MetadataRoute.Robots {
         "/s/",
       ],
     },
-    sitemap: "https://www.siyi.app/sitemap.xml",
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

@@ -7,6 +7,13 @@ import { YearOfKnowing } from "@/components/marketing/year-of-knowing";
 import { brand } from "@/config/brand";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { publicPageMetadata } from "@/lib/public-pages";
+import {
+  JsonLd,
+  organizationSchema,
+  softwareApplicationSchema,
+  webPageSchema,
+  websiteSchema,
+} from "@/lib/structured-data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const metadata: Metadata = publicPageMetadata("home");
@@ -19,6 +26,14 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-porcelain text-ink">
+      <JsonLd
+        schemas={[
+          organizationSchema(),
+          websiteSchema(),
+          softwareApplicationSchema(),
+          webPageSchema("home"),
+        ]}
+      />
       <header className="mx-auto flex max-w-[1180px] items-center justify-between px-5 py-5 sm:px-8 sm:py-7">
         <Link
           href="/"
