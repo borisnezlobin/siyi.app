@@ -472,15 +472,6 @@ export function PersonForm({
 
   const nameFields = (
     <>
-      {person ? null : (
-        <Button
-          compact
-          icon={AddressBook}
-          label="Import from Contacts"
-          onPress={() => setImportOpen(true)}
-          variant="quiet"
-        />
-      )}
       <FormField
         autoCapitalize="words"
         autoComplete="name"
@@ -865,6 +856,13 @@ export function PersonForm({
       ) : (
         <>
           <View style={styles.card}>
+            <Button
+              compact
+              icon={AddressBook}
+              label="Import from Contacts"
+              onPress={() => setImportOpen(true)}
+              variant="quiet"
+            />
             {photoBlock}
             <FormField
               autoCapitalize="words"
