@@ -50,7 +50,7 @@ const savedPerson = {
   instagramUsername: null,
 } as Person;
 
-const explainerTitle = "Save your Siyi people to Contacts";
+const explainerTitle = "Save your siyi people to Contacts";
 
 beforeEach(async () => {
   await AsyncStorage.clear();

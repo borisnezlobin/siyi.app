@@ -73,7 +73,7 @@ describe("classifyUpdate", () => {
 describe("sourceLabel", () => {
   it("says where the sorting happened, and nothing when it did not", () => {
     expect(sourceLabel("device")).toBe("Sorted on your phone");
-    expect(sourceLabel("server")).toBe("Sorted by Siyi");
+    expect(sourceLabel("server")).toBe("Sorted by siyi");
     expect(sourceLabel("none")).toBeNull();
   });
 });

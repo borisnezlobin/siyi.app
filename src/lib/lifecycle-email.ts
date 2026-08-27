@@ -39,7 +39,7 @@ export const lifecycleCampaigns: LifecycleCampaign[] = [
     description: "Signed up three days ago and has not saved anyone.",
     subject: "Add the first person you want to remember",
     paragraphs: [
-      "You signed up a few days ago and there is nobody in your directory yet — which means Siyi has nothing to remind you about.",
+      "You signed up a few days ago and there is nobody in your directory yet — which means siyi has nothing to remind you about.",
       "Adding someone takes about ten seconds: a name is enough to start, and everything else can come later, whenever you learn it.",
     ],
     action: { label: "Add someone", path: "/people/new" },
@@ -55,7 +55,7 @@ export const lifecycleCampaigns: LifecycleCampaign[] = [
       "It has been about a month since you last added anyone or logged a conversation.",
       "Nothing needs catching up on — but if someone comes to mind, writing down what you remember now is what makes the next conversation easier.",
     ],
-    action: { label: "Open Siyi", path: "/today" },
+    action: { label: "Open siyi", path: "/today" },
     matches: (facts, now) =>
       facts.contactCount > 0 && daysSinceActive(facts, now) >= 30,
   },

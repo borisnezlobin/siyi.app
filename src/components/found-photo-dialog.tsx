@@ -42,14 +42,14 @@ export function FoundPhotoDialog({
         Save profile picture?
       </h2>
       <p className="mt-2 text-sm leading-6 text-ink-muted">
-        Siyi found this profile picture on Instagram. Use it?
+        siyi found this profile picture on Instagram. Use it?
       </p>
 
       <div className="mt-5 flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photoUrl}
-          alt="The profile picture Siyi found"
+          alt="The profile picture siyi found"
           className="size-32 rounded-full bg-mist object-cover"
         />
       </div>

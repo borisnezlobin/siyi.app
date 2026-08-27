@@ -1,6 +1,6 @@
 export const brand = {
-  name: process.env.EXPO_PUBLIC_APP_NAME?.trim() || "Siyi.app",
-  shortName: process.env.EXPO_PUBLIC_APP_SHORT_NAME?.trim() || "Siyi",
+  name: process.env.EXPO_PUBLIC_APP_NAME?.trim() || "siyi.app",
+  shortName: process.env.EXPO_PUBLIC_APP_SHORT_NAME?.trim() || "siyi",
   slug: process.env.EXPO_PUBLIC_APP_SLUG?.trim() || "siyi-app",
   scheme: process.env.EXPO_PUBLIC_APP_SCHEME?.trim() || "siyi",
   description: "Remember the people who make this chapter feel like yours.",
@@ -8,7 +8,7 @@ export const brand = {
   supportEmail:
     process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() || "support@siyi.app",
   operatorName:
-    process.env.EXPO_PUBLIC_LEGAL_ENTITY_NAME?.trim() || "Siyi.app",
+    process.env.EXPO_PUBLIC_LEGAL_ENTITY_NAME?.trim() || "siyi.app",
   legalEffectiveDate: "August 4, 2026",
   iosProtectedCapabilitiesEnabled:
     process.env.EXPO_PUBLIC_IOS_PROTECTED_CAPABILITIES !== "false",

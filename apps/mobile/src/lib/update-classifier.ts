@@ -51,6 +51,6 @@ export async function classifyUpdate({
 /** Said in the sheet, so it is never a mystery where the sorting happened. */
 export function sourceLabel(source: ClassifierSource): string | null {
   if (source === "device") return "Sorted on your phone";
-  if (source === "server") return "Sorted by Siyi";
+  if (source === "server") return "Sorted by siyi";
   return null;
 }

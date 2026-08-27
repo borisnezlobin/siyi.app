@@ -83,7 +83,7 @@ describe("arriving at /admin as an allowlisted admin", () => {
     render(await AdminPage());
 
     expect(screen.getByRole("heading", { name: "Admin" })).toBeTruthy();
-    expect(screen.getByText("How Siyi is doing")).toBeTruthy();
+    expect(screen.getByText("How siyi is doing")).toBeTruthy();
     // Three accounts, one with push, 125 contacts between them.
     expect(screen.getByText("Total users")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
@@ -117,7 +117,7 @@ describe("arriving at /admin as an allowlisted admin", () => {
 
     render(await AdminPage());
 
-    expect(screen.getByText("How Siyi is doing")).toBeTruthy();
+    expect(screen.getByText("How siyi is doing")).toBeTruthy();
   });
 
   it("still renders the console when the stats query fails, and says so", async () => {

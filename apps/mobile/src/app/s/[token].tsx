@@ -10,7 +10,7 @@ import { buildShareUrl, isValidShareToken } from "@/lib/person-share";
 
 /**
  * Share links are meant to work for anyone, including people who have never
- * heard of Siyi, so /s/ is deliberately left out of the iOS association file
+ * heard of siyi, so /s/ is deliberately left out of the iOS association file
  * and always opens in the browser. Android's intent filter claims the whole
  * domain, though, so a link handed to someone who happens to have the app
  * installed would otherwise dead-end here. This screen hands it straight back
@@ -43,7 +43,7 @@ export default function SharedContactRedirect() {
           onPress={() => void WebBrowser.openBrowserAsync(url)}
         />
       ) : (
-        <Button label="Go to Siyi" onPress={() => router.replace("/")} />
+        <Button label="Go to siyi" onPress={() => router.replace("/")} />
       )}
     </View>
   );

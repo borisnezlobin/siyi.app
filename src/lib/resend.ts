@@ -23,7 +23,7 @@ export function isResendConfigured() {
 }
 
 export function marketingSender() {
-  return process.env.MARKETING_FROM_EMAIL?.trim() || "Siyi <hello@siyi.app>";
+  return process.env.MARKETING_FROM_EMAIL?.trim() || "siyi <hello@siyi.app>";
 }
 
 export async function sendEmail(email: OutgoingEmail): Promise<void> {

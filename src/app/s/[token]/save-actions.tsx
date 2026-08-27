@@ -6,7 +6,7 @@ import { useState } from "react";
 import { getApiResponseError, readJsonResponse } from "@/lib/http";
 
 /**
- * Saving into Siyi is the main thing to do with a shared card — it keeps the
+ * Saving into siyi is the main thing to do with a shared card — it keeps the
  * details current if the sharer changes them, which a downloaded file cannot.
  * The contacts file stays available underneath for people who want it.
  *
@@ -78,7 +78,7 @@ export function SaveActions({
         ) : (
           <UserPlus size={17} weight="bold" aria-hidden="true" />
         )}
-        Save {personName.split(" ")[0]} to {"Siyi"}
+        Save {personName.split(" ")[0]} to {"siyi"}
       </button>
 
       <p className="mt-3 text-xs leading-5 text-ink-muted">
