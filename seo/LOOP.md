@@ -14,11 +14,18 @@ impressions before the first real run.
 ## What the run does
 
 1. Read `progress.md` in full — every section, not just the most recent.
-2. Pull from Search Console over MCP (`mcp-gsc`), last 28 days and the 28 days
-   before that:
+2. Pull from Search Console with `node scripts/fetch-search-console.mjs`, which
+   prints both windows — the last 28 days and the 28 days before that — as JSON:
    - queries by impressions, clicks, CTR and average position
    - pages by the same
-   - coverage: which submitted URLs are indexed
+
+   A scheduled run happens where a local MCP server does not exist, which is why
+   this is a script and a service account rather than `mcp-gsc`. Running by hand
+   against the MCP server is still fine; the numbers are the same ones.
+
+   The script reports `hasData: false` rather than an empty list when the window
+   has no impressions. That is the prerequisite above, answered in the data
+   instead of from memory: if it is false, stop and write down that you stopped.
 3. Decide what changed, what moved, and what did not.
 4. Propose changes as a **pull request**.
 5. Append a dated section to `progress.md`: what changed, what moved, what did
@@ -43,10 +50,21 @@ impressions before the first real run.
 
 ## Hard rules
 
-**It opens a pull request. It does not deploy.** The tweet this loop is modelled
-on had the agent `git pull` and restart the server itself. One bad automated
+**It opens a pull request, and may merge it once every check has passed.** This
+rule used to end at the pull request, on the reasoning that one bad automated
 commit into the marketing site during launch week is not something a cron can
-undo.
+undo. That reasoning still holds — what changed is the judgement of how much
+iteration speed it was costing, decided deliberately on 2026-08-29, not by an
+agent widening its own authority.
+
+What makes it safe enough is that the merge is gated, and the gate is the
+existing `npm run check`: lint, typecheck, unit tests, the production build, and
+the end-to-end suite. A red check means the branch stays open and the run says
+so. A run may never merge a branch that touches a path outside **What it may
+change** below — if it wants one, it opens the pull request and stops.
+
+It still does not deploy by hand: merging to `main` is what deploys, through
+Vercel, and that is the only mechanism it may use.
 
 **Two new pages per run, maximum.** This is the single line that keeps the loop
 out of scaled content abuse — the failure mode that took 50–80% of traffic off

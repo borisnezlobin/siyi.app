@@ -47,3 +47,32 @@ plus `/privacy`, `/terms`, `/support`, `/team`.
 2. Report queries with impressions and no matching page — those are the
    evidence for what to write next.
 3. Do not propose new pages in the first run. Establish what exists first.
+
+---
+
+## Setup correction — 2026-08-29 (written by hand, still before the first run)
+
+**The baseline's date is not the date crawling could start.** The 2026-08-16
+entry describes thirteen public pages as the state of the site. They were
+written then, but they were not reachable: the work sat unmerged on
+`fix/pwa-responsiveness-and-staleness` while `main` served six public pages. The
+content pages went live on 2026-08-26, verified by the sitemap listing all
+thirteen and each page answering 200.
+
+So the four-week clock in `LOOP.md` starts on 2026-08-26, not 2026-08-16. The
+earliest honest first run is **2026-09-23**. A run before that reads a window
+that is mostly pre-launch and concludes things about pages Google had not yet
+seen.
+
+**How the data arrives now.** `mcp-gsc` was never configured; it is now
+registered locally, and a scheduled run — which happens where no local MCP
+server exists — uses `scripts/fetch-search-console.mjs` and a service account
+instead. Both read the same property.
+
+**One rule changed.** The loop may now merge its own pull request when every
+check passes, where before it always stopped at the pull request. The reasoning
+and its limits are in `LOOP.md`; it is recorded here because a rule that changes
+silently is indistinguishable from a rule an agent talked itself out of.
+
+**Still open.** The service account key does not exist yet, so the first run
+cannot fetch anything until it does.
