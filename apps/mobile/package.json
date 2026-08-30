@@ -23,7 +23,6 @@
     "expo-constants": "~57.0.9",
     "expo-contacts": "~57.0.1",
     "expo-crypto": "~57.0.1",
-    "expo-dev-client": "~57.0.10",
     "expo-device": "~57.0.1",
     "expo-document-picker": "~57.0.1",
     "expo-file-system": "~57.0.1",
@@ -64,6 +63,7 @@
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
+    "expo-dev-client": "~57.0.10",
     "jest-expo": "^57.0.3",
     "react-test-renderer": "^19.2.3",
     "typescript": "~6.0.3"
@@ -78,6 +78,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "store:metadata": "node ./scripts/build-store-metadata.mjs",
     "test": "jest --runInBand"
   },
   "private": true,

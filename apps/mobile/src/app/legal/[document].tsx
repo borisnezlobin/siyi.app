@@ -20,6 +20,20 @@ const privacySections: LegalSection[] = [
     ],
   },
   {
+    title: "Your device address book",
+    paragraphs: [
+      "The app can ask for access to your contacts, and never does so before you have saved someone. It is used on the device to recognise a person you have saved as somebody already in your address book, and to add a person to your contacts when you ask for that.",
+      "Your address book is not uploaded to us, and declining leaves every part of the app working.",
+    ],
+  },
+  {
+    title: "The card you choose to share",
+    paragraphs: [
+      "Your own card can be published at an unlisted link so people you meet can save you. A new account starts with one carrying your full name and major. You choose which of your details appear on it, and switching the link off stops the page resolving.",
+      "These pages ask search engines not to index them, and nothing about the people you save is published this way.",
+    ],
+  },
+  {
     title: "How we use it",
     paragraphs: [
       "We use your information to provide the app, keep your data synchronized, calculate reminders in your timezone, send the notifications you enable, secure accounts, respond to support, and improve reliability.",

@@ -10,4 +10,8 @@ Account deletion is available in Settings > Delete account and data. Privacy Pol
 
 Push notification permission is requested only after the reviewer taps Set up notifications during onboarding or Enable push notifications on the Notifications screen. Remote push requires a physical device. The Send a test notification action is available after permission is granted.
 
+Contacts permission is optional and is never requested at launch. It is offered only after the reviewer saves their first person, behind an in-app explanation shown before the system prompt, and declining leaves every feature working. It is used to match a saved person to an existing contact and to add saved people to the address book on request. The address book is read on the device and is never uploaded to our servers.
+
+A new account starts with a shareable card carrying its own full name and major, reachable at an unlisted, non-indexed link. It is the account holder's own card, never any of the people they have saved. Under Your card the reviewer can choose which fields it shows, or switch the link off entirely, at which point the page stops resolving.
+
 Sign in with Apple and Google require network access. Email/password is available as a reliable review fallback. After the first successful load, cached people, notes, updates, follow-ups, and photos remain available offline, and changes sync when connectivity returns.
