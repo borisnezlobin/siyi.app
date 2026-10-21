@@ -232,6 +232,7 @@ function PersonPicker({
   multiple = false,
   locked = false,
   label = "Who is this for?",
+  autoFocus = false,
 }: {
   people: Person[];
   selectedIds: string[];
@@ -239,6 +240,8 @@ function PersonPicker({
   multiple?: boolean;
   locked?: boolean;
   label?: string;
+  /** Only where choosing somebody is the first thing the sheet is asking. */
+  autoFocus?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const revealOnFocus = useRevealOnFocus();
@@ -288,6 +291,7 @@ function PersonPicker({
         <BottomSheetTextInput
           accessibilityLabel="Search people"
           autoCapitalize="words"
+          autoFocus={autoFocus}
           onChangeText={setQuery}
           onSubmitEditing={() => Keyboard.dismiss()}
           placeholder="Search…"
@@ -1056,15 +1060,6 @@ export function QuickCaptureProvider({
         setError(message);
         return;
       }
-      // An update that just filled in their Instagram is the other moment
-      // worth looking for a picture.
-      const handle = plan.contacts.find(
-        (contact) => contact.kind === "instagram",
-      )?.value;
-      const subject = people.find(
-        (person) => person.id === selectedPersonIds[0],
-      );
-      if (subject) void offerFoundPhoto(subject, handle ?? null);
       await finishSaving();
     } catch (saveError) {
       reportFailure(saveError, "That update could not be saved.");

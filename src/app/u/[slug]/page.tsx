@@ -88,7 +88,14 @@ export default async function PublicProfilePage({
         <Link href="/" className="font-semibold text-ink hover:underline">
           {brand.name}
         </Link>
-        , a private place to remember the people in your life.
+        , a private place to remember the people in your life.{" "}
+        <Link
+          href="/support"
+          className="font-semibold text-ink hover:underline"
+        >
+          Report this page
+        </Link>{" "}
+        if it is impersonating someone or should not be here.
       </p>
     </main>
   );

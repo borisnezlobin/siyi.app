@@ -24,6 +24,10 @@ const helpTopics = [
     title: "Notifications are not arriving",
     body: "Open Settings, choose Notifications, and confirm that both the browser or iPhone permission and your reminder categories are enabled.",
   },
+  {
+    title: "Reporting a shared page or card",
+    body: "Write to us with the address of the page. Tell us what is wrong with it — that it is pretending to be someone, or carries details that are not the sender's to hand out — and we will look at it and take it down if it should not be there.",
+  },
 ];
 
 export default function SupportPage() {
