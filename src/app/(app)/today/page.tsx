@@ -9,6 +9,7 @@ import { differenceInCalendarDays, startOfDay } from "date-fns";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { CatchUpDialog, CatchUpTrigger } from "@/components/catch-up-dialog";
+import { CircleOverTimeSection } from "@/components/circle-over-time-section";
 import { CompleteReminderButton } from "@/components/complete-reminder-button";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -231,6 +232,10 @@ export default async function TodayPage() {
           <CatchUpTrigger label="Catch up with someone" />
         </div>
       ) : null}
+
+      {/* Below the reminders, never above them: this is a look back, and it must
+          not push the thing that actually needs doing down the screen. */}
+      <CircleOverTimeSection people={activePeople} now={now} />
 
       {checkInPeople.length ? (
         <section className="mt-9" aria-labelledby="check-in-heading">
